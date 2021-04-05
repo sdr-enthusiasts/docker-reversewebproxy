@@ -10,9 +10,6 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # See: "Copy CA Certificates from GitHub Runner to Image rootfs" in deploy.yml
 COPY rootfs/ /
 
-# Copy the noisecapt program files in place:
-COPY noisecapt/ /noisecapt
-
 RUN set -x && \
 # define packages needed for installation and general management of the container:
     TEMP_PACKAGES=() && \
