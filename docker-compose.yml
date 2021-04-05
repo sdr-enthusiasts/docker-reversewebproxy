@@ -1,26 +1,8 @@
 version: '3.8'
 
 services:
-  noisecapt:
+  webproxy:
     image: kx1t/reversewebproxy
-    tty: true
-    container_name: webproxy
-    hostname: webproxy
-    restart: always
-    ports:
-      - 80:80
-      - 443:443
-    environment:
-      - REQUEST_SSL_CERT=ON
-      - SSL_EMAIL=my@email.com
-      # SSL_DOMAIN must be a real domain name that resolves to this machine.
-      # If you don't have that, please set REQUEST_SSL_CERT=OFF
-      - SSL_DOMAIN=www.mydomain.com
-version: '3.8'
-
-services:
-  noisecapt:
-    image: kx1t/webproxy
     tty: true
     container_name: webproxy
     hostname: webproxy
