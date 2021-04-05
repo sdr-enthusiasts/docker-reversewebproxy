@@ -20,7 +20,7 @@ version: '3.8'
 
 services:
   noisecapt:
-    image: kx1t/reversewebproxy
+    image: kx1t/webproxy
     tty: true
     container_name: webproxy
     hostname: webproxy
@@ -34,7 +34,8 @@ services:
       # SSL_DOMAIN must be a real domain name that resolves to this machine.
       # If you don't have that, please set REQUEST_SSL_CERT=OFF
       - SSL_DOMAIN=www.mydomain.com
-      - REVPROXY=readsb|http://10.0.0.191:8080,
+      - REVPROXY=>-
+                 readsb|http://10.0.0.191:8080,
                  piaware|http://10.0.0.191:8081,
                  tar1090|http://10.0.0.191:8082,
                  planefence|http://10.0.0.191:8083,
@@ -43,7 +44,8 @@ services:
                  graphs|http://10.0.0.191:8080/graphs,
                  radar|http://10.0.0.191:8080/radar,
                  acarshub|http://10.0.0.188:80
-      - REDIRECT=/planefinder/setup.html|http://10.0.0.191:8086/setup.html,
+      - REDIRECT=>-
+                 /planefinder/setup.html|http://10.0.0.191:8086/setup.html,
                  /planefinder/logs.html|http://10.0.0.191:8086/logs.html
     tmpfs:
       - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
