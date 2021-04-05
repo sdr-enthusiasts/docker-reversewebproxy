@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   webproxy:
-    image: kx1t/reversewebproxy
+    image: kx1t/webproxy
     tty: true
     container_name: webproxy
     hostname: webproxy
