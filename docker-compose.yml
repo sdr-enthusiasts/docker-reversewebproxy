@@ -2,22 +2,59 @@ version: '3.8'
 
 services:
   noisecapt:
-    image: kx1t/noisecapt
+    image: kx1t/reversewebproxy
     tty: true
-    container_name: noisecapt
-    hostname: noisecapt
+    container_name: webproxy
+    hostname: webproxy
     restart: always
-    devices:
-      - /dev/snd:/dev/snd
-#    ports:
-#      - 30088:80
+    ports:
+      - 80:80
+      - 443:443
     environment:
-      - TZ=${FEEDER_TZ}
-      - PF_DELETEAFTER=7
-      - PF_CAPTURETIME=5
-#      - PF_AUDIOCARD=2
-#      - PF_AUDIODEVICE=0
-#      - PF_ALSA_MANUAL=ON
+      - REQUEST_SSL_CERT=ON
+      - SSL_EMAIL=my@email.com
+      # SSL_DOMAIN must be a real domain name that resolves to this machine.
+      # If you don't have that, please set REQUEST_SSL_CERT=OFF
+      - SSL_DOMAIN=www.mydomain.com
+version: '3.8'
+
+services:
+  noisecapt:
+    image: kx1t/reversewebproxy
+    tty: true
+    container_name: webproxy
+    hostname: webproxy
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      - REQUEST_SSL_CERT=ON
+      - SSL_EMAIL=my@email.com
+      # SSL_DOMAIN must be a real domain name that resolves to this machine.
+      # If you don't have that, please set REQUEST_SSL_CERT=OFF
+      - SSL_DOMAIN=www.mydomain.com
+      - REVPROXY=readsb|http://10.0.0.191:8080,
+                 piaware|http://10.0.0.191:8081,
+                 tar1090|http://10.0.0.191:8082,
+                 planefence|http://10.0.0.191:8083,
+                 planefinder|http://10.0.0.191:8086,
+                 ajax|http://10.0.0.191:8086/ajax,
+                 graphs|http://10.0.0.191:8080/graphs,
+                 radar|http://10.0.0.191:8080/radar,
+                 acarshub|http://10.0.0.188:80
+      - REDIRECT=/planefinder/setup.html|http://10.0.0.191:8086/setup.html,
+                 /planefinder/logs.html|http://10.0.0.191:8086/logs.html
     tmpfs:
-      - /run:rw,nosuid,nodev,exec,relatime,size=128M
       - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
+    volumes:
+      - /home/pi/.revproxy:/run/revproxy
+
+# Special handling:
+# REVPROXY for "acarshub" will automatically configure the following additional parameters:
+#        proxy_set_header Upgrade $http_upgrade;
+#        proxy_set_header Connection $http_connection;
+#        proxy_set_header Host $http_host;
+#
+# For PlaneFinder to work, you must also redirect "/ajax" to "http://planefinderurl/ajax"
+# For the Readsb Graphs shortcut to work, you must also redirect "/radar" to "http://readsburl/radar"
