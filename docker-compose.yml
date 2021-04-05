@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  noisecapt:
+    image: kx1t/noisecapt
+    tty: true
+    container_name: noisecapt
+    hostname: noisecapt
+    restart: always
+    devices:
+      - /dev/snd:/dev/snd
+#    ports:
+#      - 30088:80
+    environment:
+      - TZ=${FEEDER_TZ}
+      - PF_DELETEAFTER=7
+      - PF_CAPTURETIME=5
+#      - PF_AUDIOCARD=2
+#      - PF_AUDIODEVICE=0
+#      - PF_ALSA_MANUAL=ON
+    tmpfs:
+      - /run:rw,nosuid,nodev,exec,relatime,size=128M
+      - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
