@@ -4,7 +4,7 @@
 APPNAME="$(hostname)/reverse-proxy"
 
 echo "[$APPNAME][$(date)] Started as an s6 service"
-echo "Initial run -- installing NXINX web service
+echo "Initial run -- installing NXINX web service"
 
 # create run directory. This is where the locations.conf file will be located.
 mkdir -p /run/revproxy/html
