@@ -11,21 +11,18 @@ services:
       - 8099:80
       - 443:443
     environment:
+      #
       # if AUTOGENERATE is set to ON, it will automatically create a config based on the REVPROXY and REDIRECT parameters below
       # if it is set to OFF, you should map the volume as shown in the "volumes" section below, and you can edit the "locations.conf" file in that directory
       - AUTOGENERATE=ON
-      # REQUEST_SSL_CERT indicates if we are requesting an SSL certificate. If ON, it will try to configure a SSL setup
-      # and it will redirect any http://mydomain requests to https://mydomain.
-      # SSL_DOMAIN must be a real domain name that resolves to this machine.
-      # If you don't have that, please set REQUEST_SSL_CERT=OFF as SSL won't work and your proxy will fail without this.
-      - REQUEST_SSL_CERT=ON
-      - SSL_EMAIL=my@email.com
-      - SSL_DOMAIN=www.mydomain.com
+      # ----------------------------------------------------------------------------------------
       # REVPROXY has the following format:
       #     urltarget|proxytarget
       # For example, for REVPROXY=readsb|http://10.0.0.191:8080,
       # a user browing to http://mydomain/readsb will be proxied to http://10.0.0.191:8080
       # The user's browser will *never* see the internal IP address.
+      # Note - both the urltarget and the destination must be URLs or directories, and cannot be
+      # a file name
       - REVPROXY=
                  readsb|http://10.0.0.191:8080,
                  piaware|http://10.0.0.191:8081,
@@ -36,6 +33,7 @@ services:
                  graphs|http://10.0.0.191:8080/graphs,
                  radar|http://10.0.0.191:8080/radar,
                  acarshub|http://10.0.0.188:80
+      # ----------------------------------------------------------------------------------------
       # REDIRECT has the following format:
       #     urltarget|redirection
       # For example, for REVPROXY=/planefinder/setup.html|http://10.0.0.191:8086/setup.html,
@@ -44,6 +42,7 @@ services:
       # because it is on a isolated subnet), the browser won't be able to render the page.
       # This can be useful if you want to protect certain pages from view outside your internal network, while exposing
       # others. See for example the planefinder setup in REVPROXY and REDIRECT.
+      # Note - both the urltarget and the redirection MAY BE a URL or a file names.
       - REDIRECT=
                  /planefinder/setup.html|http://10.0.0.191:8086/setup.html,
                  /planefinder/logs.html|http://10.0.0.191:8086/logs.html
@@ -51,7 +50,7 @@ services:
       - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
     volumes:
       - /home/pi/.revproxy:/run/revproxy
-
+#
 # Special handling:
 # REVPROXY for "acarshub" will automatically configure the following additional parameters:
 #        proxy_set_header Upgrade $http_upgrade;

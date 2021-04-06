@@ -7,12 +7,17 @@ echo "[$APPNAME][$(date)] Started as an s6 service"
 echo "Initial run -- installing NXINX web service
 
 # create run directory. This is where the locations.conf file will be located.
-mkdir -p /run/revproxy
-chmod a+rwx /run/revproxy
+mkdir -p /run/revproxy/html
+cp -n /root/locations.conf.example /run/revproxy
+cp -n /root/index.html /run/revproxy/html
+chmod a+rwx /run/revproxy /run/revproxy/html
+chmod a+rw /run/revproxy/*
+chmod a+r /run/revproxy/html/*
 
 # auto-create the locations.conf file if $AUTOGENERATE is set to yes
 if [[ "$AUTOGENERATE" == "yes" ]]
 then
+    echo "[$APPNAME][$(date)] Auto-generating locations.conf file"
     # back up any existing locations.conf file:
     mv -f /run/locations.conf /run/locations.conf.bkup-$(date +%y%m%d%H%M%S)
 
@@ -30,18 +35,15 @@ then
 
         # fix prefixes and suffixes if necessary:
         [[ "${location:0:1}" != "/" ]] && location="/$location"
-        [[ "${location: -1}" != "/" ]] && location="$location/"
         [[ "${destination:0:4}" != "http" ]] && destination="http://$destination"
         [[ "${destination:0:2}" == "//" ]] && destination="http:$destination"
-        [[ "${destination: -1}" != "/" ]] && destination="$destination/"
 
         # Now print the location entry:
-        printf "location %s {\n" "$location" >> /etc/nginx/locations.conf
-        printf "    return 301 %s;\n" "$destination"  >> /etc/nginx/locations.conf
-        printf "}\n\n"  >> /etc/nginx/locations.conf
+        printf "location %s {\n" "$location" >> /run/nginx/locations.conf
+        printf "    return 301 %s;\n" "$destination"  >> /run/nginx/locations.conf
+        printf "}\n\n"  >> /run/nginx/locations.conf
 
     done
-
 
     # now loop through the array and create location elements for each entry:
     for (i=0; i<${#proxy_array[@]}; i++)
@@ -58,19 +60,63 @@ then
         [[ "${destination: -1}" != "/" ]] && destination="$destination/"
 
         # Now print the location entry:
-        printf "location %s {\n" "$location" >> /etc/nginx/locations.conf
-        printf "    proxy_pass %s;\n" "$destination"  >> /etc/nginx/locations.conf
+        printf "location %s {\n" "$location" >> /run/nginx/locations.conf
+        printf "    proxy_pass %s;\n" "$destination"  >> /run/nginx/locations.conf
 
         # Special handling for acarshub:
         if [[ "$location" == "/acarshub/" ]]
         then
-            printf "    proxy_set_header Upgrade \$http_upgrade;\n"  >> /etc/nginx/locations.conf
-            printf "    proxy_set_header Connection \$http_connection;\n"  >> /etc/nginx/locations.conf
-            printf "    proxy_set_header Host \$http_host;\n"  >> /etc/nginx/locations.conf
+            printf "    proxy_set_header Upgrade \$http_upgrade;\n"  >> /run/nginx/locations.conf
+            printf "    proxy_set_header Connection \$http_connection;\n"  >> /run/nginx/locations.conf
+            printf "    proxy_set_header Host \$http_host;\n"  >> /run/nginx/locations.conf
         fi
 
         # close off the location entry:
-        printf "}\n\n"  >> /etc/nginx/locations.conf
+        printf "}\n\n"  >> /run/nginx/locations.conf
     done
-
+elif [[ ! -f /run/nginx/locations.conf ]]
+then
+    # No locations.conf is found, and none is generated either. Complain and stop the container:
+    echo "-------------------------------------------------"
+    echo "|           STOP ! You must either:             |"
+    echo "| set AUTOGENERATE=ON in docker-compose.yml     |"
+    echo "| or provide a well-formed locations.conf file  |"
+    echo "| Please do so and then restart the container.  |"
+    echo "-------------------------------------------------"
+    s6-svscanctl -t /var/run/s6/services
+    # if the previous command somehow fails to bring down the container, we'll just loop forevah:
+    while true; do sleep 99999; done
+else
+    echo "[$APPNAME][$(date)] Using user-provided locations.conf file"
 fi
+
+# now copy a bunch of files into place:
+cp -f /root/nginx.conf /etc/nginx
+cp -f /root/default /etc/nginx/sites-available/
+ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
+
+# now test the nginx configuration
+if ! /usr/sbin/nginx -g 'master_process on;' -t -q
+then
+    # nginx config problem. Complain and stop the container:
+    echo "--------------------------------------------------"
+    echo "|      STOP ! NGINX configuration problem        |"
+    echo "| This is probably caused by a mal-formed        |"
+    echo "| locations.conf file or by syntax errors in the |"
+    echo "| definition of REVPROXY or REDIRECT in your     |"
+    echo "| docker-compose.yml file. Go check and fix them!|"
+    echo "--------------------------------------------------"
+    s6-svscanctl -t /var/run/s6/services
+    # if the previous command somehow fails to bring down the container, we'll just loop forevah:
+    while true; do sleep 99999; done
+fi
+
+# Finally -- start nginx and loop forever if it quits for some reason:
+echo "[$APPNAME][$(date)] Starting the NGINX service..."
+while true
+do
+    /usr/sbin/nginx -g 'master_process on;'
+    echo "[$APPNAME][$(date)] NGINX Service has failed!"
+    sleep 10
+    echo "[$APPNAME][$(date)] Restarting NGINC Service now..."
+done

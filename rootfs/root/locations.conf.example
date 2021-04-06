@@ -1,0 +1,122 @@
+# Locations file
+#
+# Use this as an example of how to create a locations.conf file
+# "location /" tries to redirect to different home directories based on the hostname used
+# the following location entries reverse-proxy the request to the internal URL servicing the request
+
+location / {
+	if ($host = mydomain-1.com) {
+		return 301 https://mydomain-1.com/mydomain-1;
+	}
+
+	if ($host = mydomain-2.com) {
+		return 301 https://mydomain-2.com/mydomain-3;
+	}
+
+	if ($host = mydomain-3.net) {
+		return 301 https://mydomain-3.net/index.html;
+	}
+        # if none of the redirects matched, then try to load the URL as-is. If it fails, return a 404-not found:
+        try_files $uri $uri/ =404;
+}
+
+# Not withstanding the "location /" definition above, if the file requested is "my-query", then go get that file:
+location /my-query {
+		try_files $uri $uri/ =404;
+}
+
+# Here are a bunch of reverse proxy definitions. This is what you'd normally want for your container:
+location /readsb/ {
+	proxy_pass http://10.0.0.191:8080/;
+}
+
+location /piaware/ {
+	proxy_pass http://10.0.0.191:8081/;
+}
+
+location /tar1090/ {
+	proxy_pass http://10.0.0.191:8082/;
+}
+
+location /adsb/ {
+	proxy_pass http://10.0.0.191:8082/;
+}
+
+location /planefence/ {
+	proxy_pass http://10.0.0.191:8083/;
+}
+
+location /plane-alert/ {
+	proxy_pass http://10.0.0.191:8083/plane-alert/;
+}
+
+location /planefence-dev/ {
+	proxy_pass http://10.0.0.191:8084/;
+}
+
+location /planefinns/ {
+	proxy_pass http://10.0.0.191:8085/;
+}
+
+location /planefinder/ {
+	proxy_pass http://10.0.0.191:8086/;
+}
+
+location /pf-test/ {
+	proxy_pass http://10.0.0.191:8086/;
+}
+
+
+location /planefinder/setup.html {
+	# this is only allowed from within the intranet
+	return 301 http://10.0.0.191:8086/setup.html;
+}
+
+location /planefinder/logs.html {
+	# this is only allowed from within the intranet
+	return 301 http://10.0.0.191:8086/logs.html;
+}
+
+location /ajax/ {
+	# sloppy programming - planefinder makes a call to the root that we need to rewrite
+	proxy_pass http://10.0.0.191:8086/ajax/;
+}
+
+location /stats/ {
+	proxy_pass http://10.0.0.191:8080/graphs/;
+}
+
+location /graphs/ {
+	proxy_pass http://10.0.0.191:8080/graphs/;
+}
+location /radar/ {
+	proxy_pass http://10.0.0.191:8080/radar/;
+	# this is needed because of URL issues with the graphs package in readsb
+}
+
+# acarshub makes a number of live database calls that need the "proxy_set_header" arguments as below:
+location /acarshub/ {
+	proxy_pass http://10.0.0.188:80/;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $http_connection;
+        proxy_set_header Host $http_host;
+}
+
+location /acarsdb/ {
+	proxy_pass http://10.0.0.188:8080/acarsdb/;
+}
+
+location /noise/ {
+	proxy_pass http://10.0.0.191:30088/;
+}
+
+location /noisecapt/ {
+	proxy_pass http://10.0.0.191:30088/;
+}
+
+location /portainer/ {
+	proxy_pass http://127.0.0.1:9000/;
+}
+
+# last, let's define the order of index files that the proxy tries to get if we're trying to get the local web server:
+index index.html index.htm index.nginx-debian.html;
