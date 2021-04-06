@@ -7,19 +7,19 @@ echo "[$APPNAME][$(date)] Started as an s6 service"
 echo "[$APPNAME][$(date)] Initial run -- installing NXINX web service"
 
 # create run directory. This is where the locations.conf file will be located.
-mkdir -p /run/revproxy/html
-cp -n /root/locations.conf.example /run/revproxy
-cp -n /root/index.html /run/revproxy/html
-chmod a+rwx /run/revproxy /run/revproxy/html
-chmod a+rw /run/revproxy/*
-chmod a+r /run/revproxy/html/*
+mkdir -p /run/nginx/html
+cp -n /root/locations.conf.example /run/nginx
+cp -n /root/index.html /run/nginx/html
+chmod a+rwx /run/nginx /run/nginx/html
+chmod a+rw /run/nginx/*
+chmod a+r /run/nginx/html/*
 
 # auto-create the locations.conf file if $AUTOGENERATE is set to yes
 if [[ "$AUTOGENERATE" == "ON" ]]
 then
     echo "[$APPNAME][$(date)] Auto-generating locations.conf file"
     # back up any existing locations.conf file:
-    mv -f /run/locations.conf /run/locations.conf.bkup-$(date +%y%m%d%H%M%S)
+    [[ -f /run/nginx/locations.conf ]] && mv -f /run/nginx/locations.conf /run/nginx/locations.conf.bkup-$(date +%y%m%d%H%M%S)
 
     # configure the locations.conf file:
     # first read the REVPROXY and REDIRECT environment variables into an array:
@@ -130,7 +130,7 @@ fi
 echo "[$APPNAME][$(date)] Starting the NGINX service..."
 while true
 do
-    /usr/sbin/nginx -g 'master_process on;'
+    /usr/sbin/nginx -g 'daemon off;'
     echo "[$APPNAME][$(date)] NGINX Service has failed!"
     sleep 10
     echo "[$APPNAME][$(date)] Restarting NGINC Service now..."

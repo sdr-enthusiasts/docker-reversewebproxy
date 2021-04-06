@@ -9,7 +9,6 @@ services:
     restart: always
     ports:
       - 8099:80
-      - 443:443
     environment:
       #
       # if AUTOGENERATE is set to ON, it will automatically create a config based on the REVPROXY and REDIRECT parameters below
@@ -49,7 +48,7 @@ services:
     tmpfs:
       - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
     volumes:
-      - /home/pi/.revproxy:/run/revproxy
+      - /home/pi/.revproxy:/run/nginx
 #
 # Special handling:
 # REVPROXY for "acarshub" will automatically configure the following additional parameters:
