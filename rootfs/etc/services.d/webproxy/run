@@ -88,6 +88,7 @@ then
     # Finally add the default index files to this configuration:
     # Add index.php to the list if you are using PHP
     printf "index index.html index.htm index.php index.nginx-debian.html;\n"  >> /run/nginx/locations.conf
+    chmod a+r /run/nginx/locations.conf
 
 elif [[ ! -f /run/nginx/locations.conf ]]
 then

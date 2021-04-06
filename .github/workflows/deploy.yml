@@ -4,7 +4,7 @@ on:
 
   # Build and deploy the image on pushes to master branch
   push:
-    branches: 
+    branches:
       - master
       - main
 
@@ -23,9 +23,9 @@ jobs:
     #  - IMAGE: image name on dockerhub
     env:
       REPO: kx1t
-      IMAGE: planefence
+      IMAGE: webproxy
       PUSH: true
-    
+
     steps:
 
       # Check out our code
@@ -36,7 +36,7 @@ jobs:
       # Hit an issue where arm builds would fail with cURL errors regarding intermediary certificates when downloading from github (ie: deploy-s6-overlay).
       # After many hours of troubleshooting, the workaround is to pre-load the image's rootfs with the CA certificates from the runner.
       # This problem may go away in future.
-      - 
+      -
         name: Copy CA Certificates from GitHub Runner to Image rootfs
         run: |
           ls -la /etc/ssl/certs/
@@ -45,7 +45,7 @@ jobs:
           cp --no-dereference /etc/ssl/certs/*.crt ./rootfs/etc/ssl/certs
           cp --no-dereference /etc/ssl/certs/*.pem ./rootfs/etc/ssl/certs
           cp --no-dereference /usr/share/ca-certificates/mozilla/*.crt ./rootfs/usr/share/ca-certificates/mozilla
-      
+
       # Set up QEMU for multi-arch builds
       -
         name: Set up QEMU
@@ -94,7 +94,7 @@ jobs:
     #  - IMAGE: image name on dockerhub
     env:
       REPO: kx1t
-      IMAGE: planefence
+      IMAGE: webproxy
       PUSH: true
 
     steps:
@@ -107,7 +107,7 @@ jobs:
       # Hit an issue where arm builds would fail with cURL errors regarding intermediary certificates when downloading from github (ie: deploy-s6-overlay).
       # After many hours of troubleshooting, the workaround is to pre-load the image's rootfs with the CA certificates from the runner.
       # This problem may go away in future.
-      - 
+      -
         name: Copy CA Certificates from GitHub Runner to Image rootfs
         run: |
           ls -la /etc/ssl/certs/
@@ -116,7 +116,7 @@ jobs:
           cp --no-dereference /etc/ssl/certs/*.crt ./rootfs/etc/ssl/certs
           cp --no-dereference /etc/ssl/certs/*.pem ./rootfs/etc/ssl/certs
           cp --no-dereference /usr/share/ca-certificates/mozilla/*.crt ./rootfs/usr/share/ca-certificates/mozilla
-      
+
       # Set up QEMU for multi-arch builds
       -
         name: Set up QEMU
@@ -141,7 +141,7 @@ jobs:
         name: Get image architecture suffix
         run: |
           echo "ARCH_TAG=$(echo '${{ matrix.docker-platform }}' | cut -d '/' -f2- | tr -s '/' '_')" >> $GITHUB_ENV
-      
+
       # Show archictecture suffix
       -
         name: Show image architecture suffix
