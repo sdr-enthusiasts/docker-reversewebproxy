@@ -1,0 +1,76 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+APPNAME="$(hostname)/reverse-proxy"
+
+echo "[$APPNAME][$(date)] Started as an s6 service"
+echo "Initial run -- installing NXINX web service
+
+# create run directory. This is where the locations.conf file will be located.
+mkdir -p /run/revproxy
+chmod a+rwx /run/revproxy
+
+# auto-create the locations.conf file if $AUTOGENERATE is set to yes
+if [[ "$AUTOGENERATE" == "yes" ]]
+then
+    # back up any existing locations.conf file:
+    mv -f /run/locations.conf /run/locations.conf.bkup-$(date +%y%m%d%H%M%S)
+
+    # configure the locations.conf file:
+    # first read the REVPROXY and REDIRECT environment variables into an array:
+    IFS="," read -ra proxy_array <<< "$(echo $REVPROXY|tr -d '[:blank:]')"
+    IFS="," read -ra redir_array <<< "$(echo $REDIRECT|tr -d '[:blank:]')"
+
+    # add the redirects to the locations.conf file:
+    for (i=0; i<${#redir_array[@]}; i++)
+    do
+        # get the location and destination for this array element:
+        location="${redir_array[i]%%|*}"
+        destination="${redir_array[i]##*|}"
+
+        # fix prefixes and suffixes if necessary:
+        [[ "${location:0:1}" != "/" ]] && location="/$location"
+        [[ "${location: -1}" != "/" ]] && location="$location/"
+        [[ "${destination:0:4}" != "http" ]] && destination="http://$destination"
+        [[ "${destination:0:2}" == "//" ]] && destination="http:$destination"
+        [[ "${destination: -1}" != "/" ]] && destination="$destination/"
+
+        # Now print the location entry:
+        printf "location %s {\n" "$location" >> /etc/nginx/locations.conf
+        printf "    return 301 %s;\n" "$destination"  >> /etc/nginx/locations.conf
+        printf "}\n\n"  >> /etc/nginx/locations.conf
+
+    done
+
+
+    # now loop through the array and create location elements for each entry:
+    for (i=0; i<${#proxy_array[@]}; i++)
+    do
+        # get the location and destination for this array element:
+        location="${proxy_array[i]%%|*}"
+        destination="${proxy_array[i]##*|}"
+
+        # fix prefixes and suffixes if necessary:
+        [[ "${location:0:1}" != "/" ]] && location="/$location"
+        [[ "${location: -1}" != "/" ]] && location="$location/"
+        [[ "${destination:0:4}" != "http" ]] && destination="http://$destination"
+        [[ "${destination:0:2}" == "//" ]] && destination="http:$destination"
+        [[ "${destination: -1}" != "/" ]] && destination="$destination/"
+
+        # Now print the location entry:
+        printf "location %s {\n" "$location" >> /etc/nginx/locations.conf
+        printf "    proxy_pass %s;\n" "$destination"  >> /etc/nginx/locations.conf
+
+        # Special handling for acarshub:
+        if [[ "$location" == "/acarshub/" ]]
+        then
+            printf "    proxy_set_header Upgrade \$http_upgrade;\n"  >> /etc/nginx/locations.conf
+            printf "    proxy_set_header Connection \$http_connection;\n"  >> /etc/nginx/locations.conf
+            printf "    proxy_set_header Host \$http_host;\n"  >> /etc/nginx/locations.conf
+        fi
+
+        # close off the location entry:
+        printf "}\n\n"  >> /etc/nginx/locations.conf
+    done
+
+fi

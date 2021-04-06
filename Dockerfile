@@ -27,7 +27,7 @@ RUN set -x && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
         ${KEPT_PACKAGES[@]} \
         ${TEMP_PACKAGES[@]} && \
-#
+        #
 # Install noisecapt (it was copied in at the top of the script, so this is
 # mainly moving files to the correct location):
 #
