@@ -4,7 +4,7 @@
 APPNAME="$(hostname)/reverse-proxy"
 
 echo "[$APPNAME][$(date)] Started as an s6 service"
-echo "Initial run -- installing NXINX web service"
+echo "[$APPNAME][$(date)] Initial run -- installing NXINX web service"
 
 # create run directory. This is where the locations.conf file will be located.
 mkdir -p /run/revproxy/html
@@ -27,11 +27,16 @@ then
     IFS="," read -ra redir_array <<< "$(echo $REDIRECT|tr -d '[:blank:]')"
 
     # add the redirects to the locations.conf file:
-    for (i=0; i<${#redir_array[@]}; i++)
+    for ((i=0; i<${#redir_array[@]}; i++))
     do
         # get the location and destination for this array element:
         location="${redir_array[i]%%|*}"
         destination="${redir_array[i]##*|}"
+
+        if [[ "$location" == "" ]] || [[ "$destination" == "" ]]
+        then
+            continue;
+        fi
 
         # fix prefixes and suffixes if necessary:
         [[ "${location:0:1}" != "/" ]] && location="/$location"
@@ -46,11 +51,16 @@ then
     done
 
     # now loop through the array and create location elements for each entry:
-    for (i=0; i<${#proxy_array[@]}; i++)
+    for ((i=0; i<${#proxy_array[@]}; i++))
     do
         # get the location and destination for this array element:
         location="${proxy_array[i]%%|*}"
         destination="${proxy_array[i]##*|}"
+
+        if [[ "$location" == "" ]] || [[ "$destination" == "" ]]
+        then
+            continue;
+        fi
 
         # fix prefixes and suffixes if necessary:
         [[ "${location:0:1}" != "/" ]] && location="/$location"
@@ -74,6 +84,11 @@ then
         # close off the location entry:
         printf "}\n\n"  >> /run/nginx/locations.conf
     done
+
+    # Finally add the default index files to this configuration:
+    # Add index.php to the list if you are using PHP
+    printf "index index.html index.htm index.php index.nginx-debian.html;\n"  >> /run/nginx/locations.conf
+
 elif [[ ! -f /run/nginx/locations.conf ]]
 then
     # No locations.conf is found, and none is generated either. Complain and stop the container:
