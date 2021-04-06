@@ -98,7 +98,7 @@ then
     echo "| or provide a well-formed locations.conf file  |"
     echo "| Please do so and then restart the container.  |"
     echo "-------------------------------------------------"
-    s6-svscanctl -t /var/run/s6/services
+    #s6-svscanctl -t /var/run/s6/services
     # if the previous command somehow fails to bring down the container, we'll just loop forevah:
     while true; do sleep 99999; done
 else
@@ -108,7 +108,7 @@ fi
 # now copy a bunch of files into place:
 cp -f /root/nginx.conf /etc/nginx
 cp -f /root/default /etc/nginx/sites-available/
-ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
+ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 # now test the nginx configuration
 if ! /usr/sbin/nginx -g 'master_process on;' -t -q
@@ -121,7 +121,7 @@ then
     echo "| definition of REVPROXY or REDIRECT in your     |"
     echo "| docker-compose.yml file. Go check and fix them!|"
     echo "--------------------------------------------------"
-    s6-svscanctl -t /var/run/s6/services
+    #s6-svscanctl -t /var/run/s6/services
     # if the previous command somehow fails to bring down the container, we'll just loop forevah:
     while true; do sleep 99999; done
 fi
