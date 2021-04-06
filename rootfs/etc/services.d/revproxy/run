@@ -15,7 +15,7 @@ chmod a+rw /run/revproxy/*
 chmod a+r /run/revproxy/html/*
 
 # auto-create the locations.conf file if $AUTOGENERATE is set to yes
-if [[ "$AUTOGENERATE" == "yes" ]]
+if [[ "$AUTOGENERATE" == "ON" ]]
 then
     echo "[$APPNAME][$(date)] Auto-generating locations.conf file"
     # back up any existing locations.conf file:
