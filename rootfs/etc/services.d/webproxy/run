@@ -111,8 +111,18 @@ cp -f /root/nginx.conf /etc/nginx
 cp -f /root/default /etc/nginx/sites-available/
 ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
+# set logging to what VERBOSELOG says. Any value other than OFF is interpreted to be ON
+if [[ "$VERBOSELOG"="OFF" ]]
+then
+    sed -i 's|\(^\s*access_log \).*|\1off;|' /etc/nginx/nginx.conf
+    sed -i 's|\(^\s*error_log \).*|\1off;|' /etc/nginx/nginx.conf
+else
+    sed -i 's|\(^\s*access_log \).*|\1/dev/stdout;|' /etc/nginx/nginx.conf
+    sed -i 's|\(^\s*error_log \).*|\1/dev/stdout;|' /etc/nginx/nginx.conf
+fi
+
 # now test the nginx configuration
-if ! /usr/sbin/nginx -g 'master_process on;' -t -q
+if ! /usr/sbin/nginx -g 'daemon off;' -t -q
 then
     # nginx config problem. Complain and stop the container:
     echo "--------------------------------------------------"

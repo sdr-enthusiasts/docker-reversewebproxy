@@ -10,15 +10,23 @@ services:
     ports:
       - 80:80
     environment:
-      #
+      # ----------------------------------------------------------------------------------------
       # if AUTOGENERATE is set to ON, it will automatically create a config based on the REVPROXY and REDIRECT parameters below
-      # if it is set to OFF, you should map the volume as shown in the "volumes" section below, and you can edit the "locations.conf" file in that directory
+      # if it is set to OFF, you should map the volume as shown in the "volumes" section below, and you can edit the "locations.conf" file in that directory.
+      #
+      # If you want to have the system auto-generate a locations.conf file that you will subsequently edit, you can set
+      # AUTOGENERATE=ON, then start the container once, stop the container again, and edit the system generated
+      # locations.conf file. Then, before restarting, please make sure to set AUTOGENERATE=OFF below.
       - AUTOGENERATE=ON
       # ----------------------------------------------------------------------------------------
+      # VERBOSELOGS indicates if the web server logs are written to the Docker Container logs
+      # (accessible with `docker logs webproxy`) or that they are discarded. Values are ON (default) or OFF
+      - VERBOSELOG=ON
+      # ----------------------------------------------------------------------------------------
       # REVPROXY has the following format:
-      #     urltarget|proxytarget
+      #     urltarget|destination
       # For example, for REVPROXY=readsb|http://10.0.0.191:8080,
-      # a user browing to http://mydomain/readsb will be proxied to http://10.0.0.191:8080
+      # a user browsing to http://mydomain/readsb will be proxied to http://10.0.0.191:8080
       # The user's browser will *never* see the internal IP address.
       # Note - both the urltarget and the destination must be URLs or directories, and cannot be
       # a file name
@@ -35,7 +43,7 @@ services:
       # ----------------------------------------------------------------------------------------
       # REDIRECT has the following format:
       #     urltarget|redirection
-      # For example, for REVPROXY=/planefinder/setup.html|http://10.0.0.191:8086/setup.html,
+      # For example, for REDIRECT=/planefinder/setup.html|http://10.0.0.191:8086/setup.html,
       # a user browing to http://mydomain/planefinder/setup.html will be redirected to http://10.0.0.191:8086/setup.html
       # The user's browser will show the redirection address and try to reach it. If the destination is not reachable (for example
       # because it is on a isolated subnet), the browser won't be able to render the page.

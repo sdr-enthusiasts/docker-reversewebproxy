@@ -20,7 +20,7 @@ RUN set -x && \
     TEMP_PACKAGES+=(file) && \
     TEMP_PACKAGES+=(curl) && \
     KEPT_PACKAGES+=(ca-certificates) && \
-    KEPT_PACKAGES+=(procps nano aptitude netcat) && \
+    # KEPT_PACKAGES+=(procps nano aptitude netcat) && \
     KEPT_PACKAGES+=(nginx) && \
 # Install all these packages:
     apt-get update && \
