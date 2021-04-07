@@ -46,7 +46,7 @@ A "*" means that this is the default value
 | Parameter | Values | Description |
 |-----------|--------|-------------|
 | `AUTOGENERATE` | `ON`*, `OFF` | Determines if the system will use the `REVPROXY` and `REDIRECT` settings of the `docker-compose.yml` file (`ON`), or a manually generated `locations.conf` file (`OFF`). |
-| VERBOSELOG | `ON`*, `OFF` | Determines if the internal web service Access and Error logs will be written to the Docker log (accessible with `docker logs -f webproxy`) (`ON`), or that logging will be switched `OFF`.
+| `VERBOSELOG` | `ON`*, `OFF` | Determines if the internal web service Access and Error logs will be written to the Docker log (accessible with `docker logs -f webproxy`) (`ON`), or that logging will be switched `OFF`.
 
 You may have to adjust your `port:` and your `volumes:` mapping to your liking, especially if you are not running on the Raspberry Pi standard `pi` account.
 
