@@ -71,6 +71,13 @@ After you run the container the first time, it will create a directory named `~/
 
 BEFORE restarting the container (important!!) edit `docker-compose.yml` and set `AUTOGENERATE=OFF`. If you don't do this, your newly created `locations.conf` file will be overwritten by the auto-generated one based on the `REVPROXY` and `REDIRECT` settings. (There will be a time-stamped backup file of your `locations.conf` file, so not everything is lost!)
 
+### Host your own web pages
+You can place HTML and other web files in `~/.webproxy/html`. An example `index.html` is already provided, and can be reached by browsing to the root URL of your system.
+At this time, features like `php` are not enabled. If you are interested in this, please file a feature request at [issues](https://github.com/kx1t/docker-reversewebproxy/issues).
+Note -- the web server inside the container does NOT run as `root`, so you must make sure that there are read permissions for "all" (`chmod a+r`) for any files you place in the `html` directory.
+Feel free to create additional subdirectories if needed for your project.
+Also note -- the website may not be reachable if you redirected or proxied `/` to some other service.
+
 ## Troubleshooting
 
 - Issue: `docker-compose up -d` exits with an error
