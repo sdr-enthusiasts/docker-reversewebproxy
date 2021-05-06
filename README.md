@@ -81,13 +81,16 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
 ## Troubleshooting
 
 - Issue: `docker-compose up -d` exits with an error
-- Solution: you probably have a typo on `docker-compose.yml`. Make sure that all lines are at the exact indentation level, and that the last entry in the `REVPROXY` and `REDIRECT` lists do not end on a comma.
+- Solution: you probably have a typo in `docker-compose.yml`. Make sure that all lines are at the exact indentation level, and that the last entry in the `REVPROXY` and `REDIRECT` lists do not end on a comma.
 
 - Issue: The container complaints about port mappings during start-up
-- Solution: you probably are already running another service on the same port on your host machine. The port exposed to the world is the first `80` in `- PORTS: 80:80` in `docker-compose.yml`. You can do one of two things: scour your system for other web services on that port (another container? `lighttpd`? `nginx`?) and disable that service (or put it on another port), or change the first `80` to some other port number.
+- Solution: you probably are already running another service on the same port on your host machine. The port exposed to the world is the first `80` in `- PORTS: 80:80` in `docker-compose.yml`. You can do one of two things: scour your system for other web services on that port (another container? `lighttpd`? `nginx`?) and disable that service (or put it on another port), or change the first `80` to some other port number. For `docker` containers, you can check the ports that are used by each container with this command: `docker ps`
 
 - Issue: Everything starts up fine, but the website doesn't render any pages
 - Solution: Please take a look at the container log (`docker logs webproxy`) to see if there are any errors. The log will be explicit about some of the more obvious issues.
+
+- Issue: I have troubles getting the Webproxy to work with VRS (Virtual Radar Server)
+- Solution: in VRS, make sure to configure this: VRS Options -> Website -> Website Customisation -> Proxy Type = Reverse 
 
 ## Acknowledgements
 - @Mikenye for encouraging me to look into Docker, and to suggest we need a Reverse Web Proxy to solve our web service issues. He also wrote the Github Actions scripts and taught me how to work with the `s6` service layer.
