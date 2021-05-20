@@ -94,11 +94,11 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
 
 - Issue: Planefinder doesn't work correctly
 - Solution: make sure that you have added the following to the `REVPROXY` variable:
-```
-planefinder|http://10.0.0.191:8086,
-ajax|http://10.0.0.191:8086/ajax,
-assets|http://10.0.0.191:8086/assets,
-```
+   ```
+   planefinder|http://10.0.0.191:8086,
+   ajax|http://10.0.0.191:8086/ajax,
+   assets|http://10.0.0.191:8086/assets,
+   ```
 
 ## Acknowledgements
 - @Mikenye for encouraging me to look into Docker, and to suggest we need a Reverse Web Proxy to solve our web service issues. He also wrote the Github Actions scripts and taught me how to work with the `s6` service layer.
