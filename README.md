@@ -90,7 +90,15 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
 - Solution: Please take a look at the container log (`docker logs webproxy`) to see if there are any errors. The log will be explicit about some of the more obvious issues.
 
 - Issue: I have troubles getting the Webproxy to work with VRS (Virtual Radar Server)
-- Solution: in VRS, make sure to configure this: VRS Options -> Website -> Website Customisation -> Proxy Type = Reverse 
+- Solution: in VRS, make sure to configure this: VRS Options -> Website -> Website Customisation -> Proxy Type = Reverse
+
+- Issue: Planefinder doesn't work correctly
+- Solution: make sure that you have added the following to the `REVPROXY` variable:
+```
+planefinder|http://10.0.0.191:8086,
+ajax|http://10.0.0.191:8086/ajax,
+assets|http://10.0.0.191:8086/assets,
+```
 
 ## Acknowledgements
 - @Mikenye for encouraging me to look into Docker, and to suggest we need a Reverse Web Proxy to solve our web service issues. He also wrote the Github Actions scripts and taught me how to work with the `s6` service layer.

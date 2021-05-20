@@ -37,6 +37,7 @@ services:
                  planefence|http://10.0.0.191:8083,
                  planefinder|http://10.0.0.191:8086,
                  ajax|http://10.0.0.191:8086/ajax,
+                 assets|http://10.0.0.191:8086/assets,
                  graphs|http://10.0.0.191:8080/graphs,
                  radar|http://10.0.0.191:8080/radar,
                  acarshub|http://10.0.0.188:80
