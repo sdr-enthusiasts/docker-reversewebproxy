@@ -22,6 +22,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(ca-certificates) && \
     # KEPT_PACKAGES+=(procps nano aptitude netcat) && \
     KEPT_PACKAGES+=(nginx) && \
+    KEPT_PACKAGES+=(python3-certbot-nginx) && \
 # Install all these packages:
     apt-get update && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\

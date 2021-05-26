@@ -1,0 +1,99 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+APPNAME="$(hostname)/ssl"
+
+echo "[$APPNAME][$(date)] Started as an s6 service"
+
+# If SSL is not ENABLED, stop forevah
+if [[ "${SSL^^}" != "ENABLED" ]]
+then
+    echo "[$APPNAME][$(date)] SSL disabled"
+    sleep infinity
+fi
+
+# Now wait until NGINX is up
+echo "[$APPNAME][$(date)] Waiting for NGINX to come online..."
+until [[ -f /tmp/nginx.up ]]
+do
+    sleep 1
+done
+echo "[$APPNAME][$(date)] NGINX is online."
+
+# Do some checks to ensure that there is enough info to request domains:
+if (( ${#SSL_DOMAIN[@]} == 0 ))
+then
+    # No domains in environment files. Complain and stop trying to install certificates:
+    echo "--------------------------------------------------"
+    echo "|      STOP ! NGINX SSL configuration problem    |"
+    echo "| You must define at least 1 SSL_DOMAIN in your  |"
+    echo "| docker-compose.yml file. Go check and fix it!  |"
+    echo "| The container will continue without SSL.       |"
+    echo "--------------------------------------------------"
+    sleep infinity
+fi
+
+if ! grep -E "\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}\b" <<< "$SSL_EMAIL" >/dev/null
+then
+    # No domains in environment files. Complain and stop trying to install certificates:
+    echo "--------------------------------------------------------"
+    echo "|      STOP ! NGINX SSL configuration problem          |"
+    echo "| You must provide a valid email in SSL_EMAIL in your  |"
+    echo "| docker-compose.yml file. Go check and fix it!        |"
+    echo "| The container will continue without SSL.             |"
+    echo "--------------------------------------------------------"
+    sleep infinity
+fi
+
+if [[ "${SSL_TOS,,}" != "accept" ]]
+then
+    # No domains in environment files. Complain and stop trying to install certificates:
+    echo "--------------------------------------------------------------------------"
+    echo "|      STOP ! NGINX SSL configuration problem                            |"
+    echo "| You must accept the ACME Account TOS found at                          |"
+    echo "| https://letsencrypt.org/repository/#let-s-encrypt-subscriber-agreement |"
+    echo "| and set SSL_TOS=ACCEPT in your docker-compose.yml file.                |"
+    echo "| Go check and fix it! The container will continue without SSL.          |"
+    echo "--------------------------------------------------------------------------"
+    sleep infinity
+else
+    agree_tos="--agree-tos"
+fi
+
+# Load up ${newdomains[@]} with any domain names there's not yet a certificate for
+newdomains=()
+domains=($(/usr/bin/certbot certificates 2>/dev/null | awk '/Domains:/ { $1=""; print substr($0,2) }'))
+
+for (( i=0; i<${#SSL_DOMAIN[@]}; i++ ))
+do
+    [[ ! " ${domains[@]} " =~ " ${SSL_DOMAIN[i]} " ]] && newdomains+=(${SSL_DOMAIN[i]})
+done
+
+# Figure out if we want to redirect all queries to SSL?
+[[ "${SSL_REDIRECT,,}" == "enabled" ]] && redirect="-- redirect" || redirect=""
+
+# Now get new certs for these newdomains:
+# prepend "-d " before each domain name:
+newdomains=( "${newdomains[@]/#/-d _}" )
+if ! /usr/bin/certbot --quiet --nginx $agree-tos $redirect -m $SSL_EMAIL ${newdomains[@]}
+then
+    # Something went wrong
+    echo "--------------------------------------------------"
+    echo "| STOP ! NGINX CertBot SSL installation problem  |"
+    echo "| Please see the message above.                  |"
+    echo "|                                                |"
+    echo "| The container will continue without SSL.       |"
+    echo "--------------------------------------------------"
+    sleep infinity
+else
+    echo "[$APPNAME][$(date)] SSL Certificates installed for these domains:"
+    /usr/bin/certbot certificates
+    [[ "${SSL_REDIRECT,,}" == "enabled" ]] && echo "[$APPNAME][$(date)] All web traffic will be redirected to SSL."
+    while :
+    do
+        sleep 1d
+        echo "[$APPNAME][$(date)] Checking if SSL certs need renewing..."
+        /usr/bin/certbot renew --quiet
+        /usr/bin/certbot certificates
+    done
+fi

@@ -66,6 +66,19 @@ For example, for `REDIRECT=/planefinder/setup.html|http://10.0.0.191:8086/setup.
 Note - for `REDIRECT`, both the urltarget and the redirection MAY BE a URL or a file names.
 Similar to `REVPROXY`, `REDIRECT` can contain comma separated entries. See example in the default `docker-compose.yml`.
 
+### Configuration of SSL
+The following settings will enable SSL to be part of the reverse proxy.
+SSL certificates are provided by Lets Encrypt.
+
+A "*" means that this is the default value
+| Parameter | Values | Description |
+|-----------|--------|-------------|
+| `SSL` | `DISABLED`*, `ENABLED` | Enable the installation of SSL certificates |
+| `SSL_EMAIL` | your email address | A valid email address is needed to get a certificate |
+| `SSL_DOMAIN` | A list of web domains | We will enabled SSL for these. Note - they must be reachable domains at this container for the SSL certificate to be successfully installed! |
+| `SSL_TOS` | `REJECT`*, `ACCEPT` | Indicates your acceptance of the T&S's for the SSL certificateset forth at https://letsencrypt.org/repository/#let-s-encrypt-subscriber-agreement |
+| ` SSL_REDIRECT` | `DISABLED`, `ENABLED`* | When set to ENABLED, all incoming non-SSL traffic is redirected to use SSL
+
 ### Advanced Setup
 After you run the container the first time, it will create a directory named `~/webproxy`. If `AUTOGENERATE=ON`, there will be a `locations.conf` file. There will also be a `locations.conf.example` file that contains setup examples. If you know how to write a `nginx` configuration file, feel free to edit the `locations.conf` and add any options to your liking.
 

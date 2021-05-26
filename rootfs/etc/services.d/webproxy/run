@@ -143,7 +143,9 @@ fi
 echo "[$APPNAME][$(date)] Starting the NGINX service..."
 while true
 do
+    touch /tmp/nginx.up
     /usr/sbin/nginx -g 'daemon off;'
+    rm -f /tmp/nginx.up
     echo "[$APPNAME][$(date)] NGINX Service has failed!"
     sleep 10
     echo "[$APPNAME][$(date)] Restarting NGINC Service now..."
