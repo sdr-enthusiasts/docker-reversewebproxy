@@ -12,7 +12,7 @@ cp -n /root/locations.conf.example /run/nginx
 cp -n /root/index.html /run/nginx/html
 chmod a+rwx /run/nginx /run/nginx/html
 chmod a+rw /run/nginx/*
-chmod a+r /run/nginx/html/*
+chmod a+rw /run/nginx/html/*
 
 # auto-create the locations.conf file if $AUTOGENERATE is set to yes
 if [[ "$AUTOGENERATE" == "ON" ]]
@@ -109,8 +109,8 @@ else
 fi
 
 # now copy a bunch of files into place:
-cp -f /root/nginx.conf /etc/nginx
-cp -f /root/default /etc/nginx/sites-available/
+#cp -f /root/nginx.conf /etc/nginx
+#cp -f /root/default /etc/nginx/sites-available/
 ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 # set logging to what VERBOSELOG says. Any value other than OFF is interpreted to be ON

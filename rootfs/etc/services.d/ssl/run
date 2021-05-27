@@ -79,7 +79,7 @@ done
 newdomains=( "${newdomains[@]/#/-d }" )
 
 # Now get new certs for these newdomains:
-if ! /usr/bin/certbot --quiet --nginx "$agree_tos" "$redirect" -m $SSL_EMAIL ${newdomains[@]}
+if (( ${#newdomains[@]} > 0 )) && ! /usr/bin/certbot --quiet --nginx "$agree_tos" "$redirect" -m $SSL_EMAIL ${newdomains[@]}
 then
     # Something went wrong
     echo Error in:
