@@ -9,6 +9,7 @@ services:
         restart: always
         ports:
             - 80:80
+            - 443:443
         environment:
             # ----------------------------------------------------------------------------------------
             # if AUTOGENERATE is set to ON, it will automatically create a config based on the REVPROXY and REDIRECT parameters below
