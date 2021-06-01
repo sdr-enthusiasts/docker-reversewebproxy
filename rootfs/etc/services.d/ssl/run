@@ -79,6 +79,8 @@ else
     agree_tos="--agree-tos"
 fi
 
+[[ "${SSL_TEST}" != "" ]] && staging="--dry-run" || staging=""
+
 # Load up ${newdomains[@]} with any domain names there's not yet a certificate for
 newdomains=()
 domains=($(/usr/bin/certbot certificates 2>/dev/null | awk '/Domains:/ { $1=""; print substr($0,2) }'))
@@ -96,7 +98,7 @@ done
 newdomains=( "${newdomains[@]/#/-d }" )
 
 # Now get new certs for these newdomains:
-if (( ${#newdomains[@]} > 0 )) && ! /usr/bin/certbot --quiet --nginx "$agree_tos" "$redirect" -m $SSL_EMAIL ${newdomains[@]}
+if (( ${#newdomains[@]} > 0 )) && ! /usr/bin/certbot --quiet --nginx "$agree_tos" "$redirect" "$staging" -m $SSL_EMAIL ${newdomains[@]}
 then
     # Something went wrong
     echo Error in:
