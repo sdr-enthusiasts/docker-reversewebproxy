@@ -7,13 +7,6 @@ APPNAME="$(hostname)/ssl"
 
 echo "[$APPNAME][$(date)] Started as an s6 service"
 
-# If SSL is not ENABLED, stop forevah
-if [[ "${SSL^^}" != "ENABLED" ]]
-then
-    echo "[$APPNAME][$(date)] SSL disabled"
-    sleep infinity
-fi
-
 # Now wait until NGINX is up
 echo "[$APPNAME][$(date)] Waiting for NGINX to come online..."
 until [[ -f /tmp/nginx.up ]]
@@ -21,6 +14,30 @@ do
     sleep 1
 done
 echo "[$APPNAME][$(date)] NGINX is online."
+
+# If SSL is not ENABLED, stop forevah
+if [[ "${SSL^^}" != "ENABLED" ]]
+then
+    echo "[$APPNAME][$(date)] SSL disabled"
+    cp -f /etc/nginx/sites-available/default.org /etc/nginx/sites-available/default
+    killall /usr/sbin/nginx # this will tell s6 to restart the web server process
+    sleep infinity
+fi
+
+
+# First let's check if there's a backup. This backup contains the latest, so let's make sure it's installed
+if [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]]
+then
+    # if /etc/letsencrypt does not exist, but there is a backup, restore it
+    tar xvpfz --overwrite letsencrypt.tgz -C /
+elif [[ -d /etc/letsencrypt ]]
+then
+    # let's make sure it's backed up before we do anything else
+    mkdir -p /run/nginx/.letsencrypt
+    chmod u=rwx,go= /run/nginx/.letsencrypt
+    tar --create --gzip --file=/run/nginx/.letsencrypt/letsencrypt.tgz /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default
+    chmod u=rx,go= /run/nginx/.letsencrypt
+fi
 
 # Do some checks to ensure that there is enough info to request domains:
 if (( ${#SSL_DOMAIN[@]} == 0 ))
@@ -95,11 +112,25 @@ else
     echo "[$APPNAME][$(date)] SSL Certificates installed for these domains:"
     /usr/bin/certbot certificates
     [[ "${SSL_REDIRECT,,}" == "enabled" ]] && echo "[$APPNAME][$(date)] All web traffic will be redirected to SSL."
+    # back things up again:
+    mkdir -p /run/nginx/.letsencrypt
+    chmod u=rwx,go= /run/nginx/.letsencrypt
+    tar --create --gzip --file=/run/nginx/.letsencrypt/letsencrypt.tgz /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default
+    chmod u=rx,go= /run/nginx/.letsencrypt
+    echo "[$APPNAME][$(date)] nginx will restart now to ensure SSL is enabled"
+    killall /usr/sbin/nginx # restart nginx with the SSL stuff installed
     while :
     do
         sleep 1d
         echo "[$APPNAME][$(date)] Checking if SSL certs need renewing..."
         /usr/bin/certbot renew --quiet
         /usr/bin/certbot certificates
+        # back things up again:
+        mkdir -p /run/nginx/.letsencrypt
+        chmod u=rwx,go= /run/nginx/.letsencrypt
+        tar --create --gzip --file=/run/nginx/.letsencrypt/letsencrypt.tgz /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default
+        chmod u=rx,go= /run/nginx/.letsencrypt
+        echo "[$APPNAME][$(date)] nginx will restart now to ensure SSL is enabled"
+        killall /usr/sbin/nginx
     done
 fi
