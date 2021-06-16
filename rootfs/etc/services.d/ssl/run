@@ -80,7 +80,7 @@ else
     agree_tos="--agree-tos"
 fi
 
-[[ "${SSL_TEST}" != "" ]] && staging="--dry-run" || staging=""
+#[[ "${SSL_TEST}" != "" ]] && staging="--test-cert" || staging=""
 
 # Load up ${newdomains[@]} with any domain names there's not yet a certificate for
 newdomains=()
@@ -99,11 +99,11 @@ done
 newdomains=( "${newdomains[@]/#/-d }" )
 
 # Now get new certs for these newdomains:
-if (( ${#newdomains[@]} > 0 )) && ! /usr/bin/certbot run --nginx "$agree_tos" "$redirect" "$staging" -m $SSL_EMAIL ${newdomains[@]}
+if (( ${#newdomains[@]} > 0 )) && ! /usr/bin/certbot run --quiet --nginx ${agree_tos} ${redirect} -m "${SSL_EMAIL}" ${newdomains[@]}
 then
     # Something went wrong
     echo Error in:
-    echo "/usr/bin/certbot run --nginx $agree_tos $redirect $staging -m $SSL_EMAIL ${newdomains[@]}"
+    echo "/usr/bin/certbot run --quiet --nginx ${agree_tos} ${redirect} -m \"${SSL_EMAIL}\" ${newdomains[@]}"
     echo "--------------------------------------------------"
     echo "| STOP ! NGINX CertBot SSL installation problem  |"
     echo "| Please see the message above.                  |"
