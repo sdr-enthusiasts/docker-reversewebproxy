@@ -148,5 +148,5 @@ do
     rm -f /tmp/nginx.up
     echo "[$APPNAME][$(date)] NGINX Service has failed!"
     sleep 10
-    echo "[$APPNAME][$(date)] Restarting NGINC Service now..."
+    echo "[$APPNAME][$(date)] Restarting NGINX Service now..."
 done
