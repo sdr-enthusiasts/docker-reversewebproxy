@@ -28,6 +28,7 @@ fi
 if [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]]
 then
     # if there is a backup, restore it
+    echo "[$APPNAME][$(date)] Backup of certificates found. Restoring..."
     tar --overwrite -xzf /run/nginx/.letsencrypt/letsencrypt.tgz -C /
 elif [[ -d /etc/letsencrypt ]]
 then
@@ -94,6 +95,8 @@ done
 
 # Figure out if we want to redirect all queries to SSL?
 [[ "${SSL_REDIRECT,,}" == "enabled" ]] && redirect="--redirect" || redirect=""
+
+(( ${#newdomains[@]} > 0 )) && echo "[$APPNAME][$(date)] New domains detected - attempting to get certificates for ${newdomains[@]}" || echo "[$APPNAME][$(date)] No new domains detected"
 
 # prepend "-d " before each domain name:
 newdomains=( "${newdomains[@]/#/-d }" )
