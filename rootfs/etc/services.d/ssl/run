@@ -18,24 +18,25 @@ echo "[$APPNAME][$(date)] NGINX is online."
 # If SSL is not ENABLED, stop forevah
 if [[ "${SSL^^}" != "ENABLED" ]]
 then
-    echo "[$APPNAME][$(date)] SSL disabled"
+    echo "[$APPNAME][$(date)] SSL disabled. Restarting nginx with non-SSL configuration."
     cp -f /etc/nginx/sites-available/default.org /etc/nginx/sites-available/default
     killall /usr/sbin/nginx # this will tell s6 to restart the web server process
     sleep infinity
 fi
 
-
 # First let's check if there's a backup. This backup contains the latest, so let's make sure it's installed
 if [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]]
 then
-    # if /etc/letsencrypt does not exist, but there is a backup, restore it
-    tar xvpfz --overwrite letsencrypt.tgz -C /
+    # if there is a backup, restore it
+    tar --overwrite -xzf /run/nginx/.letsencrypt/letsencrypt.tgz -C /
 elif [[ -d /etc/letsencrypt ]]
 then
-    # let's make sure it's backed up before we do anything else
+    # If there's no backup but there is /etc/letsencrypt, then let's make sure it's backed up before we do anything else
     mkdir -p /run/nginx/.letsencrypt
     chmod u=rwx,go= /run/nginx/.letsencrypt
-    tar --create --gzip --file=/run/nginx/.letsencrypt/letsencrypt.tgz /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default
+    find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist
+    tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist
+    rm /tmp/tarlist
     chmod u=rx,go= /run/nginx/.letsencrypt
 fi
 
@@ -114,12 +115,20 @@ else
     echo "[$APPNAME][$(date)] SSL Certificates installed for these domains:"
     /usr/bin/certbot certificates
     [[ "${SSL_REDIRECT,,}" == "enabled" ]] && echo "[$APPNAME][$(date)] All web traffic will be redirected to SSL."
-    # back things up again:
+
+    # back things up again, keep a copy of the previous TGZ if there was one:
     mkdir -p /run/nginx/.letsencrypt
     chmod u=rwx,go= /run/nginx/.letsencrypt
-    tar --create --gzip --file=/run/nginx/.letsencrypt/letsencrypt.tgz /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default
+
+    [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]] && mv -f /run/nginx/.letsencrypt/letsencrypt.tgz /run/nginx/.letsencrypt/letsencrypt-backup.tgz
+
+    find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist
+    tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist
+    rm /tmp/tarlist
     chmod u=rx,go= /run/nginx/.letsencrypt
+
     echo "[$APPNAME][$(date)] nginx will restart now to ensure SSL is enabled"
+    echo "[$APPNAME][$(date)] the container will check every 24 hours to see if the certificates need renewal."
     killall /usr/sbin/nginx # restart nginx with the SSL stuff installed
     while :
     do
@@ -128,11 +137,11 @@ else
         /usr/bin/certbot renew --quiet
         /usr/bin/certbot certificates
         # back things up again:
-        mkdir -p /run/nginx/.letsencrypt
         chmod u=rwx,go= /run/nginx/.letsencrypt
-        tar --create --gzip --file=/run/nginx/.letsencrypt/letsencrypt.tgz /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default
+        [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]] && mv -f /run/nginx/.letsencrypt/letsencrypt.tgz /run/nginx/.letsencrypt/letsencrypt-backup.tgz
+        find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist
+        tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist
+        rm /tmp/tarlist
         chmod u=rx,go= /run/nginx/.letsencrypt
-        echo "[$APPNAME][$(date)] nginx will restart now to ensure SSL is enabled"
-        killall /usr/sbin/nginx
     done
 fi
