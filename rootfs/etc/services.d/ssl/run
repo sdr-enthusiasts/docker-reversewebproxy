@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
-set +x
+set -x
 
 APPNAME="$(hostname)/ssl"
 
@@ -29,14 +29,14 @@ if [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]]
 then
     # if there is a backup, restore it
     echo "[$APPNAME][$(date)] Backup of certificates found. Restoring..."
-    tar --overwrite -xzf /run/nginx/.letsencrypt/letsencrypt.tgz -C /
+    tar --overwrite -xzf /run/nginx/.letsencrypt/letsencrypt.tgz -C /  >/dev/null 2>&1
 elif [[ -d /etc/letsencrypt ]]
 then
     # If there's no backup but there is /etc/letsencrypt, then let's make sure it's backed up before we do anything else
     mkdir -p /run/nginx/.letsencrypt
     chmod u=rwx,go= /run/nginx/.letsencrypt
     find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist
-    tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist
+    tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist  >/dev/null 2>&1
     rm /tmp/tarlist
     chmod u=rx,go= /run/nginx/.letsencrypt
 fi
@@ -45,37 +45,37 @@ fi
 if (( ${#SSL_DOMAIN[@]} == 0 ))
 then
     # No domains in environment files. Complain and stop trying to install certificates:
-    echo "--------------------------------------------------"
-    echo "|      STOP ! NGINX SSL configuration problem    |"
-    echo "| You must define at least 1 SSL_DOMAIN in your  |"
-    echo "| docker-compose.yml file. Go check and fix it!  |"
-    echo "| The container will continue without SSL.       |"
-    echo "--------------------------------------------------"
+    echo "[$APPNAME][$(date)] --------------------------------------------------"
+    echo "[$APPNAME][$(date)] |      STOP ! NGINX SSL configuration problem    |"
+    echo "[$APPNAME][$(date)] | You must define at least 1 SSL_DOMAIN in your  |"
+    echo "[$APPNAME][$(date)] | docker-compose.yml file. Go check and fix it!  |"
+    echo "[$APPNAME][$(date)] | The container will continue without SSL.       |"
+    echo "[$APPNAME][$(date)] --------------------------------------------------"
     sleep infinity
 fi
 
 if ! grep -E "\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}\b" <<< "$SSL_EMAIL" >/dev/null
 then
     # No domains in environment files. Complain and stop trying to install certificates:
-    echo "--------------------------------------------------------"
-    echo "|      STOP ! NGINX SSL configuration problem          |"
-    echo "| You must provide a valid email in SSL_EMAIL in your  |"
-    echo "| docker-compose.yml file. Go check and fix it!        |"
-    echo "| The container will continue without SSL.             |"
-    echo "--------------------------------------------------------"
+    echo "[$APPNAME][$(date)] --------------------------------------------------------"
+    echo "[$APPNAME][$(date)] |      STOP ! NGINX SSL configuration problem          |"
+    echo "[$APPNAME][$(date)] | You must provide a valid email in SSL_EMAIL in your  |"
+    echo "[$APPNAME][$(date)] | docker-compose.yml file. Go check and fix it!        |"
+    echo "[$APPNAME][$(date)] | The container will continue without SSL.             |"
+    echo "[$APPNAME][$(date)] --------------------------------------------------------"
     sleep infinity
 fi
 
 if [[ "${SSL_TOS,,}" != "accept" ]]
 then
     # No domains in environment files. Complain and stop trying to install certificates:
-    echo "--------------------------------------------------------------------------"
-    echo "|      STOP ! NGINX SSL configuration problem                            |"
-    echo "| You must accept the ACME Account TOS found at                          |"
-    echo "| https://letsencrypt.org/repository/#let-s-encrypt-subscriber-agreement |"
-    echo "| and set SSL_TOS=ACCEPT in your docker-compose.yml file.                |"
-    echo "| Go check and fix it! The container will continue without SSL.          |"
-    echo "--------------------------------------------------------------------------"
+    echo "[$APPNAME][$(date)] --------------------------------------------------------------------------"
+    echo "[$APPNAME][$(date)] |      STOP ! NGINX SSL configuration problem                            |"
+    echo "[$APPNAME][$(date)] | You must accept the ACME Account TOS found at                          |"
+    echo "[$APPNAME][$(date)] | https://letsencrypt.org/repository/#let-s-encrypt-subscriber-agreement |"
+    echo "[$APPNAME][$(date)] | and set SSL_TOS=ACCEPT in your docker-compose.yml file.                |"
+    echo "[$APPNAME][$(date)] | Go check and fix it! The container will continue without SSL.          |"
+    echo "[$APPNAME][$(date)] --------------------------------------------------------------------------"
     sleep infinity
 else
     agree_tos="--agree-tos"
@@ -107,12 +107,12 @@ then
     # Something went wrong
     echo Error in:
     echo "/usr/bin/certbot run --quiet --nginx ${agree_tos} ${redirect} -m \"${SSL_EMAIL}\" ${newdomains[@]}"
-    echo "--------------------------------------------------"
-    echo "| STOP ! NGINX CertBot SSL installation problem  |"
-    echo "| Please see the message above.                  |"
-    echo "|                                                |"
-    echo "| The container will continue without SSL.       |"
-    echo "--------------------------------------------------"
+    echo "[$APPNAME][$(date)] --------------------------------------------------"
+    echo "[$APPNAME][$(date)] | STOP ! NGINX CertBot SSL installation problem  |"
+    echo "[$APPNAME][$(date)] | Please see the error message above.            |"
+    echo "[$APPNAME][$(date)] |                                                |"
+    echo "[$APPNAME][$(date)] | The container will continue without SSL.       |"
+    echo "[$APPNAME][$(date)] --------------------------------------------------"
     sleep infinity
 else
     echo "[$APPNAME][$(date)] SSL Certificates installed for these domains:"
@@ -126,12 +126,12 @@ else
     [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]] && mv -f /run/nginx/.letsencrypt/letsencrypt.tgz /run/nginx/.letsencrypt/letsencrypt-backup.tgz
 
     find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist
-    tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist
+    tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist >/dev/null 2>&1
     rm /tmp/tarlist
     chmod u=rx,go= /run/nginx/.letsencrypt
 
-    echo "[$APPNAME][$(date)] nginx will restart now to ensure SSL is enabled"
-    echo "[$APPNAME][$(date)] the container will check every 24 hours to see if the certificates need renewal."
+    echo "[$APPNAME][$(date)] Nginx will restart now to ensure SSL is enabled. Please ignore the message below about NGINX exiting."
+    echo "[$APPNAME][$(date)] The container will check every 24 hours to see if the certificates need renewal."
     killall /usr/sbin/nginx # restart nginx with the SSL stuff installed
     while :
     do
@@ -143,7 +143,7 @@ else
         chmod u=rwx,go= /run/nginx/.letsencrypt
         [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]] && mv -f /run/nginx/.letsencrypt/letsencrypt.tgz /run/nginx/.letsencrypt/letsencrypt-backup.tgz
         find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist
-        tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist
+        tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist >/dev/null 2>&1
         rm /tmp/tarlist
         chmod u=rx,go= /run/nginx/.letsencrypt
     done

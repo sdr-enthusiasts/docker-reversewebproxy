@@ -69,8 +69,11 @@ services:
             # If SSL_REDIRECT=ENABLED then all incoming non-SSL requests will automatically be redirected to a https:// request
             #
             # Put 1 or more domain names in SSL_DOMAIN. Note that *ALL OF THESE DOMAINS* must be reachable from the internet
-            # and render a website that is server from the container upon thestart of the container,
+            # and render a website that is served from the container upon the start of the container,
             # otherwise the request to get a certificate for them will fail!
+            #
+            # Also note that more than 5 (failed) requests will cause you to be locked out from getting new certificates for
+            # 1 week. We, nor LetsEncrypt, can "unlock" you. More info: https://letsencrypt.org/docs/rate-limits/
             #
             - SSL=ENABLED
             - SSL_EMAIL=your@email.com
@@ -84,3 +87,5 @@ services:
             - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
         volumes:
             - /home/pi/.webproxy:/run/nginx
+            - "/etc/localtime:/etc/localtime:ro"
+            - "/etc/timezone:/etc/timezone:ro"

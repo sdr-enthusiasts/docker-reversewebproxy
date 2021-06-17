@@ -146,7 +146,7 @@ do
     touch /tmp/nginx.up
     /usr/sbin/nginx -g 'daemon off;'
     rm -f /tmp/nginx.up
-    echo "[$APPNAME][$(date)] NGINX Service has failed!"
+    echo "[$APPNAME][$(date)] NGINX Service has exited."
     sleep 10
     echo "[$APPNAME][$(date)] Restarting NGINX Service now..."
 done
