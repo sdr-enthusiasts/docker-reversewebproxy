@@ -107,15 +107,16 @@ jobs:
       # Hit an issue where arm builds would fail with cURL errors regarding intermediary certificates when downloading from github (ie: deploy-s6-overlay).
       # After many hours of troubleshooting, the workaround is to pre-load the image's rootfs with the CA certificates from the runner.
       # This problem may go away in future.
+
       -
         name: Copy CA Certificates from GitHub Runner to Image rootfs
         run: |
           ls -la /etc/ssl/certs/
-          mkdir -p ./rootfs/etc/ssl/certs
-          mkdir -p ./rootfs/usr/share/ca-certificates/mozilla
-          cp --no-dereference /etc/ssl/certs/*.crt ./rootfs/etc/ssl/certs
-          cp --no-dereference /etc/ssl/certs/*.pem ./rootfs/etc/ssl/certs
-          cp --no-dereference /usr/share/ca-certificates/mozilla/*.crt ./rootfs/usr/share/ca-certificates/mozilla
+          mkdir -p ./root_certs/etc/ssl/certs
+          mkdir -p ./root_certs/usr/share/ca-certificates/mozilla
+          cp --no-dereference /etc/ssl/certs/*.crt ./root_certs/etc/ssl/certs
+          cp --no-dereference /etc/ssl/certs/*.pem ./root_certs/etc/ssl/certs
+          cp --no-dereference /usr/share/ca-certificates/mozilla/*.crt ./root_certs/usr/share/ca-certificates/
 
       # Set up QEMU for multi-arch builds
       -
