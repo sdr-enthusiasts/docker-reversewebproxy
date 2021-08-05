@@ -137,7 +137,7 @@ else
     do
         sleep 1d
         echo "[$APPNAME][$(date)] Checking if SSL certs need renewing..."
-        /usr/bin/certbot renew --quiet
+        /usr/bin/certbot renew --quiet --deploy-hook "killall /usr/sbin/nginx"
         /usr/bin/certbot certificates
         # back things up again:
         chmod u=rwx,go= /run/nginx/.letsencrypt
