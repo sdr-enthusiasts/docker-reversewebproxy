@@ -79,6 +79,7 @@ A "*" means that this is the default value
 | `SSL_TOS` | `REJECT`*, `ACCEPT` | Indicates your acceptance of the T&S's for the SSL certificateset forth at https://letsencrypt.org/repository/#let-s-encrypt-subscriber-agreement |
 | ` SSL_REDIRECT` | `DISABLED`, `ENABLED`* | When set to ENABLED, all incoming non-SSL traffic is redirected to use SSL
 
+Note: your SSL certificates are valid for 90 days. The container will check daily if they be renewing, and will do so of there's less than a month before the expiration date. **LetsEncrypt will start sending you emails about the pending expiration about 45 days before the deadline. You can safely ignore these emails as long as your container is running.**
 ### Advanced Setup
 After you run the container the first time, it will create a directory named `~/webproxy`. If `AUTOGENERATE=ON`, there will be a `locations.conf` file. There will also be a `locations.conf.example` file that contains setup examples. If you know how to write a `nginx` configuration file, feel free to edit the `locations.conf` and add any options to your liking.
 
