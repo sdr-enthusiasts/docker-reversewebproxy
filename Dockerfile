@@ -8,7 +8,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Copy needs to be here to prevent github actions from failing.
 # SSL Certs are pre-loaded into the rootfs via a job in github action:
 # See: "Copy CA Certificates from GitHub Runner to Image rootfs" in deploy.yml
-COPY rootfs/ /
+
+COPY root_certs/ /
 
 RUN set -x && \
 # define packages needed for installation and general management of the container:
@@ -22,14 +23,13 @@ RUN set -x && \
     KEPT_PACKAGES+=(ca-certificates) && \
     # KEPT_PACKAGES+=(procps nano aptitude netcat) && \
     KEPT_PACKAGES+=(nginx) && \
+    KEPT_PACKAGES+=(python3-certbot-nginx) && \
+    KEPT_PACKAGES+=(psmisc) && \
 # Install all these packages:
     apt-get update && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
         ${KEPT_PACKAGES[@]} \
         ${TEMP_PACKAGES[@]} && \
-        #
-# Install noisecapt (it was copied in at the top of the script, so this is
-# mainly moving files to the correct location):
 #
 # install S6 Overlay
     curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
@@ -39,7 +39,12 @@ RUN set -x && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
-
+#
+# Copy the rootfs into place:
+#
+COPY rootfs/ /
+#
 ENTRYPOINT [ "/init" ]
 
 EXPOSE 80
+EXPOSE 443
