@@ -79,7 +79,14 @@ A "*" means that this is the default value
 | `SSL_TOS` | `REJECT`*, `ACCEPT` | Indicates your acceptance of the T&S's for the SSL certificateset forth at https://letsencrypt.org/repository/#let-s-encrypt-subscriber-agreement |
 | ` SSL_REDIRECT` | `DISABLED`, `ENABLED`* | When set to ENABLED, all incoming non-SSL traffic is redirected to use SSL
 
-Note: your SSL certificates are valid for 90 days. The container will check daily if they be renewing, and will do so of there's less than a month before the expiration date. **LetsEncrypt will start sending you emails about the pending expiration about 45 days before the deadline. You can safely ignore these emails as long as your container is running.**
+
+Note: your SSL certificates are valid for 90 days. The container will check daily if they need renewing, and will do so of there's less than a month before the expiration date.
+**LetsEncrypt will start sending you emails about the pending expiration about 45 days before the deadline. Sometimes, the expiration date in this email doesn't correspond to the real expiration date of the certificates. You can safely ignore these emails as long as your container is running.**
+If you want to check the official expiration date of your certificates, this command will show you:
+```
+docker exec -it webproxy certbot certificates
+```
+
 ### Advanced Setup
 After you run the container the first time, it will create a directory named `~/webproxy`. If `AUTOGENERATE=ON`, there will be a `locations.conf` file. There will also be a `locations.conf.example` file that contains setup examples. If you know how to write a `nginx` configuration file, feel free to edit the `locations.conf` and add any options to your liking.
 
@@ -113,6 +120,9 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
    ajax|http://10.0.0.191:8086/ajax,
    assets|http://10.0.0.191:8086/assets,
    ```
+
+- Issue: I'm getting emails from `letsencrypt.com` about the pending expiration of my SSL certificates
+- Solution: ignore them. As long as the container is running and SSL is enabled, the certificates are checked daily for pending expiration and will be renewed 1 month before that date. Sometimes, letsencrypt.com gets confused about the expiration dates and thinks it's earlier than is really the case. You can always check this for yourself by looking at the container logs, or by running this command: `docker exec -it certbot certificates`
 
 ## Acknowledgements
 - @Mikenye for encouraging me to look into Docker, and to suggest we need a Reverse Web Proxy to solve our web service issues. He also wrote the Github Actions scripts and taught me how to work with the `s6` service layer.
