@@ -67,6 +67,9 @@ Note - for `REDIRECT`, both the urltarget and the redirection MAY BE a URL or a 
 Similar to `REVPROXY`, `REDIRECT` can contain comma separated entries. See example in the default `docker-compose.yml`.
 
 ### Configuration of SSL
+
+SSL can only be enabled if you have a domain name (a real one or a Dynamic DNS name) that currently points at your WebProxy instance. This means that your WebProxy must be accessible from the internet (forward of port 80 and port 443 required if behind a router).
+
 The following settings will enable SSL to be part of the reverse proxy.
 SSL certificates are provided by Lets Encrypt.
 
