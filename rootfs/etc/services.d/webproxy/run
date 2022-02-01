@@ -73,15 +73,8 @@ then
         printf "location %s {\n" "$location" >> /run/nginx/locations.conf
         printf "    proxy_pass %s;\n" "$destination"  >> /run/nginx/locations.conf
 
-        # Proxy headers are now added in the DEFAULT config rather than on a per exception basis/
-        # This will solve issues related to websocket connections.
-        # Special handling for acarshub:
-        #if [[ "$location" == "/acarshub/" ]]
-        #then
-        #    printf "    proxy_set_header Upgrade \$http_upgrade;\n"  >> /run/nginx/locations.conf
-        #    printf "    proxy_set_header Connection \$http_connection;\n"  >> /run/nginx/locations.conf
-        #    printf "    proxy_set_header Host \$http_host;\n"  >> /run/nginx/locations.conf
-        #fi
+        # Additional line to catch redirects; suggested by @wiedehopf:
+        printf "    proxy_redirect ~^(/|http://[^/]*/)(.*) %s\$2;"  >> /run/nginx/locations.conf
 
         # close off the location entry:
         printf "}\n\n"  >> /run/nginx/locations.conf
