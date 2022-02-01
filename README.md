@@ -1,5 +1,9 @@
 # Docker-ReverseWebProxy
 
+## ATTENTION Raspberry Pi 3 / Buster users
+This application has recently been updated to use a base image container based on Debian Bullseye.
+Some older, Buster based host systems may need a patch to solve an issue related to the Real Time Clock or container log errors regarding `sleep`. See the Troubleshooting section below.
+
 ## What is it?
 
 This application, further referred to as "Webproxy", enables to show a single website for multiple web services running on different machines and/or different ports.
@@ -31,7 +35,7 @@ Once this is done, create a working directory and download the `docker-compose.y
 mkdir ~/myproxy && cd ~/myproxy
 wget https://raw.githubusercontent.com/kx1t/docker-reversewebproxy/main/docker-compose.yml
 ```
-You should EDIT this `docker-compose.yml` file and configure it to your liking. See below for options.
+You should EDIT the `docker-compose.yml` file included in this repository and configure it to your liking. See below for options.
 (Note - CAREFUL. YML is based on indentation levels, so make sure you keep each line at the correct indent level!)
 
 Now, you can either run it as-is, or, if you already have another `docker-compose.yml`, you can copy the data of the `services:` section to your existing `docker-compose.yml`.
@@ -103,6 +107,9 @@ Feel free to create additional subdirectories if needed for your project.
 Also note -- the website may not be reachable if you redirected or proxied `/` to some other service.
 
 ## Troubleshooting
+
+- Issue: the container log (`docker logs webproxy`) shows error messages like this: `sleep: cannot read realtime clock: Operation not permitted`
+- Solution: you must upgrade `libseccomp2` on your host system to version 2.4 or later. If you are using a Raspberry Pi with Buster based OS, [here](https://github.com/fredclausen/Buster-Docker-Fixes) is a repo with a script that can automatically fix this for you. 
 
 - Issue: `docker-compose up -d` exits with an error
 - Solution: you probably have a typo in `docker-compose.yml`. Make sure that all lines are at the exact indentation level, and that the last entry in the `REVPROXY` and `REDIRECT` lists do not end on a comma.
