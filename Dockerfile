@@ -1,26 +1,19 @@
-FROM debian:buster-20211115-slim
+#FROM debian:buster-20211115-slim
 #FROM debian:buster-20211220-slim
-
-ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
+FROM ghcr.io/fredclausen/docker-baseimage:python
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-# Copy needs to be here to prevent github actions from failing.
-# SSL Certs are pre-loaded into the rootfs via a job in github action:
-# See: "Copy CA Certificates from GitHub Runner to Image rootfs" in deploy.yml
-
-COPY root_certs/ /
 
 RUN set -x && \
 # define packages needed for installation and general management of the container:
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
-    KEPT_PACKAGES+=(gawk) && \
-    KEPT_PACKAGES+=(pv) && \
-    TEMP_PACKAGES+=(gnupg2) && \
-    TEMP_PACKAGES+=(file) && \
-    TEMP_PACKAGES+=(curl) && \
-    KEPT_PACKAGES+=(ca-certificates) && \
+#    KEPT_PACKAGES+=(gawk) && \
+#    KEPT_PACKAGES+=(pv) && \
+#    TEMP_PACKAGES+=(gnupg2) && \
+#    TEMP_PACKAGES+=(file) && \
+#    TEMP_PACKAGES+=(curl) && \
+#    KEPT_PACKAGES+=(ca-certificates) && \
     # KEPT_PACKAGES+=(procps nano aptitude netcat) && \
     KEPT_PACKAGES+=(nginx) && \
     KEPT_PACKAGES+=(python3-certbot-nginx) && \
@@ -32,7 +25,7 @@ RUN set -x && \
         ${TEMP_PACKAGES[@]} && \
 #
 # install S6 Overlay
-    curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
+#    curl -s https://raw.githubusercontent.com/mikenye/deploy-s6-overlay/master/deploy-s6-overlay.sh | sh && \
 #
 # Clean up
     apt-get remove -y ${TEMP_PACKAGES[@]} && \
