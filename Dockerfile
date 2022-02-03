@@ -1,6 +1,4 @@
-FROM ghcr.io/fredclausen/docker-baseimage:python
-
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
 
 RUN set -x && \
 # define packages needed for installation and general management of the container:
@@ -22,12 +20,10 @@ RUN set -x && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/*
-#
+
 # Copy the rootfs into place:
 #
 COPY rootfs/ /
-#
-ENTRYPOINT [ "/init" ]
 
 EXPOSE 80
 EXPOSE 443
