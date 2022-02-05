@@ -134,6 +134,30 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
 - Issue: I'm getting emails from `letsencrypt.com` about the pending expiration of my SSL certificates
 - Solution: ignore them. As long as the container is running and SSL is enabled, the certificates are checked daily for pending expiration and will be renewed 1 month before that date. Sometimes, letsencrypt.com gets confused about the expiration dates and thinks it's earlier than is really the case. You can always check this for yourself by looking at the container logs, or by running this command: `docker exec -it certbot certificates`
 
+- Issue: when adding new URLs to a system that deployment has SSL certifications, the logs show messages that requesting a certificate for the new URL failed because the user should indicate which of (multiple) accounts should be used.
+- Solution: This is caused by certificates that have been added to `webproxy` at different points in time. To fix it, back up any web pages that are directly served by the container, and recreate the entire setup. Please note that doing this more than 5 times in a week will lock you out and prevent you from recreating existing certificates for up to a week, so USE THIS SOLUTION SPARINGLY.
+The solution assumes that the container name is `webproxy` and that its working directory is `~/.webproxy` . If this is different, you may have to adapt the commands accordingly. It's preferable to feed the script line by line rather than all at once, so you can monitor the outcome.
+```
+cd ~  # go to the home directory
+docker stop webproxy    # stop the webproxy container
+
+# Back up the web pages and any custom configuration. Sudo is used to ensure also closed directories are backed up
+# Only of the backup is successful, delete the working directory
+sudo tar zcvf web-backup.tgz .webproxy/html .webproxy/locations.conf && sudo rm -rf .webproxy
+
+# Recreate the webproxy. Adapt the location of your "docker-compose.yml" as needed
+docker-compose -f /opt/webproxy/docker-compose.yml up -d
+
+# Check in the logs that the issue is fixed:
+sleep 30 && docker logs webproxy
+
+# Restore the files and restart the container once more to ensure the locations.conf file is applied
+sudo tar zxvf web-backup.tgz
+docker restart webproxy
+
+# You can now remove the "web-backup.tgz" file, or save it as a backup of your website.
+```
+
 ## Acknowledgements
 - @Mikenye for encouraging me to look into Docker, and to suggest we need a Reverse Web Proxy to solve our web service issues. He also wrote the Github Actions scripts and taught me how to work with the `s6` service layer.
 - @Wiedehopf for helping me get my initial installation of nginx configured and working. Without his help, everything would have taken many weeks (!) instead of a few hours.
