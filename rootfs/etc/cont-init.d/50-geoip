@@ -1,0 +1,43 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+APPNAME="$(hostname)/GeoIP"
+GEOIPDIR="/usr/share/GeoIP"
+echo "[$APPNAME][$(date)] Installing GeoIP Database and set up nginx configuration"
+
+# create GeoIP directory and install lates GeoIP DB
+mkdir -p $GEOIPDIR
+
+# get the GeoIP databases
+geoipfail=false
+! curl --fail -sL -o "$GEOIPDIR"/GeoIP.dat.gz https://mailfud.org/geoip-legacy/GeoIP.dat.gz && geoipfail=true || true
+! curl --fail -sL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://mailfud.org/geoip-legacy/GeoIPv6.dat.gz && geoipfail=true || true
+
+# if we couldn't get the databases, let's fall back to another database:
+if [[ "geoipfail" == "true" ]]
+then
+  curl --fail -sL -o "$GEOIPDIR"/GeoIP.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIP.dat.gz && geoipfail=false || true
+  curl --fail -sL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIPv6.dat.gz && geoipfail=false || true
+fi
+
+[[ "geoipfail" == "true" ]] && echo "[$APPNAME][$(date)] Couldn't retrieve any newer GeoIP databases. Your database may be out of date." || true
+
+gunzip -f "$GEOIPDIR"/GeoIP.dat.gz
+
+#---- I was here
+# I've added the geoip.conf file straight into the root file system
+
+# add geoip config to /etc/nginx/nginx.conf
+cd /etc/nginx
+#cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.geoip
+
+#reading country codes from the variable
+IFS=“,” read -ra include_list <<< “$GEOIP_COUNTRIES”
+
+
+if [[ "$GEOIP_DEFAULT" == "no" ]]
+ then
+  sed -i '/^http {.*/a     default no;' /etc/nginx/nginx.conf
+ else
+  sed -i '/^http {.*/a     default yes;' /etc/nginx/nginx.conf
+fi

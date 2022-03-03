@@ -8,6 +8,8 @@ RUN set -x && \
     KEPT_PACKAGES+=(nginx) && \
     KEPT_PACKAGES+=(python3-certbot-nginx) && \
     KEPT_PACKAGES+=(psmisc) && \
+    KEPT_PACKAGES+=(libnginx-mod-http-geoip) && \
+    KEPT_PACKAGES+=(geoip-database) && \
 #
 # Install all these packages:
     apt-get update && \
