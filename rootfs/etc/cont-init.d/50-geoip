@@ -5,10 +5,35 @@ APPNAME="$(hostname)/GeoIP"
 GEOIPDIR="/usr/share/GeoIP"
 NGINXGEOIPCNF="/etc/nginx/geoip_countries.conf"
 
+echo "[$APPNAME][$(date)] Copy geoip_countries.conf to the right place, delete old version first"
+rm -f /etc/nginx/geoip_countries.conf
+cp -f /root/geoip_countries.conf /etc/nginx/geoip_countries.conf
+
+if ! [[ -n "$GEOIP_DEFAULT" ]]
+then
+ echo "[$APPNAME][$(date)] GEOIP_DEFAULT not set, aborting further GeoIP setup."
+ sed -i '/^#defaultsetting.*/a default yes;' $NGINXGEOIPCNF
+ exit 0
+fi
+
 echo "[$APPNAME][$(date)] Installing GeoIP Database and set up nginx configuration"
 
 # create GeoIP directory and install lates GeoIP DB
 mkdir -p $GEOIPDIR
+
+#create persistent backup directory
+mkdir -p /run/nginx/.geoip
+
+#delete old cached files
+if [[ -f /run/nginx/.geoip/GeoIP.bckup ]];
+ then
+  if [ "$(( $(date +"%s") - $(stat -c "%Y" /run/nginx/.geoip/GeoIP.bckup) ))" -gt "7200" ]
+   then
+    echo "[$APPNAME][$(date)] Found DB Backup which is older than 120 Minutes. Deleting"
+    rm -f /run/nginx/.geoip/*.gz
+    rm -f /run/nginx/.geoip/GeoIP.bckup
+  fi
+fi
 
 # get the GeoIP databases
 geoipfail=false
@@ -16,18 +41,8 @@ geoipfail=false
 ! curl --fail -sL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://mailfud.org/geoip-legacy/GeoIPv6.dat.gz && geoipfail=true || true
 
 #as there is a download limit, backup the files to /run/nginx/.geoip/ but check for an old backup first and in case it's there, delete if older than 60 minutes
-mkdir -p /run/nginx/.geoip
 if [[ "$geoipfail" == "false" ]]
 then
-    if [[ -f /run/nginx/.geoip/GeoIP.bckup ]];
-     then
-      if [ "$(( $(date +"%s") - $(stat -c "%Y" /run/nginx/.geoip/GeoIP.bckup) ))" -gt "7200" ]
-       then
-        echo "[$APPNAME][$(date)] Found DB Backup which is older than 120 Minutes. Deleting"
-        rm -f /run/nginx/.geoip/*.gz
-        rm -f /run/nginx/.geoip/GeoIP.bckup
-      fi
-    fi
 echo "[$APPNAME][$(date)] Backup mailfud GeoIP DB to /run/nginx/.geoip"
   cp "$GEOIPDIR"/GeoIP.dat.gz /run/nginx/.geoip
   cp "$GEOIPDIR"/GeoIPv6.dat.gz /run/nginx/.geoip
@@ -61,16 +76,12 @@ if [[ "$geoipfail" == "true" ]] && [[ "$backupfail" == "true" ]] && [[ "$backupf
 then
   echo "[$APPNAME][$(date)] Couldn't retrieve any newer GeoIP databases. Your database may be out of date."
 else
-  echo "[$APPNAME][$(date)] centminmod DB sucessfully downloaded"
+  echo "[$APPNAME][$(date)] DB sucessfully downloaded"
 fi
 
 echo "[$APPNAME][$(date)] Unpacking downloaded DB"
 gunzip -f "$GEOIPDIR"/GeoIP.dat.gz
 gunzip -f "$GEOIPDIR"/GeoIPv6.dat.gz
-
-echo "[$APPNAME][$(date)] Copy geoip_countries.conf to the right place, delete old version first"
-rm -f /etc/nginx/geoip_countries.conf
-cp -f /root/geoip_countries.conf /etc/nginx/geoip_countries.conf
 
 #read country codes from the variable
 IFS=“,” read -ra include_list <<< “$GEOIP_COUNTRIES”
