@@ -3,6 +3,8 @@
 
 APPNAME="$(hostname)/GeoIP"
 GEOIPDIR="/usr/share/GeoIP"
+NGINXGEOIPCNF="/etc/nginx/geoip_countries.conf"
+
 echo "[$APPNAME][$(date)] Installing GeoIP Database and set up nginx configuration"
 
 # create GeoIP directory and install lates GeoIP DB
@@ -13,31 +15,91 @@ geoipfail=false
 ! curl --fail -sL -o "$GEOIPDIR"/GeoIP.dat.gz https://mailfud.org/geoip-legacy/GeoIP.dat.gz && geoipfail=true || true
 ! curl --fail -sL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://mailfud.org/geoip-legacy/GeoIPv6.dat.gz && geoipfail=true || true
 
-# if we couldn't get the databases, let's fall back to another database:
-if [[ "geoipfail" == "true" ]]
+#as there is a download limit, backup the files to /run/nginx/.geoip/ but check for an old backup first and in case it's there, delete if older than 60 minutes
+mkdir -p /run/nginx/.geoip
+if [[ "$geoipfail" == "false" ]]
 then
-  curl --fail -sL -o "$GEOIPDIR"/GeoIP.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIP.dat.gz && geoipfail=false || true
-  curl --fail -sL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIPv6.dat.gz && geoipfail=false || true
+    if [[ -f /run/nginx/.geoip/GeoIP.bckup ]];
+     then
+      if [ "$(( $(date +"%s") - $(stat -c "%Y" /run/nginx/.geoip/GeoIP.bckup) ))" -gt "7200" ]
+       then
+        echo "[$APPNAME][$(date)] Found DB Backup which is older than 120 Minutes. Deleting"
+        rm -f /run/nginx/.geoip/*.gz
+        rm -f /run/nginx/.geoip/GeoIP.bckup
+      fi
+    fi
+echo "[$APPNAME][$(date)] Backup mailfud GeoIP DB to /run/nginx/.geoip"
+  cp "$GEOIPDIR"/GeoIP.dat.gz /run/nginx/.geoip
+  cp "$GEOIPDIR"/GeoIPv6.dat.gz /run/nginx/.geoip
+  touch /run/nginx/.geoip/GeoIP.bckup
 fi
 
-[[ "geoipfail" == "true" ]] && echo "[$APPNAME][$(date)] Couldn't retrieve any newer GeoIP databases. Your database may be out of date." || true
+#If the mailfud download fails, lets see if we have a  backup and try to copy it into the right place.
+if [[ "$geoipfail" == "true" ]]
+then
+  if [[ -f /run/nginx/.geoip/GeoIP.dat.gz && -f /run/nginx/.geoip/GeoIPv6.dat.gz ]];
+   then
+    backupfail=false
+    echo "[$APPNAME][$(date)] Using backuped DB"
+    [[ -f /run/nginx/.geoip/GeoIP.dat.gz ]] && cp /run/nginx/.geoip/GeoIP.dat.gz /"$GEOIPDIR"
+    [[ -f /run/nginx/.geoip/GeoIPv6.dat.gz ]] && cp /run/nginx/.geoip/GeoIPv6.dat.gz /"$GEOIPDIR"
+   else backupfail=true
+   echo "[$APPNAME][$(date)] Nothing to backup, Download from mailfud seemingly didn't work"
+  fi
+fi
 
+# if we couldn't get the databases and the backup is not working either, let's fall back to another database:
+if [[ "$geoipfail" == "true" ]] && [[ "$backupfail" == "true" ]]
+then
+  centminfail=false
+  echo "[$APPNAME][$(date)] Couldn't download the mailfud GeoIP DB or use a backup. Now trying centminmod"
+  ! curl --fail -sL -o "$GEOIPDIR"/GeoIP.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIP.dat.gz && centminfail=true || true
+  ! curl --fail -sL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIPv6.dat.gz && geoipfail=true || true
+fi
+
+if [[ "$geoipfail" == "true" ]] && [[ "$backupfail" == "true" ]] && [[ "$backupfail" == "centminfail" ]]
+then
+  echo "[$APPNAME][$(date)] Couldn't retrieve any newer GeoIP databases. Your database may be out of date."
+else
+  echo "[$APPNAME][$(date)] centminmod DB sucessfully downloaded"
+fi
+
+echo "[$APPNAME][$(date)] Unpacking downloaded DB"
 gunzip -f "$GEOIPDIR"/GeoIP.dat.gz
+gunzip -f "$GEOIPDIR"/GeoIPv6.dat.gz
 
-#---- I was here
-# I've added the geoip.conf file straight into the root file system
+echo "[$APPNAME][$(date)] Copy geoip_countries.conf to the right place, delete old version first"
+rm -f /etc/nginx/geoip_countries.conf
+cp -f /root/geoip_countries.conf /etc/nginx/geoip_countries.conf
 
-# add geoip config to /etc/nginx/nginx.conf
-cd /etc/nginx
-#cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.geoip
-
-#reading country codes from the variable
+#read country codes from the variable
 IFS=“,” read -ra include_list <<< “$GEOIP_COUNTRIES”
 
+#set the default GeoIP in /etc/nginx/nginx.conf
+case "$GEOIP_DEFAULT" in
+  allow|ALLOW)
+  echo "[$APPNAME][$(date)] Default is set to allow every country but block the listed"
+  sed -i '/^#defaultsetting.*/a default yes;' $NGINXGEOIPCNF
+  for a in ${include_list[@]}
+    do
+    sed -i "/^#countrylist.*/a $a no;" $NGINXGEOIPCNF
+  done
+  ;;
+  block|BLOCK)
+  echo "[$APPNAME][$(date)] Default is set to block every country and only allow the listed"
+  sed -i '/^#defaultsetting.*/a default no;' $NGINXGEOIPCNF
+  for a in ${include_list[@]}
+    do
+    sed -i "/^#countrylist.*/a $a yes;" $NGINXGEOIPCNF
+  done
+  ;;
+  *)
+  echo "[$APPNAME][$(date)] Configuration not set or has a wrong value (use only allow or block). Defaulting to allow all"
+  sed -i '/^#defaultsetting.*/a default yes;' $NGINXGEOIPCNF
 
-if [[ "$GEOIP_DEFAULT" == "no" ]]
- then
-  sed -i '/^http {.*/a     default no;' /etc/nginx/nginx.conf
- else
-  sed -i '/^http {.*/a     default yes;' /etc/nginx/nginx.conf
-fi
+  ;;
+esac
+
+echo "[$APPNAME][$(date)] Finished setting up GeoIP"
+
+exit
