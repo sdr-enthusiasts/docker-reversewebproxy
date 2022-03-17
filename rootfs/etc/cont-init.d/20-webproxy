@@ -102,14 +102,18 @@ fi
 ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 # set logging to what VERBOSELOG says. Default is off, "ON" means to stdout, "FILE" means to access.log/error.log file in external volume
-if [[ "$VERBOSELOG,," == "on" ]]
+if [[ "$VERBOSELOG,," == "on" ]] || [ "$VERBOSELOG,," == "true" ]]
 then
+  echo "[$APPNAME][$(date)] Enabled HTTP logging to container logs"
   sed -i 's|\(^\s*access_log \).*|\1/dev/stdout main;|' /etc/nginx/nginx.conf
   sed -i 's|\(^\s*error_log \).*|\1/dev/stdout main;|' /etc/nginx/nginx.conf
 elif [[ "$VERBOSELOG,," == "file" ]]
 then
+  echo "[$APPNAME][$(date)] Enabled HTTP logging to files in shared volume"
   sed -i 's|\(^\s*access_log \).*|\1/run/nginx/access.log main;|' /etc/nginx/nginx.conf
   sed -i 's|\(^\s*error_log \).*|\1//run/nginx/error.log main;|' /etc/nginx/nginx.conf
+else
+  echo "[$APPNAME][$(date)] HTTP logging is disabled"
 fi
 
 if [[ -n "$BOTBLOCK" ]]
