@@ -122,6 +122,7 @@ then
   echo "[$APPNAME][$(date)] Blocking these bots: $BLOCKBOT"
   echo "if (\$http_user_agent ~ ($BLOCKLIST) ) { return 403; }" >/etc/nginx/blockbot.conf
 else
+  echo "[$APPNAME][$(date)] Bot blocking disabled"
   echo "#blocklist for bots disabled" >/etc/nginx/blockbot.conf
 fi
 chmod a+r /etc/nginx/blockbot.conf
