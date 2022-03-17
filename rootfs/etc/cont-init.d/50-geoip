@@ -5,10 +5,14 @@ APPNAME="$(hostname)/GeoIP"
 GEOIPDIR="/usr/share/GeoIP"
 NGINXGEOIPCNF="/etc/nginx/geoip_countries.conf"
 
+echo "[$APPNAME][$(date)] Set up of GeoIP Database and correpsonding nginx configuration"
+
+#Moving geoip_countries.conf to the right place
 echo "[$APPNAME][$(date)] Copy geoip_countries.conf to the right place, delete old version first"
 rm -f /etc/nginx/geoip_countries.conf
 cp -f /root/geoip_countries.conf /etc/nginx/geoip_countries.conf
 
+#Nothing set up in the docker-compose.yml? Then set default yes and abort the rest of the script
 if ! [[ -n "$GEOIP_DEFAULT" ]]
 then
  echo "[$APPNAME][$(date)] GEOIP_DEFAULT not set, aborting further GeoIP setup."
@@ -16,9 +20,7 @@ then
  exit 0
 fi
 
-echo "[$APPNAME][$(date)] Installing GeoIP Database and set up nginx configuration"
-
-# create GeoIP directory and install lates GeoIP DB
+# create GeoIP directory
 mkdir -p $GEOIPDIR
 
 #create persistent backup directory
@@ -27,21 +29,40 @@ mkdir -p /run/nginx/.geoip
 #delete old cached files
 if [[ -f /run/nginx/.geoip/GeoIP.bckup ]];
  then
-  if [ "$(( $(date +"%s") - $(stat -c "%Y" /run/nginx/.geoip/GeoIP.bckup) ))" -gt "7200" ]
+  if [ "$(( $(date +"%s") - $(stat -c "%Y" /run/nginx/.geoip/GeoIP.bckup) ))" -gt "10800" ]
    then
-    echo "[$APPNAME][$(date)] Found DB Backup which is older than 120 Minutes. Deleting"
+    echo "[$APPNAME][$(date)] Found DB Backup which is older than 3 hours. Deleting"
     rm -f /run/nginx/.geoip/*.gz
     rm -f /run/nginx/.geoip/GeoIP.bckup
   fi
 fi
 
-# get the GeoIP databases
-geoipfail=false
-! curl --fail -sL -o "$GEOIPDIR"/GeoIP.dat.gz https://mailfud.org/geoip-legacy/GeoIP.dat.gz && geoipfail=true || true
-! curl --fail -sL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://mailfud.org/geoip-legacy/GeoIPv6.dat.gz && geoipfail=true || true
+#Do we still have a usable backup after deletion? Then use it
+if [[ -f /run/nginx/.geoip/GeoIP.dat.gz && -f /run/nginx/.geoip/GeoIPv6.dat.gz ]]
+ then
+  backupworks=true
+  echo "[$APPNAME][$(date)] Found a Backup, installing"
+  [[ -f /run/nginx/.geoip/GeoIP.dat.gz ]] && cp /run/nginx/.geoip/GeoIP.dat.gz /"$GEOIPDIR"
+  [[ -f /run/nginx/.geoip/GeoIPv6.dat.gz ]] && cp /run/nginx/.geoip/GeoIPv6.dat.gz /"$GEOIPDIR"
+ else backupworks=false
+ echo "[$APPNAME][$(date)] No Backup found, continue"
+fi
 
-#as there is a download limit, backup the files to /run/nginx/.geoip/ but check for an old backup first and in case it's there, delete if older than 60 minutes
-if [[ "$geoipfail" == "false" ]]
+
+# get the GeoIP databases from mailfud
+if [[ "$backupworks" == "false" ]]
+ then
+  geoipfail=false
+  ! curl --fail -sL -o "$GEOIPDIR"/GeoIP.dat.gz https://mailfud.org/geoip-legacy/GeoIP.dat.gz && geoipfail=true || true
+  ! curl --fail -sL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://mailfud.org/geoip-legacy/GeoIPv6.dat.gz && geoipfail=true || true
+  if [[ "$geoipfail" == "false" ]]
+  then
+  echo "[$APPNAME][$(date)] Successfully downloaded DB from mailfud.org"
+  fi
+fi
+
+#as there is a download limit from mailfud, backup the files to /run/nginx/.geoip/ and create a file as timestamp for further processing
+if [[ "$backupworks" == "false" ]] && [[ "$geoipfail" == "false" ]]
 then
 echo "[$APPNAME][$(date)] Backup mailfud GeoIP DB to /run/nginx/.geoip"
   cp "$GEOIPDIR"/GeoIP.dat.gz /run/nginx/.geoip
@@ -49,44 +70,51 @@ echo "[$APPNAME][$(date)] Backup mailfud GeoIP DB to /run/nginx/.geoip"
   touch /run/nginx/.geoip/GeoIP.bckup
 fi
 
-#If the mailfud download fails, lets see if we have a  backup and try to copy it into the right place.
-if [[ "$geoipfail" == "true" ]]
-then
-  if [[ -f /run/nginx/.geoip/GeoIP.dat.gz && -f /run/nginx/.geoip/GeoIPv6.dat.gz ]];
-   then
-    backupfail=false
-    echo "[$APPNAME][$(date)] Using backuped DB"
-    [[ -f /run/nginx/.geoip/GeoIP.dat.gz ]] && cp /run/nginx/.geoip/GeoIP.dat.gz /"$GEOIPDIR"
-    [[ -f /run/nginx/.geoip/GeoIPv6.dat.gz ]] && cp /run/nginx/.geoip/GeoIPv6.dat.gz /"$GEOIPDIR"
-   else backupfail=true
-   echo "[$APPNAME][$(date)] Nothing to backup, Download from mailfud seemingly didn't work"
-  fi
-fi
+#If the mailfud download fails, lets see if we have a backup and try to copy it into the right place.
+#if [[ "$geoipfail" == "true" ]] && [[ "$backupworks" == "false" ]]
+#then
+#  if [[ -f /run/nginx/.geoip/GeoIP.dat.gz && -f /run/nginx/.geoip/GeoIPv6.dat.gz ]];
+#   then
+#    backupfail=false
+#    echo "[$APPNAME][$(date)] Using backuped DB"
+#    [[ -f /run/nginx/.geoip/GeoIP.dat.gz ]] && cp /run/nginx/.geoip/GeoIP.dat.gz /"$GEOIPDIR"
+#    [[ -f /run/nginx/.geoip/GeoIPv6.dat.gz ]] && cp /run/nginx/.geoip/GeoIPv6.dat.gz /"$GEOIPDIR"
+#   else backupfail=true
+#   echo "[$APPNAME][$(date)] Nothing to backup, Download from mailfud seemingly didn't work"
+#  fi
+#fi
 
-# if we couldn't get the databases and the backup is not working either, let's fall back to another database:
-if [[ "$geoipfail" == "true" ]] && [[ "$backupfail" == "true" ]]
+# if we couldn't get the mailfud DB and the backup is not working either, let's fall back to another database:
+if [[ "$geoipfail" == "true" ]] && [[ "$backupworks" == "false" ]]
 then
   centminfail=false
   echo "[$APPNAME][$(date)] Couldn't download the mailfud GeoIP DB or use a backup. Now trying centminmod"
   ! curl --fail -sL -o "$GEOIPDIR"/GeoIP.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIP.dat.gz && centminfail=true || true
-  ! curl --fail -sL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIPv6.dat.gz && geoipfail=true || true
+  ! curl --fail -sL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIPv6.dat.gz && centminfail=true || true
 fi
 
-if [[ "$geoipfail" == "true" ]] && [[ "$backupfail" == "true" ]] && [[ "$backupfail" == "centminfail" ]]
+if [[ "$geoipfail" == "true" ]] && [[ "$backupworks" == "false" ]] && [[ "$centminfail" == "false" ]]
+then
+  echo "[$APPNAME][$(date)] Successfully downloaded DB from centminmod.com"
+fi
+
+#If nothing of the above did work out, we just use what we got through apt install
+if [[ "$geoipfail" == "true" ]] && [[ "$backupworks" == "false" ]] && [[ "$centminfail" == "true" ]]
 then
   echo "[$APPNAME][$(date)] Couldn't retrieve any newer GeoIP databases. Your database may be out of date."
 else
-  echo "[$APPNAME][$(date)] DB sucessfully downloaded"
+  echo "[$APPNAME][$(date)] DB sucessfully installed"
 fi
 
+#Now we need to unzip what we got - if we got any
 echo "[$APPNAME][$(date)] Unpacking downloaded DB"
-gunzip -f "$GEOIPDIR"/GeoIP.dat.gz
-gunzip -f "$GEOIPDIR"/GeoIPv6.dat.gz
+[[ -f "$GEOIPDIR"/GeoIP.dat.gz ]] && gunzip -f "$GEOIPDIR"/GeoIP.dat.gz
+[[ -f "$GEOIPDIR"/GeoIPv6.dat.gz ]] && gunzip -f "$GEOIPDIR"/GeoIPv6.dat.gz
 
 #read country codes from the variable
 IFS=“,” read -ra include_list <<< “$GEOIP_COUNTRIES”
 
-#set the default GeoIP in /etc/nginx/nginx.conf
+#set the default GeoIP in /etc/nginx/nginx.conf - if the variable was set up in docker-compose but with unexpected content, fall back to default yes
 case "$GEOIP_DEFAULT" in
   allow|ALLOW)
   echo "[$APPNAME][$(date)] Default is set to allow every country but block the listed"
