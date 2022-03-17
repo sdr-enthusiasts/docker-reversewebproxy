@@ -110,6 +110,7 @@ then
   sed -i 's|\(^\s*access_log \).*|\1/dev/stdout main;|' /etc/nginx/nginx.conf
   sed -i 's|\(^\s*error_log \).*|\1/dev/stdout main;|' /etc/nginx/nginx.conf
 elif [[ "$VERBOSELOG,," == "file" ]]
+then
   sed -i 's|\(^\s*access_log \).*|\1/run/nginx/access.log main;|' /etc/nginx/nginx.conf
   sed -i 's|\(^\s*error_log \).*|\1//run/nginx/error.log main;|' /etc/nginx/nginx.conf
 fi
