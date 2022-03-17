@@ -116,7 +116,7 @@ else
   echo "[$APPNAME][$(date)] HTTP logging is disabled"
 fi
 
-if [[ -n "$BOTBLOCK" ]]
+if [[ -n "$BLOCKBOT" ]]
 then
   BLOCKLIST="$(sed 's/,/|/g' <<< "$BLOCKBOT")"
   echo "[$APPNAME][$(date)] Blocking these bots: $BLOCKBOT"
