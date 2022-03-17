@@ -119,17 +119,4 @@ then
   sed -i 's/^\s*#blockbot.*/if ($http_user_agent ~ ('"$BLOCKLIST"') ) { return 403; }/' /etc/nginx/sites-available/default.org
 fi
 
-# now test the nginx configuration
-if ! /usr/sbin/nginx -g 'daemon off;' -t -q
-then
-    # nginx config problem. Complain and stop the container:
-    echo "--------------------------------------------------"
-    echo "|      STOP ! NGINX configuration problem        |"
-    echo "| This is probably caused by a mal-formed        |"
-    echo "| locations.conf file or by syntax errors in the |"
-    echo "| definition of REVPROXY or REDIRECT in your     |"
-    echo "| docker-compose.yml file. Go check and fix them!|"
-    echo "--------------------------------------------------"
-
-    exit 1
-fi
+exit 0
