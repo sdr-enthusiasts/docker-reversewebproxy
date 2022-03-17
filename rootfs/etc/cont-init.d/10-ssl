@@ -24,11 +24,14 @@ then
     # If there's no backup but there is /etc/letsencrypt, then let's make sure it's backed up before we do anything else
     mkdir -p /run/nginx/.letsencrypt
     chmod u=rwx,go= /run/nginx/.letsencrypt
-    find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist
+    find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist 2>/dev/null
     tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist  >/dev/null 2>&1
     rm /tmp/tarlist
     chmod u=rx,go= /run/nginx/.letsencrypt
 fi
+
+# Just make sure that this file exists so `nginx -t` won't complain later on:
+touch /run/nginx/locations.conf
 
 # Do some checks to ensure that there is enough info to request domains:
 if (( ${#SSL_DOMAIN[@]} == 0 ))
