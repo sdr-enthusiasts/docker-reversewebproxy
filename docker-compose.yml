@@ -85,15 +85,16 @@ services:
             - SSL_REDIRECT=ENABLED
             #
             # These settings will enable GeoIP inclusion or exclusion of requests based on country.
-            # the container uses the GeoLite2 database for this, and to make it work
-            # you need to obtain a free License Key at https://dev.maxmind.com/geoip/geolite2-free-geolocation-data?lang=en
-            # Add the key to your .env as GEOLITE2_KEY=xxxxxxx or add it directly into the variable below
-            # If you enter an empty key, or leave the variable out, inclusion/exclusion by country will be switched off.
-            # You can then add a comma separated list of included and a list of excluded countries to filter your traffic.
             # Country names are two-letter abbreviations corresponding to the country suffix used in domain names.
-            - GEOLITE2_KEY=${GEOLITE2_KEY}
-            - GEO_INCLUDE=
-            - GEO_EXCLUDE=
+            # GEOIP_DEFAULT is "allow" (allow all except for country list)
+            #                  "block" (block all except for country list)
+            #                  <empty> no GeoIP blocking
+            - GEOIP_DEFAULT=allow
+            - GEOIP_COUNTRIES=cn,ru
+            #
+            # BLOCKBOT blocks bots of which the User Agent contains all or part of these comma-separated strings:
+            - BLOCKBOT=bot,Bot,LieBaoFast,UCBrowser,MQQBrowser,Mb2345Browser
+            #
         tmpfs:
             - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
         volumes:

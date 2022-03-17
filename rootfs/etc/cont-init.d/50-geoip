@@ -1,11 +1,11 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
-APPNAME="$(hostname)/GeoIP"
+APPNAME="$(hostname)/GeoIP-init"
 GEOIPDIR="/usr/share/GeoIP"
 NGINXGEOIPCNF="/etc/nginx/geoip_countries.conf"
 
-echo "[$APPNAME][$(date)] Set up of GeoIP Database and correpsonding nginx configuration"
+echo "[$APPNAME][$(date)] Set up of GeoIP Database and corresponding nginx configuration"
 
 #Moving geoip_countries.conf to the right place
 echo "[$APPNAME][$(date)] Copy geoip_countries.conf to the right place, delete old version first"
@@ -117,7 +117,7 @@ IFS=“,” read -ra include_list <<< “$GEOIP_COUNTRIES”
 #set the default GeoIP in /etc/nginx/nginx.conf - if the variable was set up in docker-compose but with unexpected content, fall back to default yes
 case "$GEOIP_DEFAULT" in
   allow|ALLOW)
-  echo "[$APPNAME][$(date)] Default is set to allow every country but block the listed"
+  echo "[$APPNAME][$(date)] Default is set to allow every country but block these: ${include_list[@]}"
   sed -i '/^#defaultsetting.*/a default yes;' $NGINXGEOIPCNF
   for a in ${include_list[@]}
     do
@@ -125,7 +125,7 @@ case "$GEOIP_DEFAULT" in
   done
   ;;
   block|BLOCK)
-  echo "[$APPNAME][$(date)] Default is set to block every country and only allow the listed"
+  echo "[$APPNAME][$(date)] Default is set to block every country and only allow these: ${include_list[@]}"
   sed -i '/^#defaultsetting.*/a default no;' $NGINXGEOIPCNF
   for a in ${include_list[@]}
     do
