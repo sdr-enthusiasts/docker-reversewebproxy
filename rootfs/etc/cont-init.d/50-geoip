@@ -29,7 +29,7 @@ mkdir -p /run/nginx/.geoip
 #delete old cached files
 if [[ -f /run/nginx/.geoip/GeoIP.bckup ]];
  then
-  if [ "$(( $(date +"%s") - $(stat -c "%Y" /run/nginx/.geoip/GeoIP.bckup) ))" -gt "10800" ]
+  if [ "$(( $(date +"%s") - $(stat -c "%Y" /run/nginx/.geoip/GeoIP.bckup) ))" -gt "90000" ]
    then
     echo "[$APPNAME][$(date)] Found DB Backup which is older than 3 hours. Deleting"
     rm -f /run/nginx/.geoip/*.gz
