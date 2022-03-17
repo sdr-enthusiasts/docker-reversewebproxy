@@ -30,7 +30,7 @@ server {
 		try_files $uri $uri/ =404;
 
 		include /run/nginx/locations.conf;
+    include /etc/nginx/blockbot.conf;
 
-    #blockbot goes here
 	}
 }
