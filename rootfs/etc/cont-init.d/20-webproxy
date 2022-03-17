@@ -119,6 +119,7 @@ fi
 if [[ -n "$BOTBLOCK" ]]
 then
   BLOCKLIST="$(sed 's/,/|/g' <<< "$BLOCKBOT")"
+  echo "[$APPNAME][$(date)] Blocking these bots: $BLOCKBOT"
   sed -i 's/^\s*#blockbot.*/if ($http_user_agent ~ ('"$BLOCKLIST"') ) { return 403; }/' /etc/nginx/sites-available/default
   sed -i 's/^\s*#blockbot.*/if ($http_user_agent ~ ('"$BLOCKLIST"') ) { return 403; }/' /etc/nginx/sites-available/default.org
 fi
