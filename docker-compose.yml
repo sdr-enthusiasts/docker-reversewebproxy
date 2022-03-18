@@ -25,7 +25,7 @@ services:
             - VERBOSELOG=ON
             # ----------------------------------------------------------------------------------------
             # REVPROXY has the following format:
-            #     urltarget|destination
+            #     urltarget,destination
             # For example, for REVPROXY=readsb|http://10.0.0.191:8080,
             # a user browsing to http://mydomain/readsb will be proxied to http://10.0.0.191:8080
             # The user's browser will *never* see the internal IP address.
@@ -93,7 +93,15 @@ services:
             - GEOIP_COUNTRIES=cn,ru
             #
             # BLOCKBOT blocks bots of which the User Agent contains all or part of these comma-separated strings:
-            - BLOCKBOT=bot,Bot,LieBaoFast,UCBrowser,MQQBrowser,Mb2345Browser
+            - BLOCKBOT=
+                       bot,LieBaoFast,UCBrowser,MQQBrowser,Mb2345Browser,
+                       google,bing,yandex,msnbot,
+                       AltaVista,Googlebot,Slurp,BlackWidow,Bot,ChinaClaw,Custo,DISCo,Download,Demon,eCatch,EirGrabber,EmailSiphon,EmailWolf,SuperHTTP,Surfbot,WebWhacker,
+                       Express,WebPictures,ExtractorPro,EyeNetIE,FlashGet,GetRight,GetWeb!,Go!Zilla,Go-Ahead-Got-It,GrabNet,Grafula,HMView,Go!Zilla,Go-Ahead-Got-It,
+                       rafula,HMView,HTTrack,Stripper,Sucker,Indy,InterGET,Ninja,JetCar,Spider,larbin,LeechFTP,Downloader,tool,Navroad,NearSite,NetAnts,tAkeOut,WWWOFFLE,
+                       GrabNet,NetSpider,Vampire,NetZIP,Octopus,Offline,PageGrabber,Foto,pavuk,pcBrowser,RealDownload,ReGet,SiteSnagger,SmartDownload,SuperBot,WebSpider,
+                       Teleport,VoidEYE,Collector,WebAuto,WebCopier,WebFetch,WebGo,WebLeacher,WebReaper,WebSauger,eXtractor,Quester,WebStripper,WebZIP,Wget,Widow,Zeus,
+                       Twengabot,htmlparser,libwww,Python,perl,urllib,scan,email,PycURL,Pyth,PyQ,WebCollector,WebCopy,webcraw
             #
         tmpfs:
             - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
