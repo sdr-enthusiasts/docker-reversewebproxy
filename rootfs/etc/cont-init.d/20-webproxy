@@ -116,17 +116,6 @@ else
   echo "[$APPNAME][$(date)] HTTP logging is disabled"
 fi
 
-if [[ -n "$BLOCKBOT" ]]
-then
-  BLOCKLIST="$(sed 's/,/|/g' <<< "$BLOCKBOT")"
-  echo "[$APPNAME][$(date)] Blocking these bots: $BLOCKBOT"
-  printf "map \$http_user_agent \$limit_bots {\n       default 0;" >/etc/nginx/blockbot.conf
-  printf "       ~*(%s) 1;\n" "$BLOCKLIST" >>/etc/nginx/blockbot.conf
-  printf "}\n"  >>/etc/nginx/blockbot.conf
-  cat /etc/nginx/blockbot.conf
-else
-  echo "[$APPNAME][$(date)] Bot blocking disabled"
-  cp -f /etc/nginx/blockbot.conf.org /etc/nginx/blockbot.conf
-fi
+
 
 exit 0
