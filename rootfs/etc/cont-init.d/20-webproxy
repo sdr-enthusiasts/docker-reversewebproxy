@@ -125,7 +125,7 @@ then
   printf "}\n"  >>/etc/nginx/blockbot.conf
 else
   echo "[$APPNAME][$(date)] Bot blocking disabled"
-  printf "map $http_user_agent $limit_bots {\n       default 0;\" >/etc/nginx/blockbot.conf
+  printf "map $http_user_agent \$limit_bots {\n       default 0;" >/etc/nginx/blockbot.conf
   printf "}\n"  >>/etc/nginx/blockbot.conf
 fi
 chmod a+r /etc/nginx/blockbot.conf
