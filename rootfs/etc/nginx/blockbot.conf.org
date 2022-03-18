@@ -1,0 +1,4 @@
+#blocklist for bots disabled
+map $http_user_agent $limit_bots {
+       default 0;
+}
