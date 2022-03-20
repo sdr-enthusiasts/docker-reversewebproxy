@@ -1,6 +1,10 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
+# This script makes a quick/final backup of all SSL files upon container exit
+# This ensures that any config changes that are added during the runtime are backed up as well
+#
+
 APPNAME="$(hostname)/ssl-init"
 echo "[$APPNAME][$(date)] Started SSL initialization"
 
@@ -14,26 +18,9 @@ then
 fi
 
 # First let's check if there's a backup. This backup contains the latest, so let's make sure it's installed
-# If /root/letsencrypt-force-reinstall exists, then there were some BREAKING changing to the container that
-# necesitate a container update. This file will contain a date (secs since epoch). If the last forced reinstall was
-# earlier than this date, then don't restore any backups
-
-forceinstall="false"
-[[ -f /run/nginx/.letsencrypt/.force-reinstall.lastforced ]] && read -r lastforced < /run/nginx/.letsencrypt/.force-reinstall.lastforced || lastforced=0
-if [[ -f /root/letsencrypt-force-reinstall ]]
+if [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]]
 then
-  read -r mustforce < /root/letsencrypt-force-reinstall
-  [[ -z "$mustforce" ]] && mustforce=0 || true
-  [[ -z "$lastforced" ]] && lastforced=0 || true
-  (( mustforce - lastforced > 0 )) && forceinstall="true" || true
-  date +%s > /run/nginx/.letsencrypt/.force-reinstall.lastforced
-  echo -n "[$APPNAME][$(date)] Reinstallation of certificates forced by rule. Must reinstall if last install was before $(date -d "@$mustforce"). Last reinstall was at $(date -d "@$lastforced"). Will "
-  [[ "$forceinstall" == "true" ]] && echo "reinstall certificates." || echo "not reinstall certificates."
-fi
-
-# if there is a backup and $forceinstall is not true, restore it
-if [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]] && [[ "$forceinstall" != "true" ]]
-then
+    # if there is a backup, restore it
     echo "[$APPNAME][$(date)] Backup of certificates found. Restoring..."
     tar --overwrite -xzf /run/nginx/.letsencrypt/letsencrypt.tgz -C /  >/dev/null 2>&1
 elif [[ -d /etc/letsencrypt ]]
@@ -134,7 +121,7 @@ else
 
     [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]] && mv -f /run/nginx/.letsencrypt/letsencrypt.tgz /run/nginx/.letsencrypt/letsencrypt-backup.tgz
 
-    find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist 2>/dev/null
+    find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist
     tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist >/dev/null 2>&1
     rm /tmp/tarlist
     chmod u=rx,go= /run/nginx/.letsencrypt
