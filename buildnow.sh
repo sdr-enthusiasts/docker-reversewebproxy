@@ -4,11 +4,14 @@ set -x
 
 [[ "$1" != "" ]] && BRANCH="$1" || BRANCH=main
 [[ "$BRANCH" == "main" ]] && TAG="latest" || TAG="$BRANCH"
-[[ "$ARCHS" == "" ]] && ARCHS="linux/armhf,linux/arm64,linux/amd64"
+[[ "$ARCHS" == "" ]] && ARCHS="linux/armhf,linux/arm64,linux/amd64,linux/i386"
 
-IMAGE=kx1t/$(pwd | sed -n 's|.*/docker-\(.*\)|\1|p'):$TAG
+BASETARGET=ghcr.io/sdr-enthusiasts
+# BASETARGET=kx1t
 
-[[ "$IMAGE" == "kx1t/reversewebproxy:$TAG" ]] && IMAGE="kx1t/webproxy:$TAG" || true
+IMAGE="$BASETARGET/$(pwd | sed -n 's|.*/docker-\(.*\)|\1|p'):$TAG"
+
+[[ "$IMAGE" == "$BASETARGET/reversewebproxy:$TAG" ]] && IMAGE="$BASETARGET/webproxy:$TAG" || true
 
 echo "press enter to start building $IMAGE from $BRANCH"
 read
