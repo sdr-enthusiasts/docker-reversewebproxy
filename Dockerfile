@@ -4,7 +4,8 @@ RUN set -x && \
 # define packages needed for installation and general management of the container:
     TEMP_PACKAGES=() && \
     KEPT_PACKAGES=() && \
-    KEPT_PACKAGES+=(procps nano aptitude netcat) && \ # added for debugging
+# added for debugging
+    KEPT_PACKAGES+=(procps nano aptitude netcat) && \
     KEPT_PACKAGES+=(nginx) && \
     KEPT_PACKAGES+=(python3-certbot-nginx) && \
     KEPT_PACKAGES+=(psmisc) && \
