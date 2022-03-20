@@ -10,7 +10,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(libnginx-mod-http-geoip) && \
     KEPT_PACKAGES+=(geoip-database) && \
     # added for debugging
-        KEPT_PACKAGES+=(procps nano aptitude netcat ibnginx-mod-http-echo) && \
+        KEPT_PACKAGES+=(procps nano aptitude netcat libnginx-mod-http-echo) && \
 #
 # Install all these packages:
     apt-get update && \
