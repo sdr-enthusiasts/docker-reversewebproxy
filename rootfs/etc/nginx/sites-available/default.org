@@ -5,7 +5,11 @@ server {
     if ($allowed_country = no) {
         return 403;
     }
-#
+# check if it's a bot that needs filtering
+    if ($limit_bots = 1) {
+      return 403;
+    }
+
 	listen 80 default_server;
 	listen [::]:80 default_server;
 
@@ -16,15 +20,8 @@ server {
 
 	server_name _;
 
-  include /etc/nginx/blockbot.conf;
-
 	location / {
-
-    if ($limit_bots = 1) {
-        return 403;
-    }
-
-		# headers added to resolve issues with websocket connections:
+  	# headers added to resolve issues with websocket connections:
 		proxy_set_header Upgrade $http_upgrade;
 		proxy_set_header Connection $http_connection;
 		proxy_set_header Host $http_host;
@@ -36,7 +33,7 @@ server {
 		# as directory, then fall back to displaying a 404.
 		try_files $uri $uri/ =404;
 
-		include /run/nginx/locations.conf;
+  }
+	include /run/nginx/locations.conf;
 
-	}
 }

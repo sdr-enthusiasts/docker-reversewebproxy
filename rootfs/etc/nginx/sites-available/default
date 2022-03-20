@@ -5,7 +5,11 @@ server {
     if ($allowed_country = no) {
         return 403;
     }
-#
+# check if it's a bot that needs filtering
+    if ($limit_bots = 1) {
+      return 403;
+    }
+
 	listen 80 default_server;
 	listen [::]:80 default_server;
 
@@ -17,12 +21,6 @@ server {
 	server_name _;
 
 	location / {
-
-    # first check if it's a bot that needs filtering
-    if ($limit_bots = 1) {
-      return 404;
-    }
-
   	# headers added to resolve issues with websocket connections:
 		proxy_set_header Upgrade $http_upgrade;
 		proxy_set_header Connection $http_connection;
