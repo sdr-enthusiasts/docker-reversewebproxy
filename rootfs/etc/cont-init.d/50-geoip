@@ -139,6 +139,15 @@ case "$GEOIP_DEFAULT" in
   ;;
 esac
 
+# If there is a GEOIP_RESPONSECODE, then substitute it.
+# Default code if omitted is 403 (Forbidden). Other codes that may be useful:
+# 402 (payment required, hehe), 404 (doesnt exist), 418 (I am a teapot - used to tell requestors to go away), 410 (Gone), 500 (Internal Server Error),
+# 503 (service unavailable), etc - see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+if [[ -n "$GEOIP_RESPONSECODE" ]] && [[ "$GEOIP_RESPONSECODE" -ge 100 ]]  && [[ "$GEOIP_RESPONSECODE" -le 999 ]]
+then
+  sed -i '/\s*if ($allowed_country = no)/{$!{N;s/\(\s*if ($allowed_country = no) {\s*\n\s*return \)[0-9]*\(.*\)/\1'"$GEOIP_RESPONSECODE"'\2/;ty;P;D;:y}}' /etc/nginx/sites-available/default >/dev/null 2>&1
+fi
+
 echo "[$APPNAME][$(date)] Finished setting up GeoIP"
 
 exit

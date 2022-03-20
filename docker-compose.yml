@@ -89,6 +89,11 @@ services:
             # GEOIP_DEFAULT is "allow" (allow all except for country list)
             #                  "block" (block all except for country list)
             #                  <empty> no GeoIP blocking
+            # BLOCKBOT_RESPONSECODE indicates which HTTP response is sent when a bot is blocked.
+            # Default code if omitted is 403 (Forbidden). Other codes that may be useful:
+            # 402 (payment required, hehe), 404 (doesnt exist), 418 (I am a teapot - used to tell requestors to go away), 410 (Gone), 500 (Internal Server Error),
+            # 503 (service unavailable), etc - see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+            - GEOIP_RESPONSECODE=418
             - GEOIP_DEFAULT=allow
             - GEOIP_COUNTRIES=cn,ru
             #
@@ -102,7 +107,11 @@ services:
                        GrabNet,NetSpider,Vampire,NetZIP,Octopus,Offline,PageGrabber,Foto,pavuk,pcBrowser,RealDownload,ReGet,SiteSnagger,SmartDownload,SuperBot,WebSpider,
                        Teleport,VoidEYE,Collector,WebAuto,WebCopier,WebFetch,WebGo,WebLeacher,WebReaper,WebSauger,eXtractor,Quester,WebStripper,WebZIP,Wget,Widow,Zeus,
                        Twengabot,htmlparser,libwww,Python,perl,urllib,scan,email,PycURL,Pyth,PyQ,WebCollector,WebCopy,webcraw
-            #
+            # BLOCKBOT_RESPONSECODE indicates which HTTP response is sent when a bot is blocked.
+            # Default code if omitted is 403 (Forbidden). Other codes that may be useful:
+            # 402 (payment required, hehe), 404 (doesnt exist), 418 (I am a teapot - used to tell requestors to go away), 410 (Gone), 500 (Internal Server Error),
+            # 503 (service unavailable), etc - see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+            - BLOCKBOT_RESPONSECODE=418
         tmpfs:
             - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
         volumes:

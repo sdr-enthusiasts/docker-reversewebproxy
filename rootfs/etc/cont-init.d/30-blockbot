@@ -19,3 +19,12 @@ else
   echo "[$APPNAME][$(date)] Bot blocking disabled"
   cp -f /etc/nginx/blockbot.conf.org /etc/nginx/blockbot.conf
 fi
+
+# If there is a BLOCKBOT_RESPONSECODE, then substitute it.
+# Default code if omitted is 403 (Forbidden). Other codes that may be useful:
+# 402 (payment required, hehe), 404 (doesnt exist), 418 (I am a teapot - used to tell requestors to go away), 410 (Gone), 500 (Internal Server Error),
+# 503 (service unavailable), etc - see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+if [[ -n "$BLOCKBOT_RESPONSECODE" ]] && [[ "$BLOCKBOT_RESPONSECODE" -ge 100 ]]  && [[ "$BLOCKBOT_RESPONSECODE" -le 999 ]]
+then
+  sed -i '/\s*if ($limit_bots = 1)/{$!{N;s/\(\s*if ($limit_bots = 1) {\s*\n\s*return \)[0-9]*\(.*\)/\1'"$BLOCKBOT_RESPONSECODE"'\2/;ty;P;D;:y}}' /etc/nginx/sites-available/default >/dev/null 2>&1
+fi
