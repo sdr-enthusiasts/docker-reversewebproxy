@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
     webproxy:
-        image: kx1t/webproxy
+        image: https://github.com/sdr-enthusiasts/docker-baseimage/pkgs/container/webproxy
         tty: true
         container_name: webproxy
         hostname: webproxy
