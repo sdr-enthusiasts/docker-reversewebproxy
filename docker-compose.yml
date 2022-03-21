@@ -99,6 +99,7 @@ services:
             #
             # BLOCKBOT blocks bots of which the User Agent contains all or part of these comma-separated strings:
             - BLOCKBOT=
+            - BLOCKBOT=
                        bot,LieBaoFast,UCBrowser,MQQBrowser,Mb2345Browser,
                        google,bing,yandex,msnbot,
                        AltaVista,Googlebot,Slurp,BlackWidow,Bot,ChinaClaw,Custo,DISCo,Download,Demon,eCatch,EirGrabber,EmailSiphon,EmailWolf,SuperHTTP,Surfbot,WebWhacker,
@@ -106,12 +107,13 @@ services:
                        rafula,HMView,HTTrack,Stripper,Sucker,Indy,InterGET,Ninja,JetCar,Spider,larbin,LeechFTP,Downloader,tool,Navroad,NearSite,NetAnts,tAkeOut,WWWOFFLE,
                        GrabNet,NetSpider,Vampire,NetZIP,Octopus,Offline,PageGrabber,Foto,pavuk,pcBrowser,RealDownload,ReGet,SiteSnagger,SmartDownload,SuperBot,WebSpider,
                        Teleport,VoidEYE,Collector,WebAuto,WebCopier,WebFetch,WebGo,WebLeacher,WebReaper,WebSauger,eXtractor,Quester,WebStripper,WebZIP,Wget,Widow,Zeus,
-                       Twengabot,htmlparser,libwww,Python,perl,urllib,scan,email,PycURL,Pyth,PyQ,WebCollector,WebCopy,webcraw
+                       Twengabot,htmlparser,libwww,Python,perl,urllib,scan,email,PycURL,Pyth,PyQ,WebCollector,WebCopy,webcraw,PetalBot,ubermetrics,Firefox/45,
+                       Vert.x-WebClient,jsonlite,rv:45.0,Nexgate Ruby Client,scoop.it,NetSystemsResearch
             # BLOCKBOT_RESPONSECODE indicates which HTTP response is sent when a bot is blocked.
             # Default code if omitted is 403 (Forbidden). Other codes that may be useful:
             # 402 (payment required, hehe), 404 (doesnt exist), 418 (I am a teapot - used to tell requestors to go away), 410 (Gone), 500 (Internal Server Error),
             # 503 (service unavailable), etc - see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
-            - BLOCKBOT_RESPONSECODE=418
+            - BLOCKBOT_RESPONSECODE=403
         tmpfs:
             - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
         volumes:
