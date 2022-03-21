@@ -99,7 +99,6 @@ services:
             #
             # BLOCKBOT blocks bots of which the User Agent contains all or part of these comma-separated strings:
             - BLOCKBOT=
-            - BLOCKBOT=
                        bot,LieBaoFast,UCBrowser,MQQBrowser,Mb2345Browser,
                        google,bing,yandex,msnbot,
                        AltaVista,Googlebot,Slurp,BlackWidow,Bot,ChinaClaw,Custo,DISCo,Download,Demon,eCatch,EirGrabber,EmailSiphon,EmailWolf,SuperHTTP,Surfbot,WebWhacker,
