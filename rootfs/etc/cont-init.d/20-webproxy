@@ -72,7 +72,8 @@ then
         printf "    proxy_pass %s;\n" "$destination"  >> /run/nginx/locations.conf
 
         # Additional line to catch redirects; suggested by @wiedehopf:
-        printf " proxy_redirect ~^(/|http://[^/]*/)(.*) %s\$2;" "$location" >> /run/nginx/locations.conf
+        # removed again after discussions
+        # printf "    proxy_redirect ~^(/|http://[^/]*/)(.*) %s\$2;\n" "$location" >> /run/nginx/locations.conf
 
         # close off the location entry:
         printf "}\n\n"  >> /run/nginx/locations.conf
