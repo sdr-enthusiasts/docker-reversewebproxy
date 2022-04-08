@@ -1,30 +1,32 @@
-name: Deploy to Docker Hub
+name: Deploy to GHCR
 
 on:
-
+  # Build and deploy the image on pushes to main branch
+  workflow_dispatch:
+    inputs:
+      reason:
+        required: true
+        description: "Reason for running this workflow"
   # Build and deploy the image on pushes to master branch
   push:
     branches:
       - master
       - main
 
-  # Build and deploy the image nightly (to ensure we pick up any security updates)
-  schedule:
-    - cron: "0 10 * * *"
-
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  REPO: sdr-enthusiasts
+  IMAGE: webproxy
 
 jobs:
-  deploy_dockerhub_multiarch:
-    name: Deploy to DockerHub (Multi-Arch)
-    runs-on: ubuntu-18.04
+  deploy_ghcr_multiarch:
+    name: Deploy to GHCR (Multi-Arch)
+    runs-on: ubuntu-latest
 
     # Set job-wide environment variables
     #  - REPO: repo name on dockerhub
     #  - IMAGE: image name on dockerhub
-    env:
-      REPO: kx1t
-      IMAGE: webproxy
-      PUSH: true
 
     steps:
 
@@ -33,18 +35,134 @@ jobs:
         name: Checkout
         uses: actions/checkout@v2
 
-      # Hit an issue where arm builds would fail with cURL errors regarding intermediary certificates when downloading from github (ie: deploy-s6-overlay).
-      # After many hours of troubleshooting, the workaround is to pre-load the image's rootfs with the CA certificates from the runner.
-      # This problem may go away in future.
+      # Set up QEMU for multi-arch builds
       -
-        name: Copy CA Certificates from GitHub Runner to Image rootfs
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      # # Log into GHCR (so we can push images)
+      - name: Login to ghcr.io
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Get metadata from repo
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      # Set up buildx for multi platform builds
+      -
+        name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build & Push ghcr.io/sdr-enthusiasts/webproxy:latest
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          no-cache: true
+          platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/i386
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ghcr.io/sdr-enthusiasts/webproxy:latest
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy_ghcr_single_arch:
+    name: Deploy to GHCR
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        docker-platform:
+          - linux/amd64
+          - linux/arm64
+          - linux/arm/v7
+          - linux/i386
+
+    steps:
+
+      # Check out our code
+      -
+        name: Checkout
+        
+        uses: actions/checkout@v2
+
+      # Set up QEMU for multi-arch builds
+      -
+        name: Set up QEMU
+        
+        uses: docker/setup-qemu-action@v1
+
+      # # Log into GHCR (so we can push images)
+      - name: Login to ghcr.io
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Get metadata from repo
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      # Set up buildx for multi platform builds
+      -
+        name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      # Get archictecture suffix
+      -
+        name: Get image architecture suffix
         run: |
-          ls -la /etc/ssl/certs/
-          mkdir -p ./root_certs/etc/ssl/certs
-          mkdir -p ./root_certs/usr/share/ca-certificates/mozilla
-          cp --no-dereference /etc/ssl/certs/*.crt ./root_certs/etc/ssl/certs
-          cp --no-dereference /etc/ssl/certs/*.pem ./root_certs/etc/ssl/certs
-          cp --no-dereference /usr/share/ca-certificates/mozilla/*.crt ./root_certs/usr/share/ca-certificates/mozilla
+          echo "ARCH_TAG=$(echo '${{ matrix.docker-platform }}' | cut -d '/' -f2- | tr -s '/' '_')" >> $GITHUB_ENV
+      # Show archictecture suffix
+      -
+        name: Show image architecture suffix
+        run: |
+          echo "Architecture suffix: ${{ env.ARCH_TAG }}"
+      - name: Build & Push ghcr.io/sdr-enthusiasts/webproxyl:latest arch
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          no-cache: true
+          platforms: ${{ matrix.docker-platform }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ghcr.io/sdr-enthusiasts/webproxy:latest_${{ env.ARCH_TAG }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy_dockerhub_multiarch:
+    name: Deploy to DockerHub (Multi-Arch)
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # Check out our code
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+
 
       # Set up QEMU for multi-arch builds
       -
@@ -73,29 +191,19 @@ jobs:
           context: .
           file: ./Dockerfile
           no-cache: true
-          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm/v6,linux/arm64
-          push: ${{ env.PUSH }}
-          tags: ${{ env.REPO }}/${{ env.IMAGE }}:latest
+          platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/i386
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: kx1t/webproxy:latest
 
   deploy_dockerhub_single_arch:
     name: Deploy to DockerHub
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         docker-platform:
           - linux/amd64
           - linux/arm64
-          - linux/arm/v6
           - linux/arm/v7
-          - linux/i386
-
-    # Set job-wide environment variables
-    #  - REPO: repo name on dockerhub
-    #  - IMAGE: image name on dockerhub
-    env:
-      REPO: kx1t
-      IMAGE: webproxy
-      PUSH: true
 
     steps:
 
@@ -104,19 +212,6 @@ jobs:
         name: Checkout
         uses: actions/checkout@v2
 
-      # Hit an issue where arm builds would fail with cURL errors regarding intermediary certificates when downloading from github (ie: deploy-s6-overlay).
-      # After many hours of troubleshooting, the workaround is to pre-load the image's rootfs with the CA certificates from the runner.
-      # This problem may go away in future.
-
-      -
-        name: Copy CA Certificates from GitHub Runner to Image rootfs
-        run: |
-          ls -la /etc/ssl/certs/
-          mkdir -p ./root_certs/etc/ssl/certs
-          mkdir -p ./root_certs/usr/share/ca-certificates/mozilla
-          cp --no-dereference /etc/ssl/certs/*.crt ./root_certs/etc/ssl/certs
-          cp --no-dereference /etc/ssl/certs/*.pem ./root_certs/etc/ssl/certs
-          cp --no-dereference /usr/share/ca-certificates/mozilla/*.crt ./root_certs/usr/share/ca-certificates/
 
       # Set up QEMU for multi-arch builds
       -
@@ -142,13 +237,11 @@ jobs:
         name: Get image architecture suffix
         run: |
           echo "ARCH_TAG=$(echo '${{ matrix.docker-platform }}' | cut -d '/' -f2- | tr -s '/' '_')" >> $GITHUB_ENV
-
       # Show archictecture suffix
       -
         name: Show image architecture suffix
         run: |
           echo "Architecture suffix: ${{ env.ARCH_TAG }}"
-
       # Build "latest"
       -
         name: Build & Push - latest
@@ -158,5 +251,5 @@ jobs:
           file: ./Dockerfile
           no-cache: true
           platforms: ${{ matrix.docker-platform }}
-          push: ${{ env.PUSH }}
-          tags: ${{ env.REPO }}/${{ env.IMAGE }}:latest_${{ env.ARCH_TAG }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: kx1t/webproxy:latest_${{ env.ARCH_TAG }}
