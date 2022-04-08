@@ -1,150 +1,26 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
-set +x
+APPNAME="$(hostname)/ssl-check"
 
-APPNAME="$(hostname)/ssl"
-
-echo "[$APPNAME][$(date)] Started as an s6 service"
-
-# Now wait until NGINX is up
-echo "[$APPNAME][$(date)] Waiting for NGINX to come online..."
-until [[ -f /tmp/nginx.up ]]
-do
-    sleep 1
-done
-echo "[$APPNAME][$(date)] NGINX is online."
-
-# If SSL is not ENABLED, stop forevah
-if [[ "${SSL^^}" != "ENABLED" ]]
+if [[ -f /run/.ssl-enabled ]]
 then
-    echo "[$APPNAME][$(date)] SSL disabled. Restarting nginx with non-SSL configuration."
-    cp -f /etc/nginx/sites-available/default.org /etc/nginx/sites-available/default
-    killall /usr/sbin/nginx # this will tell s6 to restart the web server process
-    sleep infinity
-fi
-
-# First let's check if there's a backup. This backup contains the latest, so let's make sure it's installed
-if [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]]
-then
-    # if there is a backup, restore it
-    echo "[$APPNAME][$(date)] Backup of certificates found. Restoring..."
-    tar --overwrite -xzf /run/nginx/.letsencrypt/letsencrypt.tgz -C /  >/dev/null 2>&1
-elif [[ -d /etc/letsencrypt ]]
-then
-    # If there's no backup but there is /etc/letsencrypt, then let's make sure it's backed up before we do anything else
-    mkdir -p /run/nginx/.letsencrypt
-    chmod u=rwx,go= /run/nginx/.letsencrypt
-    find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist
-    tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist  >/dev/null 2>&1
-    rm /tmp/tarlist
-    chmod u=rx,go= /run/nginx/.letsencrypt
-fi
-
-# Do some checks to ensure that there is enough info to request domains:
-if (( ${#SSL_DOMAIN[@]} == 0 ))
-then
-    # No domains in environment files. Complain and stop trying to install certificates:
-    echo "[$APPNAME][$(date)] --------------------------------------------------"
-    echo "[$APPNAME][$(date)] |      STOP ! NGINX SSL configuration problem    |"
-    echo "[$APPNAME][$(date)] | You must define at least 1 SSL_DOMAIN in your  |"
-    echo "[$APPNAME][$(date)] | docker-compose.yml file. Go check and fix it!  |"
-    echo "[$APPNAME][$(date)] | The container will continue without SSL.       |"
-    echo "[$APPNAME][$(date)] --------------------------------------------------"
-    sleep infinity
-fi
-
-if ! grep -E "\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}\b" <<< "$SSL_EMAIL" >/dev/null
-then
-    # No domains in environment files. Complain and stop trying to install certificates:
-    echo "[$APPNAME][$(date)] --------------------------------------------------------"
-    echo "[$APPNAME][$(date)] |      STOP ! NGINX SSL configuration problem          |"
-    echo "[$APPNAME][$(date)] | You must provide a valid email in SSL_EMAIL in your  |"
-    echo "[$APPNAME][$(date)] | docker-compose.yml file. Go check and fix it!        |"
-    echo "[$APPNAME][$(date)] | The container will continue without SSL.             |"
-    echo "[$APPNAME][$(date)] --------------------------------------------------------"
-    sleep infinity
-fi
-
-if [[ "${SSL_TOS,,}" != "accept" ]]
-then
-    # No domains in environment files. Complain and stop trying to install certificates:
-    echo "[$APPNAME][$(date)] --------------------------------------------------------------------------"
-    echo "[$APPNAME][$(date)] |      STOP ! NGINX SSL configuration problem                            |"
-    echo "[$APPNAME][$(date)] | You must accept the ACME Account TOS found at                          |"
-    echo "[$APPNAME][$(date)] | https://letsencrypt.org/repository/#let-s-encrypt-subscriber-agreement |"
-    echo "[$APPNAME][$(date)] | and set SSL_TOS=ACCEPT in your docker-compose.yml file.                |"
-    echo "[$APPNAME][$(date)] | Go check and fix it! The container will continue without SSL.          |"
-    echo "[$APPNAME][$(date)] --------------------------------------------------------------------------"
-    sleep infinity
-else
-    agree_tos="--agree-tos"
-fi
-
-#[[ "${SSL_TEST}" != "" ]] && staging="--test-cert" || staging=""
-
-# Load up ${newdomains[@]} with any domain names there's not yet a certificate for
-newdomains=()
-domains=($(/usr/bin/certbot certificates 2>/dev/null | awk '/Domains:/ { $1=""; print substr($0,2) }'))
-
-IFS="," read -ra SSL_DOMAINS <<< "$(echo $SSL_DOMAIN|tr -d '[:blank:]')"
-for (( i=0; i<${#SSL_DOMAINS[@]}; i++ ))
-do
-    [[ ! " ${domains[@]} " =~ " ${SSL_DOMAINS[i]} " ]] && newdomains+=(${SSL_DOMAINS[i]})
-done
-
-# Figure out if we want to redirect all queries to SSL?
-[[ "${SSL_REDIRECT,,}" == "enabled" ]] && redirect="--redirect" || redirect=""
-
-(( ${#newdomains[@]} > 0 )) && echo "[$APPNAME][$(date)] New domains detected - attempting to get certificates for ${newdomains[@]}" || echo "[$APPNAME][$(date)] No new domains detected"
-
-# prepend "-d " before each domain name:
-newdomains=( "${newdomains[@]/#/-d }" )
-
-# Now get new certs for these newdomains:
-if (( ${#newdomains[@]} > 0 )) && ! /usr/bin/certbot run --quiet --nginx ${agree_tos} ${redirect} -m "${SSL_EMAIL}" ${newdomains[@]}
-then
-    # Something went wrong
-    echo Error in:
-    echo "/usr/bin/certbot run --quiet --nginx ${agree_tos} ${redirect} -m \"${SSL_EMAIL}\" ${newdomains[@]}"
-    echo "[$APPNAME][$(date)] --------------------------------------------------"
-    echo "[$APPNAME][$(date)] | STOP ! NGINX CertBot SSL installation problem  |"
-    echo "[$APPNAME][$(date)] | Please see the error message above.            |"
-    echo "[$APPNAME][$(date)] |                                                |"
-    echo "[$APPNAME][$(date)] | The container will continue without SSL.       |"
-    echo "[$APPNAME][$(date)] --------------------------------------------------"
-    sleep infinity
-else
-    echo "[$APPNAME][$(date)] SSL Certificates installed for these domains:"
+  echo "[$APPNAME][$(date)] Started as an s6 service. Checks every 24 hours if SSL certs need updating."
+  while :
+  do
+    sleep 1d
+    echo "[$APPNAME][$(date)] Checking if SSL certs need renewing..."
+    /usr/bin/certbot renew --quiet --deploy-hook "killall /usr/sbin/nginx"
     /usr/bin/certbot certificates
-    [[ "${SSL_REDIRECT,,}" == "enabled" ]] && echo "[$APPNAME][$(date)] All web traffic will be redirected to SSL."
-
-    # back things up again, keep a copy of the previous TGZ if there was one:
-    mkdir -p /run/nginx/.letsencrypt
+    # back things up again:
     chmod u=rwx,go= /run/nginx/.letsencrypt
-
     [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]] && mv -f /run/nginx/.letsencrypt/letsencrypt.tgz /run/nginx/.letsencrypt/letsencrypt-backup.tgz
-
     find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist
     tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist >/dev/null 2>&1
     rm /tmp/tarlist
     chmod u=rx,go= /run/nginx/.letsencrypt
-
-    echo "[$APPNAME][$(date)] Nginx will restart now to ensure SSL is enabled. Please ignore the message below about NGINX exiting."
-    echo "[$APPNAME][$(date)] The container will check every 24 hours to see if the certificates need renewal."
-    killall /usr/sbin/nginx # restart nginx with the SSL stuff installed
-    while :
-    do
-        sleep 1d
-        echo "[$APPNAME][$(date)] Checking if SSL certs need renewing..."
-        /usr/bin/certbot renew --quiet --deploy-hook "killall /usr/sbin/nginx"
-        /usr/bin/certbot certificates
-        # back things up again:
-        chmod u=rwx,go= /run/nginx/.letsencrypt
-        [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]] && mv -f /run/nginx/.letsencrypt/letsencrypt.tgz /run/nginx/.letsencrypt/letsencrypt-backup.tgz
-        find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist
-        tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist >/dev/null 2>&1
-        rm /tmp/tarlist
-        chmod u=rx,go= /run/nginx/.letsencrypt
-    done
+  done
+else
+  echo "[$APPNAME][$(date)] SSL is disabled. No checks will be performed."
+  sleep infinity
 fi

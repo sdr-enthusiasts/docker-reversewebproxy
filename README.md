@@ -28,11 +28,11 @@ The following example highlights this:
 ## How do I get it?
 
 Prerequisite for this to work, is that you have a working `Docker` and `Docker-compose` setup.
-This is less than 5 minutes of work -- follow the instructions at [this GitBook](https://mikenye.gitbook.io/ads-b/setting-up-the-host-system/install-docker); you need to do all 3 steps of the "Setting up the Host System" section.
+This is less than 5 minutes of work -- use [this script](https://github.com/sdr-enthusiasts/docker-install) or follow all 3 steps of the "Setting up the Host System" section at [this GitBook](https://sdr-enthusiasts.gitbook.io/ads-b/setting-up-the-host-system/install-docker).
 
 Once this is done, create a working directory and download the `docker-compose.yml` file:
 ```
-mkdir ~/myproxy && cd ~/myproxy
+sudo mkdir -p -m 777 /opt/webproxy && cd /opt/webproxy
 wget https://raw.githubusercontent.com/kx1t/docker-reversewebproxy/main/docker-compose.yml
 ```
 You should EDIT the `docker-compose.yml` file included in this repository and configure it to your liking. See below for options.
@@ -50,12 +50,12 @@ A "*" means that this is the default value
 | Parameter | Values | Description |
 |-----------|--------|-------------|
 | `AUTOGENERATE` | `ON`*, `OFF` | Determines if the system will use the `REVPROXY` and `REDIRECT` settings of the `docker-compose.yml` file (`ON`), or a manually generated `locations.conf` file (`OFF`). |
-| `VERBOSELOG` | `ON`*, `OFF` | Determines if the internal web service Access and Error logs will be written to the Docker log (accessible with `docker logs -f webproxy`) (`ON`), or that logging will be switched `OFF`.
+| `VERBOSELOG` | `ON`*, `OFF` | Determines if the internal web service Access and Error logs will be written to the Docker log (accessible with `docker logs webproxy`) (`ON`), or that logging will be switched `OFF`.
 
 You may have to adjust your `port:` and your `volumes:` mapping to your liking, especially if you are not running on the Raspberry Pi standard `pi` account.
 
 ### Configuration of the Webproxy
-If `AUTOGENERATE=ON`, the system will build a Webproxy based on th `REVPROXY` and `REDIRECT` parameter values.
+If `AUTOGENERATE=ON`, the system will build a Webproxy based on the `REVPROXY` and `REDIRECT` parameter values.
 
 `REVPROXY` defines the proxy-pairs to serve the `destination` target when the user browses to `urltarget`. The user's browser will never be redirected to an internal IP address for service, all web pages are being served from the Webproxy. As such, the process of going to the correct website/port to get the web page is completely hidden from the user.
 
@@ -94,8 +94,25 @@ If you want to check the official expiration date of your certificates, this com
 docker exec -it webproxy certbot certificates
 ```
 
+### GeoIP Filtering
+The Reverse Webproxy can filter incoming requests by originating IP. It uses an external GeoIP database that maps IP addresses to countries. This database is updated regularly with the latest mappings. Note - this GeoIP IP to Location mapping is not perfect, and users with a VPN can circumvent GeoIP filtering without much problems. 
+
+| Parameter | Values | Description |
+|-----------|--------|-------------|
+| `GEOIP_DEFAULT` |\<empty\>*, `ALLOW`, `DISALLOW`|Empty: GeoIP filtering is disabled; `ALLOW`: only those countries listed in the `GEOIP_COUNTRIES` parameter are permitted; `DISALLOW`: the countries listed in `GEOIP_COUNTRIES` are filtered.|
+| `GEOIP_COUNTRIES` | | Comma-separated list of 2-letter country abbreviations, for example `RU,CN,BY,RS` (which means Russia, China, Bielorus, Serbia).|
+| `GEOIP_RESPONSECODE` | 3-digit HTTP response code | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesnt exist), `418` (I am a teapot - used to tell requestors to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See https://developer.mozilla.org/en-US/docs/Web/HTTP/Status |
+   
+### BlockBot
+The BlockBot feature filters out HTTP requests based on a fuzzy match of the HTTP User Agent field against a list of potential matches. This can be used to somewhat effectively filter out bots that are trying to scrape your website. The `BLOCKBOT` parameter included `docker-compose.yml` file has an example of a bot filter.
+   
+| Parameter | Values | Description |
+|-----------|--------|-------------|
+| `BLOCKBOT` | string snippets of User Agent fields | Comma-separated strings, for example `google,bing,yandex,msnbot`. If this parameter is empty, the BlockBot functionality is disabled.
+| `BLOCKBOT_RESPONSECODE` | 3-digit HTTP response code | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesnt exist), `418` (I am a teapot - used to tell requestors to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See https://developer.mozilla.org/en-US/docs/Web/HTTP/Status |
+
 ### Advanced Setup
-After you run the container the first time, it will create a directory named `~/webproxy`. If `AUTOGENERATE=ON`, there will be a `locations.conf` file. There will also be a `locations.conf.example` file that contains setup examples. If you know how to write a `nginx` configuration file, feel free to edit the `locations.conf` and add any options to your liking.
+After you run the container the first time, it will create a directory named `~/.webproxy`. If `AUTOGENERATE=ON`, there will be a `locations.conf` file. There will also be a `locations.conf.example` file that contains setup examples. If you know how to write a `nginx` configuration file, feel free to edit the `locations.conf` and add any options to your liking.
 
 BEFORE restarting the container (important!!) edit `docker-compose.yml` and set `AUTOGENERATE=OFF`. If you don't do this, your newly created `locations.conf` file will be overwritten by the auto-generated one based on the `REVPROXY` and `REDIRECT` settings. (There will be a time-stamped backup file of your `locations.conf` file, so not everything is lost!)
 

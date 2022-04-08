@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
     webproxy:
-        image: kx1t/webproxy
+        image: ghcr.io/sdr-enthusiasts/webproxy:dev-geoip
         tty: true
         container_name: webproxy
         hostname: webproxy
@@ -25,7 +25,7 @@ services:
             - VERBOSELOG=ON
             # ----------------------------------------------------------------------------------------
             # REVPROXY has the following format:
-            #     urltarget|destination
+            #     urltarget,destination
             # For example, for REVPROXY=readsb|http://10.0.0.191:8080,
             # a user browsing to http://mydomain/readsb will be proxied to http://10.0.0.191:8080
             # The user's browser will *never* see the internal IP address.
@@ -83,6 +83,36 @@ services:
                        my.third.domain.com
             - SSL_TOS=REJECT
             - SSL_REDIRECT=ENABLED
+            #
+            # These settings will enable GeoIP inclusion or exclusion of requests based on country.
+            # Country names are two-letter abbreviations corresponding to the country suffix used in domain names.
+            # GEOIP_DEFAULT is "allow" (allow all except for country list)
+            #                  "block" (block all except for country list)
+            #                  <empty> no GeoIP blocking
+            # GEOIP_RESPONSECODE indicates which HTTP response is sent when a bot is blocked.
+            # Default code if omitted is 403 (Forbidden). Other codes that may be useful:
+            # 402 (payment required, hehe), 404 (doesnt exist), 418 (I am a teapot - used to tell requestors to go away), 410 (Gone), 500 (Internal Server Error),
+            # 503 (service unavailable), etc - see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+            - GEOIP_RESPONSECODE=418
+            - GEOIP_DEFAULT=allow
+            - GEOIP_COUNTRIES=cn,ru
+            #
+            # BLOCKBOT blocks bots of which the User Agent contains all or part of these comma-separated strings:
+            - BLOCKBOT=
+                       bot,LieBaoFast,UCBrowser,MQQBrowser,Mb2345Browser,
+                       google,bing,yandex,msnbot,
+                       AltaVista,Googlebot,Slurp,BlackWidow,Bot,ChinaClaw,Custo,DISCo,Download,Demon,eCatch,EirGrabber,EmailSiphon,EmailWolf,SuperHTTP,Surfbot,WebWhacker,
+                       Express,WebPictures,ExtractorPro,EyeNetIE,FlashGet,GetRight,GetWeb!,Go!Zilla,Go-Ahead-Got-It,GrabNet,Grafula,HMView,Go!Zilla,Go-Ahead-Got-It,
+                       rafula,HMView,HTTrack,Stripper,Sucker,Indy,InterGET,Ninja,JetCar,Spider,larbin,LeechFTP,Downloader,tool,Navroad,NearSite,NetAnts,tAkeOut,WWWOFFLE,
+                       GrabNet,NetSpider,Vampire,NetZIP,Octopus,Offline,PageGrabber,Foto,pavuk,pcBrowser,RealDownload,ReGet,SiteSnagger,SmartDownload,SuperBot,WebSpider,
+                       Teleport,VoidEYE,Collector,WebAuto,WebCopier,WebFetch,WebGo,WebLeacher,WebReaper,WebSauger,eXtractor,Quester,WebStripper,WebZIP,Wget,Widow,Zeus,
+                       Twengabot,htmlparser,libwww,Python,perl,urllib,scan,email,PycURL,Pyth,PyQ,WebCollector,WebCopy,webcraw,PetalBot,ubermetrics,Firefox/45,
+                       Vert.x-WebClient,jsonlite,rv:45.0,Nexgate Ruby Client,scoop.it,NetSystemsResearch
+            # BLOCKBOT_RESPONSECODE indicates which HTTP response is sent when a bot is blocked.
+            # Default code if omitted is 403 (Forbidden). Other codes that may be useful:
+            # 402 (payment required, hehe), 404 (doesnt exist), 418 (I am a teapot - used to tell requestors to go away), 410 (Gone), 500 (Internal Server Error),
+            # 503 (service unavailable), etc - see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+            - BLOCKBOT_RESPONSECODE=403
         tmpfs:
             - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
         volumes:
