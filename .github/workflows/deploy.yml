@@ -75,7 +75,7 @@ jobs:
           no-cache: true
           platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/i386
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/sdr-enthusiasts/wdocker-reversewebproxy:latest
+          tags: ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest
           labels: ${{ steps.meta.outputs.labels }}
 
   deploy_ghcr_single_arch:
