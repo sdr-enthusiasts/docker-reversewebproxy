@@ -1,6 +1,6 @@
-LABEL org.opencontainers.image.source = "https://github.com/sdr-enthusiasts/docker-reversewebproxy"
-
 FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
+
+LABEL org.opencontainers.image.source = "https://github.com/sdr-enthusiasts/docker-reversewebproxy"
 
 RUN set -x && \
 # define packages needed for installation and general management of the container:
