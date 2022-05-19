@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
     webproxy:
-        image: ghcr.io/sdr-enthusiasts/webproxy:dev-geoip
+        image: ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest
         tty: true
         container_name: webproxy
         hostname: webproxy
