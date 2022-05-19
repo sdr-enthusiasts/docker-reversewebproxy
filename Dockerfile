@@ -1,3 +1,5 @@
+LABEL org.opencontainers.image.source = "https://github.com/sdr-enthusiasts/docker-reversewebproxy"
+
 FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
 
 RUN set -x && \
