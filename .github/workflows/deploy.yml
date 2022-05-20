@@ -75,7 +75,18 @@ jobs:
           no-cache: true
           platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/i386
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest , ghcr.io/sdr-enthusiasts/webproxy:latest
+          tags: ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Build & Push ghcr.io/sdr-enthusiasts/webproxy:latest
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          no-cache: true
+          platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/i386
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ghcr.io/sdr-enthusiasts/webproxy:latest
           labels: ${{ steps.meta.outputs.labels }}
 
   deploy_ghcr_single_arch:
@@ -150,6 +161,16 @@ jobs:
           platforms: ${{ matrix.docker-platform }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest_${{ env.ARCH_TAG }} , ghcr.io/sdr-enthusiasts/webproxy:latest_${{ env.ARCH_TAG }}
+          labels: ${{ steps.meta.outputs.labels }}
+      - name: Build & Push ghcr.io/sdr-enthusiasts/webproxy:latest arch
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          no-cache: true
+          platforms: ${{ matrix.docker-platform }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ghcr.io/sdr-enthusiasts/webproxy:latest_${{ env.ARCH_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
 
   deploy_dockerhub_multiarch:
