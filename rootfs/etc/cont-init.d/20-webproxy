@@ -44,7 +44,8 @@ then
 
         # fix prefixes and suffixes if necessary:
         [[ "${location:0:1}" != "/" ]] && location="/$location"
-        [[ "${destination:0:4}" != "http" ]] && destination="http://$destination"
+        # breaks more than it fixes... removed for now 
+        # [[ "${destination:0:4}" != "http" ]] && destination="http://$destination"
         [[ "${destination:0:2}" == "//" ]] && destination="http:$destination"
 
         # Now print the location entry:
