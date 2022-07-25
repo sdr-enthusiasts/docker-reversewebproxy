@@ -39,8 +39,7 @@ do
   # Notify the logs of any additions to the blocklist:
   if (( ${#blocktable[@]} > 0 ))
   then
-    echo "[$APPNAME][$(date)] These ${#blocktable[@]} IPs have been added to the iptables block list:"
-    echo "[$APPNAME][$(date)] ${blocktable[@]}"
+    echo "[$APPNAME][$(date)] These ${#blocktable[@]} IP(s) have been added to the iptables block list: ${blocktable[@]}"
   fi
 
   # Sleep a while before repeating everything:
