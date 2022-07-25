@@ -15,7 +15,11 @@ then
   exit 0
 fi
 
-# first read and prune any existing blocklists:
+# enable logging:
+
+sed -i 's|^\s*###access_log.*|access_log|' /etc/nginx/nginx.conf
+
+# read and prune any existing blocklists:
 blocktable=()
 if [[ -f /run/nginx/ip-blocklist ]]
 then

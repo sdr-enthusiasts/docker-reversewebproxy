@@ -118,6 +118,12 @@ services:
             # If you disable IPV6 on your system, you may see a container error if you don't set this parameter to "OFF" or "DISABLED" (case insensitive).
             # If the parameter is omitted, the system will assume that IPV6 is enabled.
             - IPV6=ENABLED
+            #
+            # IPTABLES_BLOCK switches `iptables` based blocking of IP addresses on or off. Default when omitted = off.
+            # See README.md for more explanation. Note -- in order for this to work, you MUST add the NET_ADMIN capacity to the container as shown below.
+            - IPTABLES_BLOCK=ENABLED
+        cap_add:
+            - NET_ADMIN    
         tmpfs:
             - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
         volumes:
