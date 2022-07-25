@@ -95,17 +95,17 @@ docker exec -it webproxy certbot certificates
 ```
 
 ### GeoIP Filtering
-The Reverse Webproxy can filter incoming requests by originating IP. It uses an external GeoIP database that maps IP addresses to countries. This database is updated regularly with the latest mappings. Note - this GeoIP IP to Location mapping is not perfect, and users with a VPN can circumvent GeoIP filtering without much problems. 
+The Reverse Webproxy can filter incoming requests by originating IP. It uses an external GeoIP database that maps IP addresses to countries. This database is updated regularly with the latest mappings. Note - this GeoIP IP to Location mapping is not perfect, and users with a VPN can circumvent GeoIP filtering without much problems.
 
 | Parameter | Values | Description |
 |-----------|--------|-------------|
 | `GEOIP_DEFAULT` |\<empty\>*, `ALLOW`, `DISALLOW`|Empty: GeoIP filtering is disabled; `ALLOW`: only those countries listed in the `GEOIP_COUNTRIES` parameter are permitted; `DISALLOW`: the countries listed in `GEOIP_COUNTRIES` are filtered.|
 | `GEOIP_COUNTRIES` | | Comma-separated list of 2-letter country abbreviations, for example `RU,CN,BY,RS` (which means Russia, China, Bielorus, Serbia).|
 | `GEOIP_RESPONSECODE` | 3-digit HTTP response code | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesnt exist), `418` (I am a teapot - used to tell requestors to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See https://developer.mozilla.org/en-US/docs/Web/HTTP/Status |
-   
+
 ### BlockBot
 The BlockBot feature filters out HTTP requests based on a fuzzy match of the HTTP User Agent field against a list of potential matches. This can be used to somewhat effectively filter out bots that are trying to scrape your website. The `BLOCKBOT` parameter included `docker-compose.yml` file has an example of a bot filter.
-   
+
 | Parameter | Values | Description |
 |-----------|--------|-------------|
 | `BLOCKBOT` | string snippets of User Agent fields | Comma-separated strings, for example `google,bing,yandex,msnbot`. If this parameter is empty, the BlockBot functionality is disabled.
@@ -115,6 +115,8 @@ The BlockBot feature filters out HTTP requests based on a fuzzy match of the HTT
 After you run the container the first time, it will create a directory named `~/.webproxy`. If `AUTOGENERATE=ON`, there will be a `locations.conf` file. There will also be a `locations.conf.example` file that contains setup examples. If you know how to write a `nginx` configuration file, feel free to edit the `locations.conf` and add any options to your liking.
 
 BEFORE restarting the container (important!!) edit `docker-compose.yml` and set `AUTOGENERATE=OFF`. If you don't do this, your newly created `locations.conf` file will be overwritten by the auto-generated one based on the `REVPROXY` and `REDIRECT` settings. (There will be a time-stamped backup file of your `locations.conf` file, so not everything is lost!)
+
+In some systems where IPV6 is disabled or not available, you may have to add this environment parameter: `IPV6=DISABLED".
 
 ### Host your own web pages
 You can place HTML and other web files in `~/.webproxy/html`. An example `index.html` is already provided, and can be reached by browsing to the root URL of your system.
@@ -126,7 +128,7 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
 ## Troubleshooting
 
 - Issue: the container log (`docker logs webproxy`) shows error messages like this: `sleep: cannot read realtime clock: Operation not permitted`
-- Solution: you must upgrade `libseccomp2` on your host system to version 2.4 or later. If you are using a Raspberry Pi with Buster based OS, [here](https://github.com/fredclausen/Buster-Docker-Fixes) is a repo with a script that can automatically fix this for you. 
+- Solution: you must upgrade `libseccomp2` on your host system to version 2.4 or later. If you are using a Raspberry Pi with Buster based OS, [here](https://github.com/fredclausen/Buster-Docker-Fixes) is a repo with a script that can automatically fix this for you.
 
 - Issue: `docker-compose up -d` exits with an error
 - Solution: you probably have a typo in `docker-compose.yml`. Make sure that all lines are at the exact indentation level, and that the last entry in the `REVPROXY` and `REDIRECT` lists do not end on a comma.
@@ -147,6 +149,13 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
    ajax|http://10.0.0.191:8086/ajax,
    assets|http://10.0.0.191:8086/assets,
    ```
+
+- Issue: The docker logs show an error like this on start up:
+```
+nginx: [emerg] socket() [::]:80 failed (97: Address family not supported)
+nginx: configuration file /etc/nginx/nginx.conf test failed
+```
+- Solution: Your system doesn't support IPV6 while the container expects this. Solve it by adding this parameter to your `docker-compose.yml`: `IPV6=DISABLED`
 
 - Issue: I'm getting emails from `letsencrypt.com` about the pending expiration of my SSL certificates
 - Solution: ignore them. As long as the container is running and SSL is enabled, the certificates are checked daily for pending expiration and will be renewed 1 month before that date. Sometimes, letsencrypt.com gets confused about the expiration dates and thinks it's earlier than is really the case. You can always check this for yourself by looking at the container logs, or by running this command: `docker exec -it certbot certificates`

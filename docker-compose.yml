@@ -113,6 +113,11 @@ services:
             # 402 (payment required, hehe), 404 (doesnt exist), 418 (I am a teapot - used to tell requestors to go away), 410 (Gone), 500 (Internal Server Error),
             # 503 (service unavailable), etc - see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
             - BLOCKBOT_RESPONSECODE=403
+            #
+            # IPV6 indicates if IPV6 is enabled or disabled on the host and/or docker system.
+            # If you disable IPV6 on your system, you may see a container error if you don't set this parameter to "OFF" or "DISABLED" (case insensitive).
+            # If the parameter is omitted, the system will assume that IPV6 is enabled.
+            - IPV6=ENABLED
         tmpfs:
             - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
         volumes:

@@ -17,11 +17,12 @@ if [[ "$AUTOGENERATE" == "ON" ]]
 then
     echo "[$APPNAME][$(date)] Auto-generating locations.conf file"
     # back up any existing locations.conf file:
-    [[ -f /run/nginx/locations.conf ]] && mv -f /run/nginx/locations.conf /run/nginx/locations.conf.bkup-$(date +%y%m%d%H%M%S)
+    [[ -f /run/nginx/locations.conf ]] && mv -f /run/nginx/locations.conf "/run/nginx/locations.conf.bkup-$(date +%y%m%d%H%M%S)"
 
     # keep only the newest 10 backups:
     org=$(shopt -p nullglob)    # save current nullglob setting
     shopt -s nullglob           # set nullglob to avoid ls errors when no backups are present
+    # shellcheck disable=SC2010
     ls -tp /run/nginx/locations.conf.bkup-* | grep -v '/$' | tail -n +11 | xargs -d '\n' -r rm --   # remove any backups older than the newest 10
     $org                        # restore the original shopt nullglob setting
 
@@ -44,7 +45,7 @@ then
 
         # fix prefixes and suffixes if necessary:
         [[ "${location:0:1}" != "/" ]] && location="/$location"
-        # breaks more than it fixes... removed for now 
+        # breaks more than it fixes... removed for now
         # [[ "${destination:0:4}" != "http" ]] && destination="http://$destination"
         [[ "${destination:0:2}" == "//" ]] && destination="http:$destination"
 
