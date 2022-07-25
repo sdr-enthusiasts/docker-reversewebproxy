@@ -11,9 +11,11 @@ IPV6="${IPV6,,}"
 IPV6="${IPV6:0:3}"
 if [[ "$IPV6" == "dis" ]] || [[ "$IPV6" == "off" ]]
 then
-  sed -i 's/\(\s*listen \[::\]:80 ;\)/#\1/g' /etc/nginx/sites-available/default
+  sed -i 's/\(\s*listen \[::\]:80\)/#\1/g' /etc/nginx/sites-available/default
+  sed -i 's/\(\s*listen \[::\]:443\)/#\1/g' /etc/nginx/sites-available/default
   echo "[$APPNAME][$(date)] IPV6 disabled"
 else
-  sed -i 's/#\(\s*listen \[::\]:80 ;\)/\1/g' /etc/nginx/sites-available/default
+  sed -i 's/#\(\s*listen \[::\]:80\)/\1/g' /etc/nginx/sites-available/default
+  sed -i 's/#\(\s*listen \[::\]:443\)/\1/g' /etc/nginx/sites-available/default
   echo "[$APPNAME][$(date)] IPV6 enabled (default)"
 fi
