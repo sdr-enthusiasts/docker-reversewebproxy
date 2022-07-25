@@ -115,8 +115,10 @@ The BlockBot feature filters out HTTP requests based on a fuzzy match of the HTT
 As an option, the system can use `iptables` to block any IP match of GeoIp or BlockBot. This is done in batches every 60 seconds.
 To enable this behavior, set `IPTABLES_BLOCK` to `ENABLED` or `ON`. Additionally, you must add the `NET_ADMIN` capacity to the container; see the [`docker-compose.yml`](docker-compose.yml) for an example.
 
-cap_add:
-166             - NET_ADMIN
+```
+     cap_add:
+       - NET_ADMIN
+```
 
 Note that it will block all IP address that received a response code of `GEOIP_RESPONSECODE` or `BLOCKBOT_RESPONSECODE`. If you are concerned that this may include occasional IP addresses that incidentally received any of this reponse codes but were not GeoIP or Bot restricted, then either use unique response codes for GeoIP/Bots or don't enable this feature.
 
