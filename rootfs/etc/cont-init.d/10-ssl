@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bash
-#shellcheck shell=bash
+#shellcheck shell=bash disable=SC2145,SC2076
 
-APPNAME="$(hostname)/ssl-init"
+APPNAME="$(hostname)/10-ssl"
 echo "[$APPNAME][$(date)] Started SSL initialization"
 
 rm -f /run/.ssl-enabled
@@ -94,12 +94,13 @@ fi
 
 # Load up ${newdomains[@]} with any domain names there's not yet a certificate for
 newdomains=()
+#shellcheck disable=SC2207
 domains=($(/usr/bin/certbot certificates 2>/dev/null | awk '/Domains:/ { $1=""; print substr($0,2) }'))
 
 IFS="," read -ra SSL_DOMAINS <<< "$(echo $SSL_DOMAIN|tr -d '[:blank:]')"
 for (( i=0; i<${#SSL_DOMAINS[@]}; i++ ))
 do
-    [[ ! " ${domains[@]} " =~ " ${SSL_DOMAINS[i]} " ]] && newdomains+=(${SSL_DOMAINS[i]})
+    [[ ! " ${domains[*]} " =~ " ${SSL_DOMAINS[i]} " ]] && newdomains+=("${SSL_DOMAINS[i]}")
 done
 
 # Figure out if we want to redirect all queries to SSL?
@@ -111,6 +112,7 @@ done
 newdomains=( "${newdomains[@]/#/-d }" )
 
 # Now get new certs for these newdomains:
+#shellcheck disable=SC2068
 if (( ${#newdomains[@]} > 0 )) && ! /usr/bin/certbot run --quiet --nginx ${agree_tos} ${redirect} -m "${SSL_EMAIL}" ${newdomains[@]}
 then
     # Something went wrong

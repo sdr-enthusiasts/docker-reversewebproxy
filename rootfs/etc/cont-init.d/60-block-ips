@@ -1,0 +1,38 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash disable=SC2145
+#
+# This init script disables IPV6 if the IPV6 env variable is set to "disabled" or "off"
+# This is necessary to deal with systems that have IPV6 switched off - if we don't do this,
+# the nginx test run in 99-test-webproxy will fail.
+
+APPNAME="$(hostname)/60-block-ips"
+
+IPTABLES_BLOCK="${IPTABLES_BLOCK,,}"
+IPTABLES_BLOCK="${IPTABLES_BLOCK:0:3}"
+if [[ "$IPTABLES_BLOCK" != "ena" ]] && [[ "$IPTABLES_BLOCK" != "on" ]]
+then
+  echo "[$APPNAME][$(date)] Iptables blocking is disabled. Continuing..."
+  exit 0
+fi
+
+# first read and prune any existing blocklists:
+blocktable=()
+if [[ -f /run/nginx/ip-blocklist ]]
+then
+  while read -ra line
+  do
+    if ! iptables -C INPUT -s ${line[0]} -j DROP >/dev/null 2>&1
+    then
+      iptables -I INPUT -s ${line[0]} -j DROP >/dev/null 2>&1
+      blocktable+=("${line[0]}")
+    fi
+  done < /run/nginx/ip-blocklist
+fi
+
+if (( ${#blocktable[@]} > 0 ))
+then
+  echo "[$APPNAME][$(date)] These ${#blocktable[@]} IPs were blocked previously and have been added to the iptables block list:"
+  echo "[$APPNAME][$(date)] ${blocktable[@]}"
+else
+  echo "[$APPNAME][$(date)] No previous iptables block list found. Continuing..."
+fi

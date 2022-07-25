@@ -103,13 +103,27 @@ The Reverse Webproxy can filter incoming requests by originating IP. It uses an 
 | `GEOIP_COUNTRIES` | | Comma-separated list of 2-letter country abbreviations, for example `RU,CN,BY,RS` (which means Russia, China, Bielorus, Serbia).|
 | `GEOIP_RESPONSECODE` | 3-digit HTTP response code | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesnt exist), `418` (I am a teapot - used to tell requestors to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See https://developer.mozilla.org/en-US/docs/Web/HTTP/Status |
 
-### BlockBot
+### BlockBot Filtering
 The BlockBot feature filters out HTTP requests based on a fuzzy match of the HTTP User Agent field against a list of potential matches. This can be used to somewhat effectively filter out bots that are trying to scrape your website. The `BLOCKBOT` parameter included `docker-compose.yml` file has an example of a bot filter.
 
 | Parameter | Values | Description |
 |-----------|--------|-------------|
 | `BLOCKBOT` | string snippets of User Agent fields | Comma-separated strings, for example `google,bing,yandex,msnbot`. If this parameter is empty, the BlockBot functionality is disabled.
 | `BLOCKBOT_RESPONSECODE` | 3-digit HTTP response code | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesnt exist), `418` (I am a teapot - used to tell requestors to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See https://developer.mozilla.org/en-US/docs/Web/HTTP/Status |
+
+### `iptables` blocking
+As an option, the system can use `iptables` to block any IP match of GeoIp or BlockBot. This is done in batches every 60 seconds.
+To enable this behavior, set `IPTABLES_BLOCK` to `ENABLED` or `ON`.
+
+Note that it will block all IP address that received a response code of `GEOIP_RESPONSECODE` or `BLOCKBOT_RESPONSECODE`. If you are concerned that this may include occasional IP addresses that incidentally received any of this reponse codes but were not GeoIP or Bot restricted, then either use unique response codes for GeoIP/Bots or don't enable this feature.
+
+As long as the `/run/nginx` volume is mapped (see example in [`docker-compose.yml'](docker-compose.yml)), the blocked IP list is persistent across restarts and recreation of the container.
+
+If you want to remove IP addresses from the blocked list, you can do so manually by removing them with a text editor from the file `ip-blocklist` in the mapped volume.
+
+| Parameter | Values | Description |
+|-----------|--------|-------------|
+| `IPTABLES_BLOCK` | `ON`/`ENABLED` or `OFF`/`DISABLED`/blank | If enabled, any IP address match to `GEOIP_RESPONSECODE` or `BLOCKBOT_RESPONSECODE` will be blocked using `iptables`. If disabled or omitted, `iptables` blocking won't be used.|
 
 ### Advanced Setup
 After you run the container the first time, it will create a directory named `~/.webproxy`. If `AUTOGENERATE=ON`, there will be a `locations.conf` file. There will also be a `locations.conf.example` file that contains setup examples. If you know how to write a `nginx` configuration file, feel free to edit the `locations.conf` and add any options to your liking.

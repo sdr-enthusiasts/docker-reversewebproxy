@@ -121,6 +121,6 @@ services:
         tmpfs:
             - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
         volumes:
-            - /home/pi/.webproxy:/run/nginx
+            - /opt/webproxy/webproxy:/run/nginx
             - "/etc/localtime:/etc/localtime:ro"
             - "/etc/timezone:/etc/timezone:ro"

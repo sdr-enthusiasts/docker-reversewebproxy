@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
-APPNAME="$(hostname)/blockbot-init"
+APPNAME="$(hostname)/30-blockbot"
 echo "[$APPNAME][$(date)] Initial setup -- installing BLOCKBOT service"
 
 if [[ -n "$BLOCKBOT" ]]

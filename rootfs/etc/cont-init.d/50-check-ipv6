@@ -5,7 +5,7 @@
 # This is necessary to deal with systems that have IPV6 switched off - if we don't do this,
 # the nginx test run in 99-test-webproxy will fail.
 
-APPNAME="$(hostname)/check-ipv6"
+APPNAME="$(hostname)/50-check-ipv6"
 
 IPV6="${IPV6,,}"
 IPV6="${IPV6:0:3}"

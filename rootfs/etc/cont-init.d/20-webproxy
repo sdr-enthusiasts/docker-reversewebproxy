@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bash
 #shellcheck shell=bash
 
-APPNAME="$(hostname)/reverse-proxy-init"
+APPNAME="$(hostname)/20-webproxy"
 echo "[$APPNAME][$(date)] Initial setup -- installing NXINX web service"
 
 # create run directory. This is where the locations.conf file will be located.

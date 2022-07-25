@@ -1,5 +1,8 @@
 FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
 
+ENV GEOIP_RESPONSECODE=403
+ENV BLOCKBOT_RESPONSECODE=403
+
 RUN set -x && \
 # define packages needed for installation and general management of the container:
     TEMP_PACKAGES=() && \
@@ -9,6 +12,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(psmisc) && \
     KEPT_PACKAGES+=(libnginx-mod-http-geoip) && \
     KEPT_PACKAGES+=(geoip-database) && \
+    KEPT_PACKAGES+=(iptables) && \
     # added for debugging
     KEPT_PACKAGES+=(procps nano aptitude netcat libnginx-mod-http-echo) && \
 #
