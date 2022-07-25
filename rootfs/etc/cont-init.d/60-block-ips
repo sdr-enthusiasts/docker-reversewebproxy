@@ -17,7 +17,7 @@ fi
 
 # enable logging:
 
-sed -i 's|^\s*###access_log.*|access_log|' /etc/nginx/nginx.conf
+sed -i 's|^\s*###access_log|access_log|' /etc/nginx/nginx.conf
 
 # read and prune any existing blocklists:
 blocktable=()
