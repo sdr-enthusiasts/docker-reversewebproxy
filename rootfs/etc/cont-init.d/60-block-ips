@@ -9,6 +9,9 @@ APPNAME="$(hostname)/60-block-ips"
 
 IPTABLES_BLOCK="${IPTABLES_BLOCK,,}"
 IPTABLES_BLOCK="${IPTABLES_BLOCK:0:3}"
+
+cp -f /root/manage_ipblock /usr/local/bin >/dev/null 2>&1
+
 if [[ "$IPTABLES_BLOCK" != "ena" ]] && [[ "$IPTABLES_BLOCK" != "on" ]]
 then
   echo "[$APPNAME][$(date)] Iptables blocking is disabled. Continuing..."

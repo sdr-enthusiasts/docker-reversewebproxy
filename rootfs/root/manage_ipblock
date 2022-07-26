@@ -1,0 +1,68 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+# BASH script to manage the iptables block list
+
+if [[ "$1" == "-l" ]] || [[ "$1" == "--list" ]]
+then
+  iptables -L
+  exit 0
+fi
+
+if [[ ! -f /run/nginx/ip-blocklist ]]
+then
+  echo "No IP Block List found. Exiting..."
+  exit 0
+fi
+
+cp /run/nginx/ip-blocklist /tmp/ip-blocklist.edit
+sort -u  /tmp/ip-blocklist.edit > /tmp/ip-blocklist.org
+echo "Preparing to edit the IP Block List using the nano editor. Here are some useful key mappings:"
+echo "ESC-a starts a selection block; delete the block with CTRL-k"
+echo "CTRL-k on itself deletes the current line"
+echo "CTRL-w searches for text in the IP Block List"
+echo "CTRL-x to save (or discard) and exit"
+echo ""
+echo "If you want to manually add additional IP addresses to the list, simply put an IP address by itself on a new line"
+echo ""
+read -p "Press ENTER to start editing the P Block List"
+
+nano -l /tmp/ip-blocklist.edit
+sort -u /tmp/ip-blocklist.edit > /tmp/ip-blocklist.edit2
+
+readarray -t adds < <(comm -23 /tmp/ip-blocklist.edit2 /tmp/ip-blocklist.org)
+readarray -t deletes < <(comm -13 /tmp/ip-blocklist.edit2 /tmp/ip-blocklist.org)
+
+# now add the adds to the file and add to the iptables:
+for (( i=0; i<${#adds[*]}; i++ ))
+do
+  s="${adds[i]}"
+  s="${s%% *}"
+  if ! iptables -C INPUT -s $s -j DROP >/dev/null 2>&1
+  then
+    echo "$s manual_add" >> /run/nginx/ip-blocklist
+    iptables -I INPUT -s $s -j DROP >/dev/null 2>&1
+    echo "$s added to the IP Block List"
+  else
+    echo "$s: error -- add failed: this IP was already blocked. Skipping..."
+  fi
+done
+
+# and remove the duplicate lines:
+for (( i=0; i<${#deletes[*]}; i++ ))
+do
+  s="${deletes[i]}"
+  s="${s%% *}"
+  if grep "$s" /run/nginx/ip-blocklist >/dev/null 2>&1
+  then
+    sed -i '/^'"$s"'/d' /run/nginx/ip-blocklist
+    iptables -D INPUT -s $s -j DROP >/dev/null 2>&1
+    echo "$s deleted from the IP Block List"
+  else
+    echo "$s: error -- delete failed: this IP was not in the block list. Skipping..."
+  fi
+done
+
+# cleaning up
+rm -f /tmp/ip-blocklist.edit /tmp/ip-blocklist.edit2 /tmp/ip-blocklist.org
+echo "Done!"
