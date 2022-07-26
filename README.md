@@ -126,9 +126,13 @@ As long as the `/run/nginx` volume is mapped (see example in [`docker-compose.ym
 
 If you want to remove IP addresses from the blocked list, you can do so manually by removing them with a text editor from the file `ip-blocklist` in the mapped volume.
 
+Note that the `IPTABLES_BLOCK` feature enables logging to disk (specifically, `/var/log/nginx/access.log`). You may want to map this directory to a `tmpfs` volume (see example in [`docker-compose.yml'](docker-compose.yml)). Log rotation keeps 24 files of 1 hour each around; the 1 hour log rotation intervals and number of retained backups are configurable with the `LOGROTATE_INTERVAL` and `LOGROTATE_MAXBACKUPS` docker environment variable.
+
 | Parameter | Values | Description |
 |-----------|--------|-------------|
 | `IPTABLES_BLOCK` | `ON`/`ENABLED` or `OFF`/`DISABLED`/blank | If enabled, any IP address match to `GEOIP_RESPONSECODE` or `BLOCKBOT_RESPONSECODE` will be blocked using `iptables`. If disabled or omitted, `iptables` blocking won't be used.|
+| `LOGROTATE_INTERVAL` | time in seconds; default value `3600` | The time between each run of of log rotation for `/var/log/nginx/access.log` and `/var/log/nginx/error.lo`g |
+| `LOGROTATE_MAXBACKUPS` | integer between `0` and `100`; default value `24` | The number of backup files for `/var/log/nginx/access.log` and `/var/log/nginx/error.log` |
 
 ### Advanced Setup
 After you run the container the first time, it will create a directory named `~/.webproxy`. If `AUTOGENERATE=ON`, there will be a `locations.conf` file. There will also be a `locations.conf.example` file that contains setup examples. If you know how to write a `nginx` configuration file, feel free to edit the `locations.conf` and add any options to your liking.

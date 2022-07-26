@@ -1,0 +1,46 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+APPNAME="$(hostname)/nginx-logrotate"
+
+if [[ -n "$LOGROTATE_INTERVAL" ]]
+then
+  LOGROTATE_INTERVAL=3600
+fi
+
+if [[ -n "$LOGROTATE_MAXBACKUPS" ]]
+then
+  LOGROTATE_MAXBACKUPS=24
+fi
+
+echo "[$APPNAME][$(date)] Started as an s6 service; nginx logs are rotated every $LOGROTATE_INTERVAL seconds; up to $LOGROTATE_MAXBACKUPS are kept."
+
+while true
+do
+  sleep $LOGROTATE_INTERVAL
+
+  if [[ -f /var/log/nginx/access.log ]]
+  then
+    count=$LOGROTATE_MAXBACKUPS
+    while (( --count > 0 ))
+    do
+      mv -f /var/log/nginx/access.log.$((count-1)) /var/log/nginx/access.log.$count
+    done
+    mv -f /var/log/nginx/access.log /var/log/nginx/access.log.0
+    echo "[$APPNAME][$(date)] nginx access logs have been rotated. Next rotation at $(date -d "+$LOGROTATE_INTERVAL seconds")."
+  fi
+
+  if [[ -f /var/log/nginx/error.log ]]
+  then
+    count=$LOGROTATE_MAXBACKUPS
+    while (( --count > 0 ))
+    do
+      mv -f /var/log/nginx/error.log.$((count-1)) /var/log/nginx/error.log.$count
+    done
+    mv -f /var/log/nginx/error.log /var/log/nginx/error.log.0
+    echo "[$APPNAME][$(date)] nginx error logs have been rotated. Next rotation at $(date -d "+$LOGROTATE_INTERVAL seconds")."
+  fi
+
+  kill -USR1 "$(</run/nginx.pid)"
+
+done
