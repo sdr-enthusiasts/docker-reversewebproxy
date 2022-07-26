@@ -123,9 +123,10 @@ services:
             # See README.md for more explanation. Note -- in order for this to work, you MUST add the NET_ADMIN capacity to the container as shown below.
             - IPTABLES_BLOCK=ENABLED
         cap_add:
-            - NET_ADMIN    
+            - NET_ADMIN
         tmpfs:
             - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
+            - /var/log/nginx:rw,nosuid,nodev,noexec,relatime,size=128M
         volumes:
             - /opt/webproxy/webproxy:/run/nginx
             - "/etc/localtime:/etc/localtime:ro"
