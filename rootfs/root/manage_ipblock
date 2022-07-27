@@ -3,9 +3,20 @@
 
 # BASH script to manage the iptables block list
 
-if [[ "$1" == "-l" ]] || [[ "$1" == "--list" ]]
+if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]] || [[ "$1" == "-?" ]]
 then
-  iptables -L
+  echo "Usage:"
+  echo "$0 -? -h --help  : show this help message"
+  echo "$0 (without args): edit your IP Block List"
+  echo "$0 with any other argument will execute \"iptables\" passing those arguments For example:"
+  echo "$0 -L            : list the current iptable ruleset"
+  echo "$0 -L -n         : list the current iptable ruleset (no name resolution for ip addresses"
+  exit 0
+fi
+
+if [[ -n "$1" ]]
+then
+  iptables $1 $2 $3 $4 $5 $6 $7 $8 $9
   exit 0
 fi
 
@@ -16,8 +27,9 @@ then
 fi
 
 cp /run/nginx/ip-blocklist /tmp/ip-blocklist.edit
-sort -u  /tmp/ip-blocklist.edit > /tmp/ip-blocklist.org
-echo "Preparing to edit the IP Block List using the nano editor. Here are some useful key mappings:"
+sort -u -k 1,1 /tmp/ip-blocklist.edit > /tmp/ip-blocklist.org
+echo "Currently, there are $(wc -l /tmp/ip-blocklist.org) IP addresses in the IP Block List."
+echo "You can edit the IP Block List using the nano editor. Here are some useful key mappings:"
 echo "ESC-a starts a selection block; delete the block with CTRL-k"
 echo "CTRL-k on itself deletes the current line"
 echo "CTRL-w searches for text in the IP Block List"
@@ -25,10 +37,10 @@ echo "CTRL-x to save (or discard) and exit"
 echo ""
 echo "If you want to manually add additional IP addresses to the list, simply put an IP address by itself on a new line"
 echo ""
-read -p "Press ENTER to start editing the P Block List"
+read -p "Press ENTER to start editing the IP Block List"
 
 nano -l /tmp/ip-blocklist.edit
-sort -u /tmp/ip-blocklist.edit > /tmp/ip-blocklist.edit2
+sort -u -k 1,1 /tmp/ip-blocklist.edit > /tmp/ip-blocklist.edit2
 
 readarray -t adds < <(comm -23 /tmp/ip-blocklist.edit2 /tmp/ip-blocklist.org)
 readarray -t deletes < <(comm -13 /tmp/ip-blocklist.edit2 /tmp/ip-blocklist.org)
@@ -40,7 +52,7 @@ do
   s="${s%% *}"
   if ! iptables -C INPUT -s $s -j DROP >/dev/null 2>&1
   then
-    echo "$s manual_add" >> /run/nginx/ip-blocklist
+    echo "$s manual_add $(date +%Y%m%d_%H%M%S_%Z)" >> /run/nginx/ip-blocklist
     iptables -I INPUT -s $s -j DROP >/dev/null 2>&1
     echo "$s added to the IP Block List"
   else

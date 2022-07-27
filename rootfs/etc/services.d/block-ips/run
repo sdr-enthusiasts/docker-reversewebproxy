@@ -18,8 +18,8 @@ echo "[$APPNAME][$(date)] Started as an s6 service"
 while true
 do
   # Read access log and process any GEOIP or BLOCKBOT response codes. Note - also naturally occurring responses with these codes are picked up:
-  awk -v "g=$GEOIP_RESPONSECODE" -v "b=$BLOCKBOT_RESPONSECODE" '{if ($9 == b || $9 == g) print $1 " " $9}' /var/log/nginx/access.log | sort -u >> /run/nginx/ip-blocklist
-  sort -u /run/nginx/ip-blocklist | sort -n > /tmp/ip-blocklist
+  awk -v "g=$GEOIP_RESPONSECODE" -v "b=$BLOCKBOT_RESPONSECODE" -v "d=$(date +%Y%m%d_%H%M%S_%Z)" '{if ($9 == b || $9 == g) print $1 " " $9 " " d}' /var/log/nginx/access.log >> /run/nginx/ip-blocklist
+  sort -u -k 1,1 /run/nginx/ip-blocklist | sort -n > /tmp/ip-blocklist
   mv -f /tmp/ip-blocklist /run/nginx/ip-blocklist
 
   # Re-process the blocklist and add them to the IP tables for DROPping:
@@ -39,7 +39,7 @@ do
   # Notify the logs of any additions to the blocklist:
   if (( ${#blocktable[@]} > 0 ))
   then
-    echo "[$APPNAME][$(date)] These ${#blocktable[@]} IP(s) have been added to the iptables block list: ${blocktable[@]}"
+    echo "[$APPNAME][$(date)] These ${#blocktable[@]} IP(s) have been added to the iptables Block List: ${blocktable[@]}. Currently, there are $(wc -l /run/nginx/ip-blocklist) blocked IP addresses."
   fi
 
   # Sleep a while before repeating everything:
