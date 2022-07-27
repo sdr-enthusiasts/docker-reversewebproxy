@@ -125,6 +125,10 @@ else
   echo "[$APPNAME][$(date)] HTTP logging is disabled"
 fi
 
-
+# Create the correct ownership and permissions for the /var/log/nginx directory:
+adduser -U www-data >/dev/null 2>&1
+mkdir -p /var/log/nginx
+chmod a+rwx /var/log/nginx
+chown www-data:www-data /var/log/nginx
 
 exit 0

@@ -15,6 +15,12 @@ fi
 
 echo "[$APPNAME][$(date)] Started as an s6 service; nginx logs are rotated every $LOGROTATE_INTERVAL seconds; up to $LOGROTATE_MAXBACKUPS are kept."
 
+# Sleep for 30 seconds to allow nginx to start and be fully up and running.
+# After that, send USR1 signal to nginx so it updates the file ownership and permissions for the log files
+
+sleep 30
+kill -USR1 "$(</run/nginx.pid)"
+
 while true
 do
   sleep $LOGROTATE_INTERVAL
