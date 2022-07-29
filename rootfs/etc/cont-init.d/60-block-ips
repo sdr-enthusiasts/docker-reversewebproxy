@@ -51,7 +51,8 @@ function conv_blocklist () {
     echo "${line[*]}" >> /tmp/ip-blocklist
   done < /run/nginx/ip-blocklist
   mv -f /tmp/ip-blocklist /run/nginx/ip-blocklist
-
+  echo "[$APPNAME][$(date)] ip-blocklist file has been converted to the new format."
+  exit 0
 }
 # enable logging:
 
