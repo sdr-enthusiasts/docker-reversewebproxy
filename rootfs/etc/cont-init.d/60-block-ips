@@ -24,14 +24,14 @@ function conv_blocklist () {
   if [[ ! -f /run/nginx/ip-blocklist ]]
   then
     # Nothing to convert
-    exit 0
+    return 0
   fi
 
   read -r firstline < /run/nginx/ip-blocklist
   if [[ "$firstline" == "# IP Blocklist for the docker-reversewebproxy container" ]]
   then
     # the ip-blocklist file was already converted; no need to do it again
-    exit 0
+    return 0
   fi
 
   # Copy the template into place:
@@ -52,7 +52,7 @@ function conv_blocklist () {
   done < /run/nginx/ip-blocklist
   mv -f /tmp/ip-blocklist /run/nginx/ip-blocklist
   echo "[$APPNAME][$(date)] ip-blocklist file has been converted to the new format."
-  exit 0
+  return 0
 }
 # enable logging:
 
