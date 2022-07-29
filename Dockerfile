@@ -4,6 +4,7 @@ ENV GEOIP_RESPONSECODE=403
 ENV BLOCKBOT_RESPONSECODE=403
 ENV LOGROTATE_INTERVAL=3600
 ENV LOGROTATE_MAXBACKUPS=24
+ENV IPTABLES_JAILTIME=0
 
 RUN set -x && \
 # define packages needed for installation and general management of the container:

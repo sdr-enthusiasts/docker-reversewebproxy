@@ -18,22 +18,63 @@ then
   exit 0
 fi
 
+function conv_blocklist () {
+  # This function converts the ip-blocklist from an older format and ensures it's homogenized
+
+  if [[ ! -f /run/nginx/ip-blocklist ]]
+  then
+    # Nothing to convert
+    exit 0
+  fi
+
+  read -r firstline < /run/nginx/ip-blocklist
+  if [[ "$firstline" == "# IP Blocklist for the docker-reversewebproxy container" ]]
+  then
+    # the ip-blocklist file was already converted; no need to do it again
+    exit 0
+  fi
+
+  # Copy the template into place:
+  cp /root/ip-blocklist-template /tmp/ip-blocklist
+
+  while read -ra line
+  do
+    [[ -z "${line[*]}" ]] && continue
+    if [[ "${line[0]:0:1}" == "#" ]]
+    then
+      echo "${line[*]}" >> /tmp/ip-blocklist
+      continue
+    fi
+    [[ -z "${line[1]}" ]] && line[1]="converted"
+    [[ -z "${line[2]}" ]] && line[2]="$(date +%s)"
+    [[ "${line[2]:0:4}" == "2022" ]] && line[2]="$(date -d "${line[2]:0:4}/${line[2]:4:2}/${line[2]:6:2} ${line[2]:9:2}:${line[2]:11:2}:${line[2]:13:2} ${line[2]:16:3}" +%s)"
+    echo "${line[*]}" >> /tmp/ip-blocklist
+  done < /run/nginx/ip-blocklist
+  mv -f /tmp/ip-blocklist /run/nginx/ip-blocklist
+
+}
 # enable logging:
 
 sed -i 's|^\s*### iptables log entry here|access_log /var/log/nginx/access.log ;|' /etc/nginx/nginx.conf
 
-# read and prune any existing blocklists:
+# Convert old format blocklist file if needed:
+conv_blocklist
+
+# read and add any blocked IPs:
 blocktable=()
 if [[ -f /run/nginx/ip-blocklist ]]
 then
   while read -ra line
   do
-    if ! iptables -C INPUT -s ${line[0]} -j DROP >/dev/null 2>&1
+    if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! iptables -C INPUT -s ${line[0]} -j DROP >/dev/null 2>&1
     then
       iptables -I INPUT -s ${line[0]} -j DROP >/dev/null 2>&1
       blocktable+=("${line[0]}")
     fi
   done < /run/nginx/ip-blocklist
+else
+  # There's no blocklist. Let's copy the template into place:
+  cp /root/ip-blocklist-template /run/nginx/ip-blocklist
 fi
 
 if (( ${#blocktable[@]} > 0 ))

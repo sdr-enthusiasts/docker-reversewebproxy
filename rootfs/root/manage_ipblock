@@ -50,9 +50,9 @@ for (( i=0; i<${#adds[*]}; i++ ))
 do
   s="${adds[i]}"
   s="${s%% *}"
-  if ! iptables -C INPUT -s $s -j DROP >/dev/null 2>&1
+  if [[ -n "$s" ]] && [[ "${s:0:1}" != "#" ]] && ! iptables -C INPUT -s $s -j DROP >/dev/null 2>&1
   then
-    echo "$s manual_add $(date +%Y%m%d_%H%M%S_%Z)" >> /run/nginx/ip-blocklist
+    echo "$s manual_add $(date +%s)" >> /run/nginx/ip-blocklist
     iptables -I INPUT -s $s -j DROP >/dev/null 2>&1
     echo "$s added to the IP Block List"
   else
@@ -65,7 +65,7 @@ for (( i=0; i<${#deletes[*]}; i++ ))
 do
   s="${deletes[i]}"
   s="${s%% *}"
-  if grep "$s" /run/nginx/ip-blocklist >/dev/null 2>&1
+  if [[ -n "$s" ]] && [[ "${s:0:1}" != "#" ]] && grep "$s" /run/nginx/ip-blocklist >/dev/null 2>&1
   then
     sed -i '/^'"$s"'/d' /run/nginx/ip-blocklist
     iptables -D INPUT -s $s -j DROP >/dev/null 2>&1
