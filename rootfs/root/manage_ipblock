@@ -90,10 +90,10 @@ then
   read -p "Press ENTER to start editing the IP Allow List using the nano editor"
 
   nano -l /tmp/ip-allowlist.edit
-  sort -u -k 1,1 /tmp/ip-allowlist.edit > /tmp/ip-allowlist.edit2
+  sort -u -k 1,1 /tmp/ip-allowlist.edit > /run/nginx/ip-allowlist
 
-  readarray -t adds < <(comm -23 /tmp/ip-allowlist.edit2 /tmp/ip-allowlist.org)
-  readarray -t deletes < <(comm -13 /tmp/ip-allowlist.edit2 /tmp/ip-allowlist.org)
+  readarray -t adds < <(comm -23 /run/nginx/ip-allowlist /tmp/ip-allowlist.org)
+  readarray -t deletes < <(comm -13 /run/nginx/ip-allowlist /tmp/ip-allowlist.org)
   echo ""
   echo "You added ${#adds[*]} and deleted ${#deletes[*]} entries from the IP Allow List".
   if (( ${#deletes[*]} > 0 )) && [[ -f /run/nginx/ip-blocklist ]]
@@ -102,7 +102,7 @@ then
     b=${b,,}
     if [[ "$b" != "n" ]]
     then
-      grep -v -f /tmp/ip-allowlist.edit2 /run/nginx/ip-blocklist >/tmp/ip-allowlist.tmp
+      grep -v -f /run/nginx/ip-allowlist /run/nginx/ip-blocklist >/tmp/ip-allowlist.tmp
       deletes=()
       readarray -t deletes < <(comm -13 /tmp/ip-allowlist.tmp /run/nginx/ip-blocklist)
       for (( i=0; i<${#deletes[*]}; i++ ))
