@@ -49,7 +49,7 @@ do
     cp /run/nginx/ip-blocklist /tmp
     while read -ra line
     do
-      if [[ -n "${line[2]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && (( line[2] > 0 )) && (( line[2] + IPJAILTIME < $(date +%s) ))
+      if [[ -n "${line[2]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! grep -f /run/nginx/ip-allowlist >/dev/null 2>&1 <<< "${line[0]}" && (( line[2] > 0 )) && (( line[2] + IPJAILTIME < $(date +%s) ))
       then
         sed -i '/^'"${line[0]}"'/d' /run/nginx/ip-blocklist
         iptables -D INPUT -s ${line[0]} -j DROP >/dev/null 2>&1

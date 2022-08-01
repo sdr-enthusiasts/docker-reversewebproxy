@@ -20,61 +20,109 @@ then
   exit 0
 fi
 
-if [[ ! -f /run/nginx/ip-blocklist ]]
-then
-  echo "No IP Block List found. Exiting..."
-  exit 0
-fi
+[[ ! -f /run/nginx/ip-blocklist ]] && touch /run/nginx/ip-blocklist || true
+[[ ! -f /run/nginx/ip-allowlist ]] && touch /run/nginx/ip-allowlist || true
 
 cp /run/nginx/ip-blocklist /tmp/ip-blocklist.edit
 sort -u -k 1,1 /tmp/ip-blocklist.edit > /tmp/ip-blocklist.org
+
+cp /run/nginx/ip-allowlist /tmp/ip-allowlist.edit
+sort -u -k 1,1 /tmp/ip-allowlist.edit > /tmp/ip-allowlist.org
+
 echo "Currently, there are $(wc -l /tmp/ip-blocklist.org) IP addresses in the IP Block List."
-echo "You can edit the IP Block List using the nano editor. Here are some useful key mappings:"
-echo "ESC-a starts a selection block; delete the block with CTRL-k"
-echo "CTRL-k on itself deletes the current line"
-echo "CTRL-w searches for text in the IP Block List"
-echo "CTRL-x to save (or discard) and exit"
-echo ""
-echo "If you want to manually add additional IP addresses to the list, simply put an IP address by itself on a new line"
-echo ""
-read -p "Press ENTER to start editing the IP Block List"
+echo "Currently, there are $(wc -l /tmp/ip-allowlist.org) IP patterns in the IP Allow List."
+read -n 1 -p "Do you want to edit the (b)lock list or the (a)llow list? (b/a) " a
+a=${a,,}
 
-nano -l /tmp/ip-blocklist.edit
-sort -u -k 1,1 /tmp/ip-blocklist.edit > /tmp/ip-blocklist.edit2
+if [[ "$a" == "b" ]]
+then
+  echo ""
+  echo "Editing the IP Block List."
+  echo "If you want to manually add additional IP addresses to the list, simply put an IP address by itself on a new line."
+  echo "No need to add any additional information to it."
+  echo ""
+  read -p "Press ENTER to start editing the IP Block List using the nano editor"
 
-readarray -t adds < <(comm -23 /tmp/ip-blocklist.edit2 /tmp/ip-blocklist.org)
-readarray -t deletes < <(comm -13 /tmp/ip-blocklist.edit2 /tmp/ip-blocklist.org)
+  nano -l /tmp/ip-blocklist.edit
+  sort -u -k 1,1 /tmp/ip-blocklist.edit > /tmp/ip-blocklist.edit2
 
-# now add the adds to the file and add to the iptables:
-for (( i=0; i<${#adds[*]}; i++ ))
-do
-  s="${adds[i]}"
-  s="${s%% *}"
-  if [[ -n "$s" ]] && [[ "${s:0:1}" != "#" ]] && ! iptables -C INPUT -s $s -j DROP >/dev/null 2>&1
+  readarray -t adds < <(comm -23 /tmp/ip-blocklist.edit2 /tmp/ip-blocklist.org)
+  readarray -t deletes < <(comm -13 /tmp/ip-blocklist.edit2 /tmp/ip-blocklist.org)
+
+  # now add the adds to the file and add to the iptables:
+  for (( i=0; i<${#adds[*]}; i++ ))
+  do
+    s="${adds[i]}"
+    s="${s%% *}"
+    if [[ -n "$s" ]] && [[ "${s:0:1}" != "#" ]] && ! grep -f /run/nginx/ip-allowlist >/dev/null 2>&1 <<< "$s" && ! iptables -C INPUT -s $s -j DROP >/dev/null 2>&1
+    then
+      echo "$s manual_add $(date +%s)" >> /run/nginx/ip-blocklist
+      iptables -I INPUT -s $s -j DROP >/dev/null 2>&1
+      echo "$s added to the IP Block List"
+    else
+      echo "$s: error -- add failed: this IP was already blocked. Skipping..."
+    fi
+  done
+
+  # and remove the duplicate lines:
+  for (( i=0; i<${#deletes[*]}; i++ ))
+  do
+    s="${deletes[i]}"
+    s="${s%% *}"
+    if [[ -n "$s" ]] && [[ "${s:0:1}" != "#" ]] && grep "$s" /run/nginx/ip-blocklist >/dev/null 2>&1
+    then
+      sed -i '/^'"$s"'/d' /run/nginx/ip-blocklist
+      iptables -D INPUT -s $s -j DROP >/dev/null 2>&1
+      echo "$s deleted from the IP Block List"
+    else
+      echo "$s: error -- delete failed: this IP was not in the block list. Skipping..."
+    fi
+  done
+elif [[ "$a" == "a" ]]
+then
+  echo ""
+  echo "Editing the IP Allow List."
+  echo "The IP Allow List contains \"grep\" patterns of IP addresses that won't be excluded, even if they contain BOT or GeoIP restricted info. "
+  echo "For example, to exclude all IP addresses in the range 192.168.xx.xx, simply add \"192.168\" to the list."
+  echo "You can use \"^\" to indicate the beginning of an IP address."
+  echo "Example: \"^192.168\" will allow all 192.168.xx.xx addresses, but it will not exclude \"10.0.192.168\"."
+  echo ""
+  read -p "Press ENTER to start editing the IP Allow List using the nano editor"
+
+  nano -l /tmp/ip-allowlist.edit
+  sort -u -k 1,1 /tmp/ip-allowlist.edit > /tmp/ip-allowlist.edit2
+
+  readarray -t adds < <(comm -23 /tmp/ip-allowlist.edit2 /tmp/ip-allowlist.org)
+  readarray -t deletes < <(comm -13 /tmp/ip-allowlist.edit2 /tmp/ip-allowlist.org)
+  echo ""
+  echo "You added ${#adds[*]} and deleted ${#deletes[*]} entries from the IP Allow List".
+  if (( ${#deletes[*]} > 0 )) && [[ -f /run/nginx/ip-blocklist ]]
   then
-    echo "$s manual_add $(date +%s)" >> /run/nginx/ip-blocklist
-    iptables -I INPUT -s $s -j DROP >/dev/null 2>&1
-    echo "$s added to the IP Block List"
-  else
-    echo "$s: error -- add failed: this IP was already blocked. Skipping..."
-  fi
-done
+    read -n 1 -p "Should we recreate iptables drop list based on the updated IP Allow List? (Y/n) " b
+    b=${b,,}
+    if [[ "$b" != "n" ]]
+    then
+      grep -v -f /tmp/ip-allowlist.edit2 /run/nginx/ip-blocklist >/tmp/ip-allowlist.tmp
+      deletes=()
+      readarray -t deletes < <(comm -13 /tmp/ip-allowlist.tmp /run/nginx/ip-blocklist)
+      for (( i=0; i<${#deletes[*]}; i++ ))
+      do
+        s="${deletes[i]}"
+        s="${s%% *}"
+        if [[ -n "$s" ]] && [[ "${s:0:1}" != "#" ]]
+        then
+          sed -i '/^'"$s"'/d' /run/nginx/ip-blocklist
+          iptables -D INPUT -s $s -j DROP >/dev/null 2>&1
+          echo "$s deleted from the IP Block List"
+        else
+          echo "$s: error -- delete failed: this IP was not in the block list. Skipping..."
+        fi
+      done
 
-# and remove the duplicate lines:
-for (( i=0; i<${#deletes[*]}; i++ ))
-do
-  s="${deletes[i]}"
-  s="${s%% *}"
-  if [[ -n "$s" ]] && [[ "${s:0:1}" != "#" ]] && grep "$s" /run/nginx/ip-blocklist >/dev/null 2>&1
-  then
-    sed -i '/^'"$s"'/d' /run/nginx/ip-blocklist
-    iptables -D INPUT -s $s -j DROP >/dev/null 2>&1
-    echo "$s deleted from the IP Block List"
-  else
-    echo "$s: error -- delete failed: this IP was not in the block list. Skipping..."
+    fi
   fi
-done
+fi
 
 # cleaning up
-rm -f /tmp/ip-blocklist.edit /tmp/ip-blocklist.edit2 /tmp/ip-blocklist.org
+rm -f /tmp/ip-blocklist* /tmp/ip-allowlist* >/dev/null 2>&1
 echo "Done!"

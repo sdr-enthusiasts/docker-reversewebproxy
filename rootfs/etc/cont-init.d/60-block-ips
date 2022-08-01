@@ -67,8 +67,13 @@ if [[ -f /run/nginx/ip-blocklist ]]
 then
   while read -ra line
   do
-    if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! iptables -C INPUT -s ${line[0]} -j DROP >/dev/null 2>&1
+    if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! grep -f /run/nginx/ip-allowlist >/dev/null 2>&1 <<< "${line[0]}" && ! iptables -C INPUT -s ${line[0]} -j DROP >/dev/null 2>&1
     then
+      # add the IP from the first field of the line to the iptables block list if...
+      # - the line isn't empty
+      # - the first field of the line doesn't start with "#" (in which case it's a comment)
+      # - the IP isn't in the ip-allowlist (if that file exists)
+      # - the IP isn't already in the iptables block list
       iptables -I INPUT -s ${line[0]} -j DROP >/dev/null 2>&1
       blocktable+=("${line[0]}")
     fi
