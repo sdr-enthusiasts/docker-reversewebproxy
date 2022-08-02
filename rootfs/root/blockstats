@@ -38,7 +38,7 @@ do
   ips+=(["$a"]="$(readarray x <<< "$(grep -h -i "$a" /var/log/nginx/* | awk '{print $1}' | sort -u)";echo "${x[@]}")")
 done
 
-print "Results:\n Bot name - number of total hits - related ip addresses:\n"
+printf "Results:\n Bot name - number of total hits - related ip addresses:\n"
 for a in "${blocksclean[@]}"
 do
   b="${ips["$a"]//$'\n'/ }"
