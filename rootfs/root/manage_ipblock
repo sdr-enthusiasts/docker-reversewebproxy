@@ -96,30 +96,10 @@ then
   readarray -t deletes < <(comm -13 /run/nginx/ip-allowlist /tmp/ip-allowlist.org)
   echo ""
   echo "You added ${#adds[*]} and deleted ${#deletes[*]} entries from the IP Allow List".
-  if (( ${#deletes[*]} > 0 )) && [[ -f /run/nginx/ip-blocklist ]]
+  if (( ${#adds[*]} + ${#deletes[*]} > 0 ))
   then
-    read -n 1 -p "Should we recreate iptables drop list based on the updated IP Allow List? (Y/n) " b
-    b=${b,,}
-    if [[ "$b" != "n" ]]
-    then
-      grep -v -f /run/nginx/ip-allowlist /run/nginx/ip-blocklist >/tmp/ip-allowlist.tmp
-      deletes=()
-      readarray -t deletes < <(comm -13 /tmp/ip-allowlist.tmp /run/nginx/ip-blocklist)
-      for (( i=0; i<${#deletes[*]}; i++ ))
-      do
-        s="${deletes[i]}"
-        s="${s%% *}"
-        if [[ -n "$s" ]] && [[ "${s:0:1}" != "#" ]]
-        then
-          sed -i '/^'"$s"'/d' /run/nginx/ip-blocklist
-          iptables -D INPUT -s $s -j DROP >/dev/null 2>&1
-          echo "$s deleted from the IP Block List"
-        else
-          echo "$s: error -- delete failed: this IP was not in the block list. Skipping..."
-        fi
-      done
-
-    fi
+    echo "If you want your changes to be in effect immediately, you should restart the container."
+    echo "If you don't restart the container, the updated IP Allow List will only be used for future log entries and any currently blocked entries will stay in place until they $( [[ "$IPTABLES_JAILTIME" -gt 0 ]] && echo "time out after $IPTABLES_JAILTIME seconds" || echo "are manually removed")."
   fi
 fi
 
