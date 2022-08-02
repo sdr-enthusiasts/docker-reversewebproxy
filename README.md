@@ -112,8 +112,10 @@ The BlockBot feature filters out HTTP requests based on a fuzzy match of the HTT
 | `BLOCKBOT_RESPONSECODE` | 3-digit HTTP response code | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesnt exist), `418` (I am a teapot - used to tell requestors to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See https://developer.mozilla.org/en-US/docs/Web/HTTP/Status |
 
 ### `iptables` blocking
-As an option, the system can use `iptables` to block any IP match of GeoIp or BlockBot. This is done in batches every 60 seconds.
-To enable this behavior, set `IPTABLES_BLOCK` to `ENABLED` or `ON`. Additionally, you must add the `NET_ADMIN` capacity to the container; see the [`docker-compose.yml`](docker-compose.yml) for an example.
+As an option, the system can use `iptables` to block any IP match of GeoIp or BlockBot. If a request comes from an ip address that is blocked via `iptables`, the server will simply not respond at all to the request - as if the tcp/ip address simply wasn't available. This decreases the load on the system, and mostly slows down or prevents DDOS attacks.
+
+The system will scan the logs for any BlockBot or GeoIP filtered request, and adds any IP address for which a return value of `$BLOCKBOT_RESPONSECODE` or `$GEOIP_RESPONSECODE` to the `iptables` blocked list, unless the IP is part of a value or range specified in the `ip-allowlist` (see below). The `iptables` blocker is updated in batches every 60 seconds.
+To enable this behavior, set `IPTABLES_BLOCK` to `ENABLED` or `ON`. You can also specify the time an IP address should stay on the `iptables` block list with the `IPTABLES_JAILTIME` parameter. Additionally, you must add the `NET_ADMIN` capacity to the container; see the [`docker-compose.yml`](docker-compose.yml) for an example.
 
 ```
      cap_add:
@@ -143,7 +145,7 @@ After you run the container the first time, it will create a directory named `~/
 
 BEFORE restarting the container (important!!) edit `docker-compose.yml` and set `AUTOGENERATE=OFF`. If you don't do this, your newly created `locations.conf` file will be overwritten by the auto-generated one based on the `REVPROXY` and `REDIRECT` settings. (There will be a time-stamped backup file of your `locations.conf` file, so not everything is lost!)
 
-In some systems where IPV6 is disabled or not available, you may have to add this environment parameter: `IPV6=DISABLED".
+In some systems where IPV6 is disabled or not available, you may have to add this environment parameter: `IPV6=DISABLED`.
 
 ### Host your own web pages
 You can place HTML and other web files in `~/.webproxy/html`. An example `index.html` is already provided, and can be reached by browsing to the root URL of your system.
@@ -170,7 +172,7 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
 - Solution: in VRS, make sure to configure this: VRS Options -> Website -> Website Customisation -> Proxy Type = Reverse
 
 - Issue: Planefinder doesn't work correctly
-- Solution: make sure that you have added the following to the `REVPROXY` variable:
+- Solution: make sure that you have added the following to the `REVPROXY` variable (replace ip address and port with whatever is appropriate for your system):
    ```
    planefinder|http://10.0.0.191:8086,
    ajax|http://10.0.0.191:8086/ajax,
@@ -183,6 +185,9 @@ nginx: [emerg] socket() [::]:80 failed (97: Address family not supported)
 nginx: configuration file /etc/nginx/nginx.conf test failed
 ```
 - Solution: Your system doesn't support IPV6 while the container expects this. Solve it by adding this parameter to your `docker-compose.yml`: `IPV6=DISABLED`
+
+- Issue: with `IPTABLES_BLOCK` switched on, it looks like the webproxy is trying to block large lists of ip addresses, even though none (or few) of these addresses have hit the system in the last 60 seconds
+- Solution: You probably didn't add the `NET_ADMIN` capacity to the container. You need to do this in your `docker-compose.yml` file and then recreate the container. See above and see [`docker-compose.yml'](docker-compose.yml) for an example.
 
 - Issue: I'm getting emails from `letsencrypt.com` about the pending expiration of my SSL certificates
 - Solution: ignore them. As long as the container is running and SSL is enabled, the certificates are checked daily for pending expiration and will be renewed 1 month before that date. Sometimes, letsencrypt.com gets confused about the expiration dates and thinks it's earlier than is really the case. You can always check this for yourself by looking at the container logs, or by running this command: `docker exec -it certbot certificates`
