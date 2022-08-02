@@ -11,7 +11,7 @@ fi
 
 
 
-if [[ ! -f /var/logs/nginx/access.log ]] || [[ -z "$BLOCKBOT" ]]
+if [[ ! -f /var/log/nginx/access.log ]] || [[ -z "$BLOCKBOT" ]]
 then
   echo "No Webserver access logs found, or IPTABLES_BLOCK not enabled. Exiting."
   exit 1
