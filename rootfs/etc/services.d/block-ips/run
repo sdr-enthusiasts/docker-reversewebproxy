@@ -30,7 +30,7 @@ do
   done
   # Parse through the log files and to the blocklist.
   # It's OK to add duplicates; `sort -u` will only keep the first (oldest) occurrence
-  grep -i -h -f <(printf '%s\n' "${BOT_ARRAY[@]}") /var/log/nginx/access.log 2>/dev/null | awk -v "d=$(date +%s)" '{print $1 " logs_crawler " d}' >> /run/nginx/ip-blocklist
+  grep -i -h -w -f <(printf '%s\n' "${BOT_ARRAY[@]}") /var/log/nginx/access.log 2>/dev/null | awk -v "d=$(date +%s)" '{print $1 " logs_crawler " d}' >> /run/nginx/ip-blocklist
 
   sort -u -k 1,1 /run/nginx/ip-blocklist | sort -n > /tmp/ip-blocklist
   mv -f /tmp/ip-blocklist /run/nginx/ip-blocklist
