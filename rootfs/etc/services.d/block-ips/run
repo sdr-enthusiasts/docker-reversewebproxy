@@ -19,6 +19,19 @@ while true
 do
   # Read access log and process any GEOIP or BLOCKBOT response codes. Note - also naturally occurring responses with these codes are picked up:
   awk -v "g=$GEOIP_RESPONSECODE" -v "b=$BLOCKBOT_RESPONSECODE" -v "d=$(date +%s)" '{if ($9 == b || $9 == g) print $1 " " $9 " " d}' /var/log/nginx/access.log >> /run/nginx/ip-blocklist
+
+  # Read $BLOCKBOT into an array and remove all leading/trailing spaces:
+  readarray -d "," -t BOT_ARRAY <<< "$BLOCKBOT"
+  for ((n=0; n<${#BOT_ARRAY[*]}; n++))
+  do
+    # this is slightly inefficient as it iterates through the entire array.
+    # However, all-at-once solutions like "y=($(printf '%s\n' "${x[@]}"|xargs))" appear to split each element at any internal whitespace :(
+    BOT_ARRAY[n]="$(xargs <<< "${BOT_ARRAY[n]}")"
+  done
+  # Parse through the log files and to the blocklist.
+  # It's OK to add duplicates; `sort -u` will only keep the first (oldest) occurrence
+  grep -i -h -f <(printf '%s\n' "${BOT_ARRAY[@]}") /var/log/nginx/access.log 2>/dev/null | awk -v "d=$(date +%s)" '{print $1 " logs_crawler " d}' >> /run/nginx/ip-blocklist
+
   sort -u -k 1,1 /run/nginx/ip-blocklist | sort -n > /tmp/ip-blocklist
   mv -f /tmp/ip-blocklist /run/nginx/ip-blocklist
 
