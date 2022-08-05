@@ -13,6 +13,6 @@ fi
 
 awk -F ' ' '{print $1}' /var/log/nginx/* \
     | sort -u \
-    | curl -Ls -XPOST --data-binary @- "https://ipinfo.io/tools/map?cli=1" \
+    | curl -Ls -XPOST --data-binary @- "https://ipinfo.io/tools/summarize-ips?cli=1" \
     | jq '.reportUrl' \
     | tr -d '\"'
