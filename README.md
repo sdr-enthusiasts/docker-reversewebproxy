@@ -154,6 +154,13 @@ Note -- the web server inside the container does NOT run as `root`, so you must 
 Feel free to create additional subdirectories if needed for your project.
 Also note -- the website may not be reachable if you redirected or proxied `/` to some other service.
 
+### Extras
+- Get a URL to a geographic map of all IPs that hit your WebProxy by typing:
+```
+docker exec -it webproxy ipmap
+```
+(Prerequisites: either of these parameters must be set: `IPTABLES_BLOCK=ENABLED` (recommended) or `VERBOSELOG=file` (works but not recommended) 
+
 ## Troubleshooting
 
 - Issue: the container log (`docker logs webproxy`) shows error messages like this: `sleep: cannot read realtime clock: Operation not permitted`

@@ -1,0 +1,18 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+# BASH script to create an IP map URL that can be displayed in your browser
+
+if [[ ! -f /var/log/nginx/access.log ]]
+then
+  echo "Access Logs not enabled. Please set either of these parameters to enable Access Logs in this container:"
+  echo "IPTABLES_BLOCK=ENABLED     ... or ..."
+  echo "VERBOSELOG=file"
+  exit 1
+fi
+
+awk -F ' ' '{print $1}' /var/log/nginx/* \
+    | sort -u \
+    | curl -Ls -XPOST --data-binary @- "https://ipinfo.io/tools/map?cli=1" \
+    | jq '.reportUrl' \
+    | tr -d '\"'

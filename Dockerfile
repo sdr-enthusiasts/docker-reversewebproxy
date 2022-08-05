@@ -16,6 +16,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(libnginx-mod-http-geoip) && \
     KEPT_PACKAGES+=(geoip-database) && \
     KEPT_PACKAGES+=(iptables) && \
+    KEPT_PACKAGES+=(jq) && \
     # added for debugging
     KEPT_PACKAGES+=(procps nano aptitude netcat libnginx-mod-http-echo) && \
 #
@@ -29,7 +30,12 @@ RUN set -x && \
     apt-get remove -y ${TEMP_PACKAGES[@]} && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
-    rm -rf /src/* /tmp/* /var/lib/apt/lists/*
+    rm -rf /src/* /tmp/* /var/lib/apt/lists/* && \
+#
+# Do some other stuff
+    echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
+    echo "alias nano=\"nano -l\"" >> /root/.bashrc && \
+    echo "PATH=/root:\$PATH" >> /root/.bashrc
 
 # Copy the rootfs into place:
 #
