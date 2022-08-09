@@ -4,8 +4,8 @@
 APPNAME="$(hostname)/30-blockbot"
 echo "[$APPNAME][$(date)] Initial setup -- installing BLOCKBOT service"
 
-cp -f /root/blockstats /usr/local/bin >/dev/null 2>&1
-cp -f /root/ipmap /usr/local/bin >/dev/null 2>&1
+mv -f /root/blockstats /usr/local/bin >/dev/null 2>&1
+mv -f /root/ipmap /usr/local/bin >/dev/null 2>&1
 
 if [[ -n "$BLOCKBOT" ]]
 then
