@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bash
-#shellcheck shell=bash
+#shellcheck shell=bash disable=SC2174
 
 APPNAME="$(hostname)/20-webproxy"
 echo "[$APPNAME][$(date)] Initial setup -- installing NXINX web service"
