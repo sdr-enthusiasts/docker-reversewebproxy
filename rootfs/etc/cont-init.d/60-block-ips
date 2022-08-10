@@ -14,7 +14,13 @@ cp -f /root/manage_ipblock /usr/local/bin >/dev/null 2>&1
 
 if [[ "$IPTABLES_BLOCK" != "ena" ]] && [[ "$IPTABLES_BLOCK" != "on" ]]
 then
-  echo "[$APPNAME][$(date)] Iptables blocking is disabled. Continuing..."
+  echo "[$APPNAME][$(date)] Bot blocking is disabled. Continuing..."
+  exit 0
+fi
+
+if [[ -z "$BLOCKBOT" ]]
+then
+  echo "[$APPNAME][$(date)] Bot blocking is disabled. Continuing..."
   exit 0
 fi
 
