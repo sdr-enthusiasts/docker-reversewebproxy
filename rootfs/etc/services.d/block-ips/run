@@ -9,7 +9,13 @@ IPTABLES_BLOCK="${IPTABLES_BLOCK,,}"
 IPTABLES_BLOCK="${IPTABLES_BLOCK:0:3}"
 if [[ "$IPTABLES_BLOCK" != "ena" ]] && [[ "$IPTABLES_BLOCK" != "on" ]]
 then
-  echo "[$APPNAME][$(date)] Iptables blocking is disabled"
+  echo "[$APPNAME][$(date)] Bot blocking is disabled"
+  sleep infinity
+fi
+
+if [[ -z "$BLOCKBOT" ]]
+then
+  echo "[$APPNAME][$(date)] Bot blocking is disabled"
   sleep infinity
 fi
 
