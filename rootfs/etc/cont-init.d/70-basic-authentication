@@ -55,11 +55,11 @@ readarray -d ',' -t revproxy_array <<< "$REVPROXY"
 for proxy in "${revproxy_array[@]}"
 do
     location="${proxy%%|*}"       # all chars up to the first "|"
-    location="${location// }"     # strip any spaces
+    location="${location//[[:space:]]}"     # strip any spaces
     location="${location///}"     # strip any '/'
     proxy="${proxy#*|}"           # all chars after the first "|"
     destination="${proxy%%|*}"    # all chars up to the (now) first "|"
-    destination="${destination// }" # strip any spaces
+    destination="${destination//[[:space:]]}" # strip any spaces
     creds="${proxy#*|}"           # now there's only user1|pass1|user2|pass2 etc left
     grep '|' <<< "$creds" >/dev/null 2>&1 || creds=""   # If there are no '|' in the string, there is no user/pass
     #debug: echo "Loc: ${location#* } - Proxy: $destination - Creds: $creds"
@@ -73,10 +73,10 @@ do
         while grep '|' <<< "$creds" >/dev/null 2>&1
         do
             username="${creds%%|*}"       # all chars up to the first "|"
-            username=${username// }       # strip any spaces
+            username=${username//[[:space:]]}       # strip any spaces
             creds="${creds#*|}"           # all chars after the first "|"
             password="${creds%%|*}"       # all chars up to the (now) first "|"
-            password="${password// }"     # strip any spaces
+            password="${password//[[:space:]]}"     # strip any spaces
             creds="${creds#*|}"           # now there's only the next user|pass|user|pass etc left
             # note - if there is no more username|pass, then $creds will contain the last password but no '|'
             # write credentials to password file:
