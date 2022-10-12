@@ -24,7 +24,7 @@ chown www-data:www-data /run/nginx/.htaccess
 mkdir -p -m 777 /var/log/nginx
 touch /var/log/nginx/access.log
 touch /var/log/nginx/error.log
-chmod a+rw touch /var/log/nginx/access.log /var/log/nginx/error.log
+chmod a+rw /var/log/nginx/access.log /var/log/nginx/error.log
 
 # auto-create the locations.conf file if $AUTOGENERATE is set to yes
 if [[ "$AUTOGENERATE" == "ON" ]]
