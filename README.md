@@ -59,10 +59,11 @@ If `AUTOGENERATE=ON`, the system will build a Webproxy based on the `REVPROXY` a
 
 `REVPROXY` defines the proxy-pairs to serve the `destination` target when the user browses to `urltarget`. The user's browser will never be redirected to an internal IP address for service, all web pages are being served from the Webproxy. As such, the process of going to the correct website/port to get the web page is completely hidden from the user.
 
-`REVPROXY` has the following format: `urltarget|destination`
+`REVPROXY` has the following format: `urltarget|destination[|user1|pass1[|user2|pass2[|...|...]]]`
 For example, for REVPROXY=readsb|http://10.0.0.191:8080, a user browsing to http://mydomain/readsb will be proxied to a service located at http://10.0.0.191:8080. The user's browser will *never* see the internal IP address.
 Note - both the `urltarget` and the `destination` must be URLs or directories, and cannot be a file name.
 You can provide a comma separated list of `urltarget|destination` pairs, similar to the example in the default `docker-compose.yml`.
+The optional `|user1|pass1|user2|pass2|...|...` addons define the allowed username/password combination for this specific revproxy.
 
 `REDIRECT` redirects the user's browser to a specific address. In contrast to `REVPROXY`, the Webproxy does NOT "front" the rendering of the website. This can be useful if there is information that you want to be available within your own subnet, but not to the outside world.
 The format for `REDIRECT` is similar to that of `REVPROXY`: `urltarget|redirection`
@@ -140,6 +141,20 @@ Note that the `IPTABLES_BLOCK` feature enables logging to disk (specifically, `/
 | `LOGROTATE_INTERVAL` | time in seconds; default value `3600` | The time between each run of of log rotation for `/var/log/nginx/access.log` and `/var/log/nginx/error.lo`g |
 | `LOGROTATE_MAXBACKUPS` | integer between `0` and `100`; default value `24` | The number of backup files for `/var/log/nginx/access.log` and `/var/log/nginx/error.log` |
 
+### Basic Authentication
+The container supports a "basic" implementation of Basic Authentication. This is not inherently super-secure, and it exposes the usernames/passwords in clear text to the host system. We are planning to make this more secure in the future, but for now, please use with caution.
+
+The container supports basic authentication for the local web page through the `LOCAL_CREDS` variable, as well as credentials for each of the `REVPROXY`d entries via the `REVPROXY` variable.
+
+| Parameter | Values | Description |
+|-----------|--------|-------------|
+| `AUTH` | `ON` or anything else | If set to `ON`, Basic Authentication is enabled. If set to anything else or omitted, Basic Authentication is disabled.|
+| `LOCAL_CREDS` | | A list of credentials in the format `username1|password1,username2|password2,...`|
+| `REVPROXY` | | A comma separated list in this format:
+```
+REVPROXY=origin1|http://destination1|username1|password1|username2|password2,
+         origin2|http://destination2|username3|password3|username4|password4|username5|password5, ...
+```
 ### Advanced Setup
 After you run the container the first time, it will create a directory named `~/.webproxy`. If `AUTOGENERATE=ON`, there will be a `locations.conf` file. There will also be a `locations.conf.example` file that contains setup examples. If you know how to write a `nginx` configuration file, feel free to edit the `locations.conf` and add any options to your liking.
 
@@ -159,7 +174,7 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
 ```
 docker exec -it webproxy ipmap
 ```
-(Prerequisites: either of these parameters must be set: `IPTABLES_BLOCK=ENABLED` (recommended) or `VERBOSELOG=file` (works but not recommended) 
+(Prerequisites: either of these parameters must be set: `IPTABLES_BLOCK=ENABLED` (recommended) or `VERBOSELOG=file` (works but not recommended)
 
 ## Troubleshooting
 

@@ -5,18 +5,26 @@ APPNAME="$(hostname)/20-webproxy"
 echo "[$APPNAME][$(date)] Initial setup -- installing NXINX web service"
 
 # create run directory. This is where the locations.conf file will be located.
+# Create the correct ownership and permissions for the /var/log/nginx directory:
+adduser -U www-data >/dev/null 2>&1
+mkdir -p /var/log/nginx
 mkdir -p /run/nginx/html
+mkdir -p /run/nginx/.htaccess
+chmod a+rwx /var/log/nginx
+chown www-data:www-data /var/log/nginx
 cp -n /root/locations.conf.example /run/nginx
 cp -n /root/index.html /run/nginx/html
 chmod a+rwx /run/nginx /run/nginx/html
 chmod a+rw /run/nginx/*
 chmod a+rw /run/nginx/html/*
+chmod go-rwx /run/nginx/.htaccess
+chown www-data:www-data /run/nginx/.htaccess
 
 # create the logging directory if it doesn't already exist
 mkdir -p -m 777 /var/log/nginx
 touch /var/log/nginx/access.log
 touch /var/log/nginx/error.log
-chmod a+rw touch /var/log/nginx/access.log var/log/nginx/error.log
+chmod a+rw touch /var/log/nginx/access.log /var/log/nginx/error.log
 
 # auto-create the locations.conf file if $AUTOGENERATE is set to yes
 if [[ "$AUTOGENERATE" == "ON" ]]
@@ -41,7 +49,7 @@ then
     for ((i=0; i<${#redir_array[@]}; i++))
     do
         # get the location and destination for this array element:
-        location="${redir_array[i]%%|*}"
+        location="${redir_array[i]%%|*}"; redir_array[i]=
         destination="${redir_array[i]##*|}"
 
         if [[ "$location" == "" ]] || [[ "$destination" == "" ]]
@@ -66,14 +74,21 @@ then
     for ((i=0; i<${#proxy_array[@]}; i++))
     do
         # get the location and destination for this array element:
-        location="${proxy_array[i]%%|*}"
-        destination="${proxy_array[i]##*|}"
+        proxystring="${proxy_array[i]}"
+        location="${proxystring%%|*}"       # all chars up to the first "|"
+        proxystring="${proxystring#*|}"     # all chars after the first "|"
+        destination="${proxy_array[i]##*|}" # all chars up to the (now) first "|"
+        # proxystring="${proxystring#*|}"     # now there's only user1|pass1|user2|pass2 etc left
 
         if [[ "$location" == "" ]] || [[ "$destination" == "" ]]
         then
             continue;
         fi
 
+        # strip $location and #destination from any spaces:
+        location="${location// }"
+        destination="${destination// }"
+        
         # fix prefixes and suffixes if necessary:
         [[ "${location:0:1}" != "/" ]] && location="/$location"
         [[ "${location: -1}" != "/" ]] && location="$location/"
@@ -83,7 +98,9 @@ then
 
         # Now print the location entry:
         printf "location %s {\n" "$location" >> /run/nginx/locations.conf
-        printf "    proxy_pass %s;\n" "$destination"  >> /run/nginx/locations.conf
+        printf "    auth_basic off;\n" >> /run/nginx/locations.conf
+        printf "    auth_basic_user_file /run/nginx/.htaccess/.htpasswd-${location///};\n" >> /run/nginx/locations.conf
+        printf "    proxy_pass %s;\n" "$destination" >> /run/nginx/locations.conf
 
         # Additional line to catch redirects; suggested by @wiedehopf:
         # removed again after discussions
@@ -91,6 +108,7 @@ then
 
         # close off the location entry:
         printf "}\n\n"  >> /run/nginx/locations.conf
+        touch /run/nginx/.htaccess/.htpasswd-${location///} # make sure that the passwd file exists even if it's empty or not used
     done
 
     # Finally add the default index files to this configuration:
@@ -131,10 +149,6 @@ else
   echo "[$APPNAME][$(date)] HTTP logging is disabled"
 fi
 
-# Create the correct ownership and permissions for the /var/log/nginx directory:
-adduser -U www-data >/dev/null 2>&1
-mkdir -p /var/log/nginx
-chmod a+rwx /var/log/nginx
-chown www-data:www-data /var/log/nginx
+
 
 exit 0

@@ -31,6 +31,11 @@ services:
             # The user's browser will *never* see the internal IP address.
             # Note - both the urltarget and the destination must be URLs or directories, and cannot be
             # a file name
+            # Optionally, you can add Basic Authentication username(s)/password(s) as well. If the AUTH parameter is set to ON,
+            # any REVPROXY entries that have one or more username/password combinations will only be proxied after the web browser
+            # furnishes the correct credentials. If AUTH is not set to ON, these credentials will be ignored.
+            # Usernames and passwords should not contain any field separators or special characters like ,'"|; or whitespace characters
+            # For example: REVPROXY=readsb|http://10.0.0.191:8080|username1;password1|username2;password2,
             - REVPROXY=
                        readsb|http://10.0.0.191:8080,
                        piaware|http://10.0.0.191:8081,
@@ -96,6 +101,21 @@ services:
             - GEOIP_RESPONSECODE=418
             - GEOIP_DEFAULT=allow
             - GEOIP_COUNTRIES=cn,ru
+            #
+            # AUTH -- a basic mechanism to use basic authentication
+            #
+            # Although it's possible to put the usernames and passwords here, we strongly advice to put them in a variable in a `.env` file
+            # AUTH=ON -- Basic Authentication is enabled
+            # AUTH=OFF or not defined or empty -- Basic Authentication is disabled
+            #
+            # Add global credentials usernames like this: (note -- this parameter structure is not yet future proof and may change when we add per-website authentication)
+            # GLOB_CREDS=<username1>|<password1>,<username2>|<password2>,...
+            # Global Credentials can be used to access all websites. If you want to define a credential for a specific
+            # REVPROXY destination, you can do so with the REVPROXY parameter (see above)
+            #
+            #
+            AUTH=OFF
+            GLOB_CREDS=
             #
             # BLOCKBOT blocks bots of which the User Agent contains all or part of these comma-separated strings:
             - BLOCKBOT=

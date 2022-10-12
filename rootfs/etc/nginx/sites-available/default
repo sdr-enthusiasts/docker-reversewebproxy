@@ -34,6 +34,9 @@ server {
         # as directory, then fall back to displaying a 404.
         try_files $uri $uri/ =404;
 
+        # auth_basic off;
+        # auth_basic_user_file /file/here;
+
         include /run/nginx/locations.conf;
 
     }

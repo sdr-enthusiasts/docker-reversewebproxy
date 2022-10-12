@@ -1,0 +1,85 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash disable=SC2174
+
+APPNAME="$(hostname)/70-basic-authentication"
+
+if [[ "${AUTH,,}" != "on" ]]
+then
+    echo "[$APPNAME][$(date)] Basic Authentication is not enabled. Continuing."
+    exit 0
+fi
+
+# -----------------------------------------------------------------------------------------
+# Implement global credentials
+# -----------------------------------------------------------------------------------------
+# Clean old credentials file:
+rm -f /run/nginx/.htaccess/.htpasswd_global
+touch /run/nginx/.htaccess/.htpasswd_global
+
+if [[ -n "$GLOB_CREDS" ]]
+then
+    readarray -d ',' -t creds_array <<< "$GLOB_CREDS"
+    n=1
+    errors=0
+    # Add global credentials to the file if they exist:
+    for cred in "${creds_array[@]}"
+    do
+        username="${cred%%|*}"
+        password="${cred##*|}"
+        if [[ -z "$username" ]] || [[ -z "$password" ]]
+        then
+            echo "[$APPNAME][$(date)] WARNING: Entry $n of CREDENTIALS variable is wrongly formatted. Skipping..."
+            (( errors++ ))
+            continue
+        fi
+        printf "%s:%s\n" "$username" "$(openssl passwd -5 $password)" >> /run/nginx/.htaccess/.htpasswd_global
+    done
+
+    # Make sure that the default file is correctly set up:
+    sed -i 's|^\s*#*\s*auth_basic .*$|        auth_basic "authorization required";|g' /etc/nginx/sites-available/default
+    sed -i 's|^\s*#*\s*auth_basic_user_file .*$|        auth_basic_user_file /run/nginx/.htaccess/.htpasswd_global;|g' /etc/nginx/sites-available/default
+else
+    # Global Authorization is not enabled, let's ensure that it's set to off
+    sed -i 's|^\s*#*\s*auth_basic .*$|        auth_basic off;|g' /etc/nginx/sites-available/default
+    sed -i 's|^\s*#*\s*auth_basic_user_file .*$|        # auth_basic_user_file /file/here;|g' /etc/nginx/sites-available/default
+fi
+
+# -----------------------------------------------------------------------------------------
+# Implement localized credentials for each of the REVPROXY entries
+# -----------------------------------------------------------------------------------------
+# Get the REVPROXY array and put each entry into am array element
+readarray -d ',' -t revproxy_array <<< "$REVPROXY"
+#
+# Loop through each of the entries in $revproxy_array:
+for proxy in "${revproxy_array[@]}"
+do
+    location="${proxy%%|*}"       # all chars up to the first "|"
+    location="${location// }"     # strip any spaces
+    location="${location///}"     # strip any '/'
+    proxy="${proxy#*|}"           # all chars after the first "|"
+    destination="${proxy%%|*}"    # all chars up to the (now) first "|"
+    destination="${destination// }" # strip any spaces
+    creds="${proxy#*|}"           # now there's only user1|pass1|user2|pass2 etc left
+    grep '|' <<< "$creds" >/dev/null 2>&1 || creds=""   # If there are no '|' in the string, there is no user/pass
+    #debug: echo "Loc: ${location#* } - Proxy: $destination - Creds: $creds"
+
+    # Clean out the password file:
+    rm -f "/run/nginx/.htaccess/.htpasswd-${location}"
+    touch "/run/nginx/.htaccess/.htpasswd-${location}"
+    # Now loop through the credentials, create the password file:
+    while grep '|' <<< "$creds" >/dev/null 2>&1
+    do
+        username="${creds%%|*}"       # all chars up to the first "|"
+        username=${username// }       # strip any spaces
+        creds="${creds#*|}"           # all chars after the first "|"
+        password="${creds%%|*}"       # all chars up to the (now) first "|"
+        password="${password// }"     # strip any spaces
+        creds="${creds#*|}"           # now there's only the next user|pass|user|pass etc left
+                                      # note - if there is no more username|pass, then $creds will contain the last password but no '|'
+
+        # write credentials to password file:
+        printf "%s:%s\n" "$username" "$(openssl passwd -5 $password)" >> "/run/nginx/.htaccess/.htpasswd-${location}"
+    done
+    # enable the entry in the locations.conf file
+    sed -i -e '1h;2,$H;$!d;g' -e 's|\(\s*location /'"$location"'/ {\n\s*auth_basic\) off\(.*\)|\1 "Authentication Required"\2|g' /run/nginx/locations.conf
+done
