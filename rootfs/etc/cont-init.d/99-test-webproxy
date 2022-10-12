@@ -16,7 +16,7 @@ then
     echo "| docker-compose.yml file. Go check and fix them!|"
     echo "--------------------------------------------------"
 
-    exit 1
+    [[ -z "$DEBUG" ]] && exit 1 || sleep infinity
 fi
 
 exit 0

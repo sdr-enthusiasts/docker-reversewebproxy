@@ -88,7 +88,7 @@ then
         # strip $location and #destination from any spaces:
         location="${location// }"
         destination="${destination// }"
-        
+
         # fix prefixes and suffixes if necessary:
         [[ "${location:0:1}" != "/" ]] && location="/$location"
         [[ "${location: -1}" != "/" ]] && location="$location/"
@@ -126,8 +126,8 @@ then
     echo "| Please do so and then restart the container.  |"
     echo "-------------------------------------------------"
 
-    exit 1
-    else
+    [[ -z "$DEBUG" ]] && exit 1 || sleep infinity
+else
     echo "[$APPNAME][$(date)] Using user-provided locations.conf file"
 fi
 
