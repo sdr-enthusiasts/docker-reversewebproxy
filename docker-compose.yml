@@ -108,14 +108,15 @@ services:
             # AUTH=ON -- Basic Authentication is enabled
             # AUTH=OFF or not defined or empty -- Basic Authentication is disabled
             #
-            # Add global credentials usernames like this: (note -- this parameter structure is not yet future proof and may change when we add per-website authentication)
-            # GLOB_CREDS=<username1>|<password1>,<username2>|<password2>,...
-            # Global Credentials can be used to access all websites. If you want to define a credential for a specific
-            # REVPROXY destination, you can do so with the REVPROXY parameter (see above)
+            # Add credentials usernames for the local web serverlike this: (note -- this parameter structure is not yet future proof and may change when we add per-website authentication)
+            # LOCA_CREDS=<username1>|<password1>,<username2>|<password2>,...
+            # Local Credentials work only for the local website. If you want to define a credential for a specific
+            # REVPROXY destination, you can do so with the REVPROXY parameter (see above).
+            # You cannot use Basic Authentication for a REDIRECT entry; this should be implemented by the target website instead.
             #
             #
             AUTH=OFF
-            GLOB_CREDS=
+            LOCAL_CREDS=
             #
             # BLOCKBOT blocks bots of which the User Agent contains all or part of these comma-separated strings:
             - BLOCKBOT=

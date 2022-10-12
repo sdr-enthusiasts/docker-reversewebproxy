@@ -16,9 +16,9 @@ fi
 rm -f /run/nginx/.htaccess/.htpasswd_global
 touch /run/nginx/.htaccess/.htpasswd_global
 
-if [[ -n "$GLOB_CREDS" ]]
+if [[ -n "$LOCAL_CREDS" ]]
 then
-    readarray -d ',' -t creds_array <<< "$GLOB_CREDS"
+    readarray -d ',' -t creds_array <<< "$LOCAL_CREDS"
     n=1
     errors=0
     # Add global credentials to the file if they exist:
