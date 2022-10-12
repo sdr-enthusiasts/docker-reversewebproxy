@@ -1,3 +1,5 @@
+<img align="right" src="https://raw.githubusercontent.com/sdr-enthusiasts/sdr-enthusiast-assets/main/SDR%20Enthusiasts.svg" height="300">
+
 # Docker-ReverseWebProxy
 
 ## ATTENTION Raspberry Pi 3 / Buster users
@@ -153,7 +155,9 @@ The container supports basic authentication for the local web page through the `
 | `REVPROXY` | | A comma separated list in this format:
 ```
 REVPROXY=origin1|http://destination1|username1|password1|username2|password2,
-         origin2|http://destination2|username3|password3|username4|password4|username5|password5, ...
+         origin2|http://destination2|username3|password3|username4|password4|username5|password5, 
+         origin3|http://destination3,
+         ...
 ```
 ### Advanced Setup
 After you run the container the first time, it will create a directory named `~/.webproxy`. If `AUTOGENERATE=ON`, there will be a `locations.conf` file. There will also be a `locations.conf.example` file that contains setup examples. If you know how to write a `nginx` configuration file, feel free to edit the `locations.conf` and add any options to your liking.
