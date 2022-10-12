@@ -51,7 +51,6 @@ then
     do
         location="${proxy%%|*}"       # all chars up to the first "|"
         location="${location//[[:space:]]}"     # strip any spaces
-        location="${location///}"     # strip any '/'
         proxy="${proxy#*|}"           # all chars after the first "|"
         destination="${proxy%%|*}"    # all chars up to the (now) first "|"
         destination="${destination//[[:space:]]}" # strip any spaces
@@ -72,9 +71,8 @@ then
 
         # fix prefixes and suffixes if necessary:
         [[ "${location:0:1}" != "/" ]] && location="/$location"
-        # breaks more than it fixes... removed for now
-        # [[ "${destination:0:4}" != "http" ]] && destination="http://$destination"
         [[ "${destination:0:2}" == "//" ]] && destination="http:$destination"
+        [[ "${destination:0:4}" != "http" ]] && destination="http://$destination"
 
         # Now print the location entry:
         printf "location %s {\n" "$location" >> /run/nginx/locations.conf
@@ -88,6 +86,8 @@ then
     do
         location="${proxy%%|*}"       # all chars up to the first "|"
         location="${location//[[:space:]]}"     # strip any spaces
+        while [[ "${location:0:1}" == "/" ]]; do location="${location:1}"; done # strip any / from the front
+        while [[ "${location: -1}" == "/" ]]; do location="${location:0: -1}"; done # strip any / from the back
         location="${location///}"     # strip any '/'
         proxy="${proxy#*|}"           # all chars after the first "|"
         destination="${proxy%%|*}"    # all chars up to the (now) first "|"
