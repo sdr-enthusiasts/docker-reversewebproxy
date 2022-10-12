@@ -42,19 +42,32 @@ then
 
     # configure the locations.conf file:
     # first read the REVPROXY and REDIRECT environment variables into an array:
-    IFS="," read -ra proxy_array <<< "$(echo $REVPROXY|tr -d '[:blank:]')"
-    IFS="," read -ra redir_array <<< "$(echo $REDIRECT|tr -d '[:blank:]')"
 
-    # add the redirects to the locations.conf file:
-    for ((i=0; i<${#redir_array[@]}; i++))
+    readarray -d ',' -t proxy_array <<< "$REVPROXY"
+    readarray -d ',' -t redir_array <<< "$REDIRECT"
+    #
+    # Loop through each of the entries in $redir_array:
+    for proxy in "${redir_array[@]}"
     do
-        # get the location and destination for this array element:
-        location="${redir_array[i]%%|*}"; redir_array[i]=
-        destination="${redir_array[i]##*|}"
+        location="${proxy%%|*}"       # all chars up to the first "|"
+        location="${location// }"     # strip any spaces
+        location="${location///}"     # strip any '/'
+        proxy="${proxy#*|}"           # all chars after the first "|"
+        destination="${proxy%%|*}"    # all chars up to the (now) first "|"
+        destination="${destination// }" # strip any spaces
+        creds="${proxy#*|}"           # now there's only user1|pass1|user2|pass2 etc left
+        grep '|' <<< "$creds" >/dev/null 2>&1 || creds=""   # If there are no '|' in the string, there is no user/pass
+        #debug: echo "Loc: ${location#* } - Proxy: $destination - Creds: $creds"
 
-        if [[ "$location" == "" ]] || [[ "$destination" == "" ]]
+        if [[ -z "$location" ]] || [[ -z "$destination" ]]
         then
+            echo "[$APPNAME][$(date)] WARNING: Skipping empty location or destination for REDIRECT $location:$destination"
             continue;
+        fi
+
+        if [[ -n "$creds" ]]
+        then
+            echo "[$APPNAME][$(date)] WARNING: Auth credentials not supported REDIRECT ($location:$destination). Implemented without authentications"
         fi
 
         # fix prefixes and suffixes if necessary:
@@ -70,35 +83,41 @@ then
 
     done
 
-    # now loop through the array and create location elements for each entry:
-    for ((i=0; i<${#proxy_array[@]}; i++))
+    # now loop through the Proxy array and create location elements for each entry:
+    for proxy in "${proxy_array[@]}"
     do
-        # get the location and destination for this array element:
-        proxystring="${proxy_array[i]}"
-        location="${proxystring%%|*}"       # all chars up to the first "|"
-        proxystring="${proxystring#*|}"     # all chars after the first "|"
-        destination="${proxy_array[i]##*|}" # all chars up to the (now) first "|"
-        # proxystring="${proxystring#*|}"     # now there's only user1|pass1|user2|pass2 etc left
+        location="${proxy%%|*}"       # all chars up to the first "|"
+        location="${location// }"     # strip any spaces
+        location="${location///}"     # strip any '/'
+        proxy="${proxy#*|}"           # all chars after the first "|"
+        destination="${proxy%%|*}"    # all chars up to the (now) first "|"
+        destination="${destination// }" # strip any spaces
+        creds="${proxy#*|}"           # now there's only user1|pass1|user2|pass2 etc left
+        grep '|' <<< "$creds" >/dev/null 2>&1 || creds=""   # If there are no '|' in the string, there is no user/pass
+        #debug: echo "Loc: ${location#* } - Proxy: $destination - Creds: $creds"
 
-        if [[ "$location" == "" ]] || [[ "$destination" == "" ]]
+        if [[ -z "$location" ]] || [[ -z "$destination" ]]
         then
+            echo "[$APPNAME][$(date)] WARNING: Skipping empty location or destination for REDIRECT $location:$destination"
             continue;
         fi
 
-        # strip $location and #destination from any spaces:
-        location="${location// }"
-        destination="${destination// }"
-
+        # If there are creds and AUTH=ON, then set `auth_basic` to a string. If not, it's `off`.
+        if [[ -n "$creds" ]] && [[ "${AUTH,,}" == "on" ]]
+        then
+            basic_auth="\"Authorization Required\""
+        else
+            basic_auth="off"
+        fi
+        
         # fix prefixes and suffixes if necessary:
-        [[ "${location:0:1}" != "/" ]] && location="/$location"
-        [[ "${location: -1}" != "/" ]] && location="$location/"
         [[ "${destination:0:4}" != "http" ]] && destination="http://$destination"
         [[ "${destination:0:2}" == "//" ]] && destination="http:$destination"
         [[ "${destination: -1}" != "/" ]] && destination="$destination/"
 
         # Now print the location entry:
-        printf "location %s {\n" "$location" >> /run/nginx/locations.conf
-        printf "    auth_basic off;\n" >> /run/nginx/locations.conf
+        printf "location %s {\n" "/$location/" >> /run/nginx/locations.conf
+        printf "    auth_basic %s;\n" "$basic_auth" >> /run/nginx/locations.conf
         printf "    auth_basic_user_file /run/nginx/.htaccess/.htpasswd-${location///};\n" >> /run/nginx/locations.conf
         printf "    proxy_pass %s;\n" "$destination" >> /run/nginx/locations.conf
 

@@ -51,6 +51,7 @@ fi
 readarray -d ',' -t revproxy_array <<< "$REVPROXY"
 #
 # Loop through each of the entries in $revproxy_array:
+# Note -- enabling each entry in the locations.conf file was already done in 20-webproxy
 for proxy in "${revproxy_array[@]}"
 do
     location="${proxy%%|*}"       # all chars up to the first "|"
@@ -81,7 +82,5 @@ do
             # write credentials to password file:
             printf "%s:%s\n" "$username" "$(openssl passwd -5 $password)" >> "/run/nginx/.htaccess/.htpasswd-${location}"
         done
-        # enable the entry in the locations.conf file
-        sed -i -e '1h;2,$H;$!d;g' -e 's|\(\s*location /'"$location"'/ {\n\s*auth_basic\) off\(.*\)|\1 "Authentication Required"\2|g' /run/nginx/locations.conf
     fi
 done
