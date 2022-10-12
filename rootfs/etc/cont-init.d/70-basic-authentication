@@ -66,20 +66,22 @@ do
     # Clean out the password file:
     rm -f "/run/nginx/.htaccess/.htpasswd-${location}"
     touch "/run/nginx/.htaccess/.htpasswd-${location}"
-    # Now loop through the credentials, create the password file:
-    while grep '|' <<< "$creds" >/dev/null 2>&1
-    do
-        username="${creds%%|*}"       # all chars up to the first "|"
-        username=${username// }       # strip any spaces
-        creds="${creds#*|}"           # all chars after the first "|"
-        password="${creds%%|*}"       # all chars up to the (now) first "|"
-        password="${password// }"     # strip any spaces
-        creds="${creds#*|}"           # now there's only the next user|pass|user|pass etc left
-                                      # note - if there is no more username|pass, then $creds will contain the last password but no '|'
-
-        # write credentials to password file:
-        printf "%s:%s\n" "$username" "$(openssl passwd -5 $password)" >> "/run/nginx/.htaccess/.htpasswd-${location}"
-    done
-    # enable the entry in the locations.conf file
-    sed -i -e '1h;2,$H;$!d;g' -e 's|\(\s*location /'"$location"'/ {\n\s*auth_basic\) off\(.*\)|\1 "Authentication Required"\2|g' /run/nginx/locations.conf
+    if [[ -n "$creds" ]]
+    then
+        # Now loop through the credentials, create the password file:
+        while grep '|' <<< "$creds" >/dev/null 2>&1
+        do
+            username="${creds%%|*}"       # all chars up to the first "|"
+            username=${username// }       # strip any spaces
+            creds="${creds#*|}"           # all chars after the first "|"
+            password="${creds%%|*}"       # all chars up to the (now) first "|"
+            password="${password// }"     # strip any spaces
+            creds="${creds#*|}"           # now there's only the next user|pass|user|pass etc left
+            # note - if there is no more username|pass, then $creds will contain the last password but no '|'
+            # write credentials to password file:
+            printf "%s:%s\n" "$username" "$(openssl passwd -5 $password)" >> "/run/nginx/.htaccess/.htpasswd-${location}"
+        done
+        # enable the entry in the locations.conf file
+        sed -i -e '1h;2,$H;$!d;g' -e 's|\(\s*location /'"$location"'/ {\n\s*auth_basic\) off\(.*\)|\1 "Authentication Required"\2|g' /run/nginx/locations.conf
+    fi
 done
