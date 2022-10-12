@@ -88,7 +88,7 @@ then
         location="${location//[[:space:]]}"     # strip any spaces
         while [[ "${location:0:1}" == "/" ]]; do location="${location:1}"; done # strip any / from the front
         while [[ "${location: -1}" == "/" ]]; do location="${location:0: -1}"; done # strip any / from the back
-        location="${location///}"     # strip any '/'
+        # location="${location///}"     <-- wayyy too aggressive - screws up the locations.conf entry # strip any '/'
         proxy="${proxy#*|}"           # all chars after the first "|"
         destination="${proxy%%|*}"    # all chars up to the (now) first "|"
         destination="${destination//[[:space:]]}" # strip any spaces
