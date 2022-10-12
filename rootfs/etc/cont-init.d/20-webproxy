@@ -106,8 +106,10 @@ then
         if [[ -n "$creds" ]] && [[ "${AUTH,,}" == "on" ]]
         then
             basic_auth="\"Authorization Required\""
+            abuf="auth_basic_user_file"
         else
             basic_auth="off"
+            abuf="# auth_basic_user_file"
         fi
 
         # fix prefixes and suffixes if necessary:
@@ -118,7 +120,7 @@ then
         # Now print the location entry:
         printf "location %s {\n" "/$location/" >> /run/nginx/locations.conf
         printf "    auth_basic %s;\n" "$basic_auth" >> /run/nginx/locations.conf
-        printf "    auth_basic_user_file /run/nginx/.htaccess/.htpasswd-${location///};\n" >> /run/nginx/locations.conf
+        printf "    %s /run/nginx/.htaccess/.htpasswd-%s;\n" "$abuf" "${location///}" >> /run/nginx/locations.conf
         printf "    proxy_pass %s;\n" "$destination" >> /run/nginx/locations.conf
 
         # Additional line to catch redirects; suggested by @wiedehopf:
