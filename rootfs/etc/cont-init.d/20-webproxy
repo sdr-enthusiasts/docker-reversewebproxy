@@ -126,7 +126,7 @@ then
         # Additional line to catch redirects; suggested by @wiedehopf:
         # removed again after discussions
         # printf "    proxy_redirect ~^(/|http://[^/]*/)(.*) %s\$2;\n" "$location" >> /run/nginx/locations.conf
-
+        printf "    proxy_redirect / /%s/;\n" "$location" >> /run/nginx/locations.conf
         # close off the location entry:
         printf "}\n\n"  >> /run/nginx/locations.conf
         touch /run/nginx/.htaccess/.htpasswd-${location///} # make sure that the passwd file exists even if it's empty or not used
