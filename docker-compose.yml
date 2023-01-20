@@ -31,6 +31,11 @@ services:
             # The user's browser will *never* see the internal IP address.
             # Note - both the urltarget and the destination must be URLs or directories, and cannot be
             # a file name
+            # Optionally, you can add Basic Authentication username(s)/password(s) as well. If the AUTH parameter is set to ON,
+            # any REVPROXY entries that have one or more username/password combinations will only be proxied after the web browser
+            # furnishes the correct credentials. If AUTH is not set to ON, these credentials will be ignored.
+            # Usernames and passwords should not contain any field separators or special characters like ,'"|; or whitespace characters
+            # For example: REVPROXY=readsb|http://10.0.0.191:8080|username1;password1|username2;password2,
             - REVPROXY=
                        readsb|http://10.0.0.191:8080,
                        piaware|http://10.0.0.191:8081,
@@ -97,25 +102,54 @@ services:
             - GEOIP_DEFAULT=allow
             - GEOIP_COUNTRIES=cn,ru
             #
+            # AUTH -- a basic mechanism to use basic authentication
+            #
+            # Although it's possible to put the usernames and passwords here, we strongly advice to put them in a variable in a `.env` file
+            # AUTH=ON -- Basic Authentication is enabled
+            # AUTH=OFF or not defined or empty -- Basic Authentication is disabled
+            #
+            # Add credentials usernames for the local web serverlike this: (note -- this parameter structure is not yet future proof and may change when we add per-website authentication)
+            # LOCA_CREDS=<username1>|<password1>,<username2>|<password2>,...
+            # Local Credentials work only for the local website. If you want to define a credential for a specific
+            # REVPROXY destination, you can do so with the REVPROXY parameter (see above).
+            # You cannot use Basic Authentication for a REDIRECT entry; this should be implemented by the target website instead.
+            #
+            #
+            AUTH=OFF
+            LOCAL_CREDS=
+            #
             # BLOCKBOT blocks bots of which the User Agent contains all or part of these comma-separated strings:
             - BLOCKBOT=
-                       bot,LieBaoFast,UCBrowser,MQQBrowser,Mb2345Browser,
-                       google,bing,yandex,msnbot,
+                       bot,LieBaoFast,UCBrowser,MQQBrowser,Mb2345Browser,https://gdnplus.com,facebookexternalhit,google,bing,yandex,msnbot,wp-login.php,zgrab,zgrab2,
                        AltaVista,Googlebot,Slurp,BlackWidow,Bot,ChinaClaw,Custo,DISCo,Download,Demon,eCatch,EirGrabber,EmailSiphon,EmailWolf,SuperHTTP,Surfbot,WebWhacker,
                        Express,WebPictures,ExtractorPro,EyeNetIE,FlashGet,GetRight,GetWeb!,Go!Zilla,Go-Ahead-Got-It,GrabNet,Grafula,HMView,Go!Zilla,Go-Ahead-Got-It,
                        rafula,HMView,HTTrack,Stripper,Sucker,Indy,InterGET,Ninja,JetCar,Spider,larbin,LeechFTP,Downloader,tool,Navroad,NearSite,NetAnts,tAkeOut,WWWOFFLE,
                        GrabNet,NetSpider,Vampire,NetZIP,Octopus,Offline,PageGrabber,Foto,pavuk,pcBrowser,RealDownload,ReGet,SiteSnagger,SmartDownload,SuperBot,WebSpider,
-                       Teleport,VoidEYE,Collector,WebAuto,WebCopier,WebFetch,WebGo,WebLeacher,WebReaper,WebSauger,eXtractor,Quester,WebStripper,WebZIP,Wget,Widow,Zeus,
+                       Teleport,VoidEYE,Collector,WebAuto,WebCopier,WebFetch,WebGo,WebLeacher,WebReaper,WebSauger,eXtractor,Quester,WebStripper,WebZIP,Widow,Zeus,
                        Twengabot,htmlparser,libwww,Python,perl,urllib,scan,email,PycURL,Pyth,PyQ,WebCollector,WebCopy,webcraw,PetalBot,ubermetrics,Firefox/45,
-                       Vert.x-WebClient,jsonlite,rv:45.0,Nexgate Ruby Client,scoop.it,NetSystemsResearch
+                       Vert.x-WebClient,jsonlite,rv:45.0,Nexgate Ruby Client,scoop.it,NetSystemsResearch,Barkrowler,Python-Requests,Expanse,Go-http-client,scpitspi-rs
+            #
             # BLOCKBOT_RESPONSECODE indicates which HTTP response is sent when a bot is blocked.
             # Default code if omitted is 403 (Forbidden). Other codes that may be useful:
             # 402 (payment required, hehe), 404 (doesnt exist), 418 (I am a teapot - used to tell requestors to go away), 410 (Gone), 500 (Internal Server Error),
             # 503 (service unavailable), etc - see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
             - BLOCKBOT_RESPONSECODE=403
+            #
+            # IPV6 indicates if IPV6 is enabled or disabled on the host and/or docker system.
+            # If you disable IPV6 on your system, you may see a container error if you don't set this parameter to "OFF" or "DISABLED" (case insensitive).
+            # If the parameter is omitted, the system will assume that IPV6 is enabled.
+            - IPV6=ENABLED
+            #
+            # IPTABLES_BLOCK switches `iptables` based blocking of IP addresses on or off. Default when omitted = off.
+            # See README.md for more explanation. Note -- in order for this to work, you MUST add the NET_ADMIN capacity to the container as shown below.
+            - IPTABLES_BLOCK=ENABLED
+            - IPJAILTIME=21600
+        cap_add:
+            - NET_ADMIN
         tmpfs:
             - /tmp:rw,nosuid,nodev,noexec,relatime,size=128M
+            - /var/log/nginx:rw,nosuid,nodev,noexec,relatime,size=128M
         volumes:
-            - /home/pi/.webproxy:/run/nginx
+            - /opt/webproxy/webproxy:/run/nginx
             - "/etc/localtime:/etc/localtime:ro"
             - "/etc/timezone:/etc/timezone:ro"

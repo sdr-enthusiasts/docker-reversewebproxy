@@ -1,0 +1,46 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+# BASH script to print stats from the block list
+
+if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]] || [[ "$1" == "-?" ]]
+then
+  echo "Usage:"
+  exit 0
+fi
+
+
+
+if [[ ! -f /var/log/nginx/access.log ]] || [[ -z "$BLOCKBOT" ]]
+then
+  echo "No Webserver access logs found, or IPTABLES_BLOCK not enabled. Exiting."
+  exit 1
+fi
+
+IFS="," read -ra blocks <<< "$BLOCKBOT"
+
+# clean up ${blocks[*]}:
+printf "Cleaning up the blockbot list... "
+for ((i=0; i<"${#blocks[*]}"; i++))
+do
+  blocks[i]="$(sed 's/^ *//g; s/ *$//g' <<< "${blocks[i]}")"
+done
+
+# shellcheck disable=SC2207
+IFS=$'\n' blocksclean=($(sort -fu <<<"${blocks[*]}"))
+
+printf "Parsing logs... "
+declare -A hits=()
+declare -A ips=()
+for a in "${blocksclean[@]}"
+do
+  hits+=(["$a"]="$(grep -h -i "$a" /var/log/nginx/* |wc -l)")
+  ips+=(["$a"]="$(readarray x <<< "$(grep -h -i "$a" /var/log/nginx/* | awk '{print $1}' | sort -u)";echo "${x[@]}")")
+done
+
+printf "Results:\n Bot name - number of total hits - related ip addresses:\n"
+for a in "${blocksclean[@]}"
+do
+  b="${ips["$a"]//$'\n'/ }"
+  (( hits["$a"] > 0)) && printf "%s - %s - %s\n" "$a" "${hits["$a"]}" "$b"
+done

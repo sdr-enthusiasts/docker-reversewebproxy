@@ -1,0 +1,108 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+# BASH script to manage the iptables block list
+
+if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]] || [[ "$1" == "-?" ]]
+then
+  echo "Usage:"
+  echo "$0 -? -h --help  : show this help message"
+  echo "$0 (without args): edit your IP Block List"
+  echo "$0 with any other argument will execute \"iptables\" passing those arguments For example:"
+  echo "$0 -L            : list the current iptable ruleset"
+  echo "$0 -L -n         : list the current iptable ruleset (no name resolution for ip addresses"
+  exit 0
+fi
+
+if [[ -n "$1" ]]
+then
+  iptables $1 $2 $3 $4 $5 $6 $7 $8 $9
+  exit 0
+fi
+
+[[ ! -f /run/nginx/ip-blocklist ]] && touch /run/nginx/ip-blocklist || true
+[[ ! -f /run/nginx/ip-allowlist ]] && touch /run/nginx/ip-allowlist || true
+
+cp /run/nginx/ip-blocklist /tmp/ip-blocklist.edit
+sort -u -k 1,1 /tmp/ip-blocklist.edit > /tmp/ip-blocklist.org
+
+cp /run/nginx/ip-allowlist /tmp/ip-allowlist.edit
+sort -u -k 1,1 /tmp/ip-allowlist.edit > /tmp/ip-allowlist.org
+
+echo "Currently, there are $(wc -l /tmp/ip-blocklist.org) IP addresses in the IP Block List."
+echo "Currently, there are $(wc -l /tmp/ip-allowlist.org) IP patterns in the IP Allow List."
+read -n 1 -p "Do you want to edit the (b)lock list or the (a)llow list? (b/a) " a
+a=${a,,}
+
+if [[ "$a" == "b" ]]
+then
+  echo ""
+  echo "Editing the IP Block List."
+  echo "If you want to manually add additional IP addresses to the list, simply put an IP address by itself on a new line."
+  echo "No need to add any additional information to it."
+  echo ""
+  read -p "Press ENTER to start editing the IP Block List using the nano editor"
+
+  nano -l /tmp/ip-blocklist.edit
+  sort -u -k 1,1 /tmp/ip-blocklist.edit > /tmp/ip-blocklist.edit2
+
+  readarray -t adds < <(comm -23 /tmp/ip-blocklist.edit2 /tmp/ip-blocklist.org)
+  readarray -t deletes < <(comm -13 /tmp/ip-blocklist.edit2 /tmp/ip-blocklist.org)
+
+  # now add the adds to the file and add to the iptables:
+  for (( i=0; i<${#adds[*]}; i++ ))
+  do
+    s="${adds[i]}"
+    s="${s%% *}"
+    if [[ -n "$s" ]] && [[ "${s:0:1}" != "#" ]] && ! grep -f /run/nginx/ip-allowlist >/dev/null 2>&1 <<< "$s" && ! iptables -C INPUT -s $s -j DROP >/dev/null 2>&1
+    then
+      echo "$s manual_add $(date +%s)" >> /run/nginx/ip-blocklist
+      iptables -I INPUT -s $s -j DROP >/dev/null 2>&1
+      echo "$s added to the IP Block List"
+    else
+      echo "$s: error -- add failed: this IP was already blocked. Skipping..."
+    fi
+  done
+
+  # and remove the duplicate lines:
+  for (( i=0; i<${#deletes[*]}; i++ ))
+  do
+    s="${deletes[i]}"
+    s="${s%% *}"
+    if [[ -n "$s" ]] && [[ "${s:0:1}" != "#" ]] && grep "$s" /run/nginx/ip-blocklist >/dev/null 2>&1
+    then
+      sed -i '/^'"$s"'/d' /run/nginx/ip-blocklist
+      iptables -D INPUT -s $s -j DROP >/dev/null 2>&1
+      echo "$s deleted from the IP Block List"
+    else
+      echo "$s: error -- delete failed: this IP was not in the block list. Skipping..."
+    fi
+  done
+elif [[ "$a" == "a" ]]
+then
+  echo ""
+  echo "Editing the IP Allow List."
+  echo "The IP Allow List contains \"grep\" patterns of IP addresses that won't be excluded, even if they contain BOT or GeoIP restricted info. "
+  echo "For example, to exclude all IP addresses in the range 192.168.xx.xx, simply add \"192.168\" to the list."
+  echo "You can use \"^\" to indicate the beginning of an IP address."
+  echo "Example: \"^192.168\" will allow all 192.168.xx.xx addresses, but it will not exclude \"10.0.192.168\"."
+  echo ""
+  read -p "Press ENTER to start editing the IP Allow List using the nano editor"
+
+  nano -l /tmp/ip-allowlist.edit
+  sort -u -k 1,1 /tmp/ip-allowlist.edit > /run/nginx/ip-allowlist
+
+  readarray -t adds < <(comm -23 /run/nginx/ip-allowlist /tmp/ip-allowlist.org)
+  readarray -t deletes < <(comm -13 /run/nginx/ip-allowlist /tmp/ip-allowlist.org)
+  echo ""
+  echo "You added ${#adds[*]} and deleted ${#deletes[*]} entries from the IP Allow List".
+  if (( ${#adds[*]} + ${#deletes[*]} > 0 ))
+  then
+    echo "If you want your changes to be in effect immediately, you should restart the container."
+    echo "If you don't restart the container, the updated IP Allow List will only be used for future log entries and any currently blocked entries will stay in place until they $( [[ "$IPTABLES_JAILTIME" -gt 0 ]] && echo "time out after $IPTABLES_JAILTIME seconds" || echo "are manually removed")."
+  fi
+fi
+
+# cleaning up
+rm -f /tmp/ip-blocklist* /tmp/ip-allowlist* >/dev/null 2>&1
+echo "Done!"

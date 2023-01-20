@@ -1,0 +1,12 @@
+# IP Blocklist for the docker-reversewebproxy container
+# (C) 2022, kx1t; licensed under GPLv3
+# See https://github.com/sdr-enthusiasts/docker-reversewebproxy for more info
+#
+# This file may be edited manually, or by using the "manage_ipblock" program that is included in this container.
+# You can invoke this utility by using "docker exec", e.g., "docker exec -it webproxy manage_ipblock"
+#
+# Format of the file:
+# ipaddress reason timestamp
+# "Reason" is a single word without any quotes or clearspaces. Often, the reason will be the HTTP return code that caused the block.
+# "Timestamp" is the date the item was added to the IP Block List, in seconds since epoch ("date +%s")
+# Any lines starting with # will be ignored

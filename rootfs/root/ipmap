@@ -1,0 +1,74 @@
+#!/usr/bin/with-contenv bash
+#shellcheck shell=bash
+
+# BASH script to create an IP map URL that can be displayed in your browser
+
+if [[ ! -f /var/log/nginx/access.log ]]
+then
+  echo "Access Logs not enabled. Please set either of these parameters to enable Access Logs in this container:"
+  echo "IPTABLES_BLOCK=ENABLED     ... or ..."
+  echo "VERBOSELOG=file"
+  exit 1
+fi
+
+# build argv -- second letter of lowercase of $1
+argv="$1"
+argv=${argv,,}
+if [[ "${argv:0:1}" == "-" ]]
+then
+  argv="${argv:1:1}"
+else
+  argv="${argv:0:1}"
+fi
+[[ -z "$argv" ]] && argv="l" || true
+
+# Read $BLOCKBOT into an array and remove all leading/trailing spaces:
+readarray -d "," -t BOT_ARRAY <<< "$BLOCKBOT"
+for ((n=0; n<${#BOT_ARRAY[*]}; n++))
+do
+  # this is slightly inefficient as it iterates through the entire array.
+  # However, all-at-once solutions like "y=($(printf '%s\n' "${x[@]}"|xargs))" appear to split each element at any internal whitespace :(
+  BOT_ARRAY[n]="$(xargs <<< "${BOT_ARRAY[n]}")"
+done
+
+FILTERED_IPS="$(grep -i -h -w -f <(printf '%s\n' "${BOT_ARRAY[@]}") /var/log/nginx/* 2>/dev/null | awk '{print $1}' | sort -u)"
+ALL_IPS="$(awk '{print $1}' /var/log/nginx/* | sort -u)"
+VALID_IPS="$(comm -23 <(IFS=" " printf "%s\n" "$ALL_IPS") <(IFS=" " printf "%s\n" "$FILTERED_IPS"))"
+
+case $argv in
+  "?" | "h")
+    echo "Print a URL to a map with all IPs that are in the current web server logs"
+    echo ""
+    echo "Usage:"
+    echo "-h -?   Print this help message"
+    echo "-l      Print URL for all log entries"
+    echo "-f      Print URL for only those entries that were filtered out (Botblock or GeoIP block)"
+    echo "-v      Print URL for map entries that were not filtered (the complement of -f)"
+    echo "If no argument is provided, \"-l\" is assumed."
+  ;;
+
+  l)
+    echo "Map URL for all IP addresses (from container-start or up to a maximum of $((LOGROTATE_INTERVAL * LOGROTATE_MAXBACKUPS / 60)) minutes):"
+    echo "$ALL_IPS" \
+      | curl -Ls -XPOST --data-binary @- "https://ipinfo.io/tools/summarize-ips?cli=1" \
+      | jq '.reportUrl' \
+      | tr -d '\"'
+    ;;
+
+  f)
+  echo "Map URL for FILTERED (blocked) IP Addresses (from container-start or up to a maximum of $((LOGROTATE_INTERVAL * LOGROTATE_MAXBACKUPS / 60)) minutes):"
+  echo "$FILTERED_IPS" \
+    | curl -Ls -XPOST --data-binary @- "https://ipinfo.io/tools/summarize-ips?cli=1" \
+    | jq '.reportUrl' \
+    | tr -d '\"'
+  ;;
+
+  v)
+  echo "Map URL for UNFILTERED IP Addresses (from container-start or up to a maximum of $((LOGROTATE_INTERVAL * LOGROTATE_MAXBACKUPS / 60)) minutes):"
+  echo "$VALID_IPS" \
+    | curl -Ls -XPOST --data-binary @- "https://ipinfo.io/tools/summarize-ips?cli=1" \
+    | jq '.reportUrl' \
+    | tr -d '\"'
+  ;;
+
+esac

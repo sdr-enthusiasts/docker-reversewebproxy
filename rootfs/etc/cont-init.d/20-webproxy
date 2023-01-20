@@ -1,51 +1,78 @@
 #!/usr/bin/with-contenv bash
-#shellcheck shell=bash
+#shellcheck shell=bash disable=SC2174
 
-APPNAME="$(hostname)/reverse-proxy-init"
+APPNAME="$(hostname)/20-webproxy"
 echo "[$APPNAME][$(date)] Initial setup -- installing NXINX web service"
 
 # create run directory. This is where the locations.conf file will be located.
+# Create the correct ownership and permissions for the /var/log/nginx directory:
+adduser -U www-data >/dev/null 2>&1
+mkdir -p /var/log/nginx
 mkdir -p /run/nginx/html
+mkdir -p /run/nginx/.htaccess
+chmod a+rwx /var/log/nginx
+chown www-data:www-data /var/log/nginx
 cp -n /root/locations.conf.example /run/nginx
 cp -n /root/index.html /run/nginx/html
 chmod a+rwx /run/nginx /run/nginx/html
 chmod a+rw /run/nginx/*
 chmod a+rw /run/nginx/html/*
+chmod go-rwx /run/nginx/.htaccess
+chown www-data:www-data /run/nginx/.htaccess
+
+# create the logging directory if it doesn't already exist
+mkdir -p -m 777 /var/log/nginx
+touch /var/log/nginx/access.log
+touch /var/log/nginx/error.log
+chmod a+rw /var/log/nginx/access.log /var/log/nginx/error.log
 
 # auto-create the locations.conf file if $AUTOGENERATE is set to yes
 if [[ "$AUTOGENERATE" == "ON" ]]
 then
     echo "[$APPNAME][$(date)] Auto-generating locations.conf file"
     # back up any existing locations.conf file:
-    [[ -f /run/nginx/locations.conf ]] && mv -f /run/nginx/locations.conf /run/nginx/locations.conf.bkup-$(date +%y%m%d%H%M%S)
+    [[ -f /run/nginx/locations.conf ]] && mv -f /run/nginx/locations.conf "/run/nginx/locations.conf.bkup-$(date +%y%m%d%H%M%S)"
 
     # keep only the newest 10 backups:
     org=$(shopt -p nullglob)    # save current nullglob setting
     shopt -s nullglob           # set nullglob to avoid ls errors when no backups are present
+    # shellcheck disable=SC2010
     ls -tp /run/nginx/locations.conf.bkup-* | grep -v '/$' | tail -n +11 | xargs -d '\n' -r rm --   # remove any backups older than the newest 10
     $org                        # restore the original shopt nullglob setting
 
     # configure the locations.conf file:
     # first read the REVPROXY and REDIRECT environment variables into an array:
-    IFS="," read -ra proxy_array <<< "$(echo $REVPROXY|tr -d '[:blank:]')"
-    IFS="," read -ra redir_array <<< "$(echo $REDIRECT|tr -d '[:blank:]')"
 
-    # add the redirects to the locations.conf file:
-    for ((i=0; i<${#redir_array[@]}; i++))
+    readarray -d ',' -t proxy_array <<< "$REVPROXY"
+    readarray -d ',' -t redir_array <<< "$REDIRECT"
+    #
+    # Loop through each of the entries in $redir_array:
+    for proxy in "${redir_array[@]}"
     do
-        # get the location and destination for this array element:
-        location="${redir_array[i]%%|*}"
-        destination="${redir_array[i]##*|}"
+        location="${proxy%%|*}"       # all chars up to the first "|"
+        location="${location//[[:space:]]}"     # strip any spaces
+        proxy="${proxy#*|}"           # all chars after the first "|"
+        destination="${proxy%%|*}"    # all chars up to the (now) first "|"
+        destination="${destination//[[:space:]]}" # strip any spaces
+        creds="${proxy#*|}"           # now there's only user1|pass1|user2|pass2 etc left
+        grep '|' <<< "$creds" >/dev/null 2>&1 || creds=""   # If there are no '|' in the string, there is no user/pass
+        #debug: echo "Loc: ${location#* } - Proxy: $destination - Creds: $creds"
 
-        if [[ "$location" == "" ]] || [[ "$destination" == "" ]]
+        if [[ -z "$location" ]] || [[ -z "$destination" ]]
         then
+            echo "[$APPNAME][$(date)] WARNING: Skipping empty location or destination for REDIRECT $location:$destination"
             continue;
+        fi
+
+        if [[ -n "$creds" ]]
+        then
+            echo "[$APPNAME][$(date)] WARNING: Auth credentials not supported REDIRECT ($location:$destination). Implemented without authentications"
         fi
 
         # fix prefixes and suffixes if necessary:
         [[ "${location:0:1}" != "/" ]] && location="/$location"
-        [[ "${destination:0:4}" != "http" ]] && destination="http://$destination"
         [[ "${destination:0:2}" == "//" ]] && destination="http:$destination"
+        [[ "${destination:0:4}" != "http" ]] && destination="http://$destination"
 
         # Now print the location entry:
         printf "location %s {\n" "$location" >> /run/nginx/locations.conf
@@ -54,35 +81,55 @@ then
 
     done
 
-    # now loop through the array and create location elements for each entry:
-    for ((i=0; i<${#proxy_array[@]}; i++))
+    # now loop through the Proxy array and create location elements for each entry:
+    for proxy in "${proxy_array[@]}"
     do
-        # get the location and destination for this array element:
-        location="${proxy_array[i]%%|*}"
-        destination="${proxy_array[i]##*|}"
+        location="${proxy%%|*}"       # all chars up to the first "|"
+        location="${location//[[:space:]]}"     # strip any spaces
+        while [[ "${location:0:1}" == "/" ]]; do location="${location:1}"; done # strip any / from the front
+        while [[ "${location: -1}" == "/" ]]; do location="${location:0: -1}"; done # strip any / from the back
+        # location="${location///}"     <-- wayyy too aggressive - screws up the locations.conf entry # strip any '/'
+        proxy="${proxy#*|}"           # all chars after the first "|"
+        destination="${proxy%%|*}"    # all chars up to the (now) first "|"
+        destination="${destination//[[:space:]]}" # strip any spaces
+        creds="${proxy#*|}"           # now there's only user1|pass1|user2|pass2 etc left
+        grep '|' <<< "$creds" >/dev/null 2>&1 || creds=""   # If there are no '|' in the string, there is no user/pass
+        #debug: echo "Loc: ${location#* } - Proxy: $destination - Creds: $creds"
 
-        if [[ "$location" == "" ]] || [[ "$destination" == "" ]]
+        if [[ -z "$location" ]] || [[ -z "$destination" ]]
         then
+            echo "[$APPNAME][$(date)] WARNING: Skipping empty location or destination for REDIRECT $location:$destination"
             continue;
         fi
 
+        # If there are creds and AUTH=ON, then set `auth_basic` to a string. If not, it's `off`.
+        if [[ -n "$creds" ]] && [[ "${AUTH,,}" == "on" ]]
+        then
+            basic_auth="\"Authorization Required\""
+            abuf="auth_basic_user_file"
+        else
+            basic_auth="off"
+            abuf="# auth_basic_user_file"
+        fi
+
         # fix prefixes and suffixes if necessary:
-        [[ "${location:0:1}" != "/" ]] && location="/$location"
-        [[ "${location: -1}" != "/" ]] && location="$location/"
         [[ "${destination:0:4}" != "http" ]] && destination="http://$destination"
         [[ "${destination:0:2}" == "//" ]] && destination="http:$destination"
         [[ "${destination: -1}" != "/" ]] && destination="$destination/"
 
         # Now print the location entry:
-        printf "location %s {\n" "$location" >> /run/nginx/locations.conf
-        printf "    proxy_pass %s;\n" "$destination"  >> /run/nginx/locations.conf
+        printf "location %s {\n" "/$location/" >> /run/nginx/locations.conf
+        printf "    auth_basic %s;\n" "$basic_auth" >> /run/nginx/locations.conf
+        printf "    %s /run/nginx/.htaccess/.htpasswd-%s;\n" "$abuf" "${location///}" >> /run/nginx/locations.conf
+        printf "    proxy_pass %s;\n" "$destination" >> /run/nginx/locations.conf
 
         # Additional line to catch redirects; suggested by @wiedehopf:
         # removed again after discussions
         # printf "    proxy_redirect ~^(/|http://[^/]*/)(.*) %s\$2;\n" "$location" >> /run/nginx/locations.conf
-
+        printf "    proxy_redirect / /%s/;\n" "$location" >> /run/nginx/locations.conf
         # close off the location entry:
         printf "}\n\n"  >> /run/nginx/locations.conf
+        touch /run/nginx/.htaccess/.htpasswd-${location///} # make sure that the passwd file exists even if it's empty or not used
     done
 
     # Finally add the default index files to this configuration:
@@ -100,8 +147,8 @@ then
     echo "| Please do so and then restart the container.  |"
     echo "-------------------------------------------------"
 
-    exit 1
-    else
+    [[ -z "$DEBUG" ]] && exit 1 || sleep infinity
+else
     echo "[$APPNAME][$(date)] Using user-provided locations.conf file"
 fi
 

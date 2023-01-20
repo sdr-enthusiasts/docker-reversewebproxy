@@ -61,10 +61,11 @@ If `AUTOGENERATE=ON`, the system will build a Webproxy based on the `REVPROXY` a
 
 `REVPROXY` defines the proxy-pairs to serve the `destination` target when the user browses to `urltarget`. The user's browser will never be redirected to an internal IP address for service, all web pages are being served from the Webproxy. As such, the process of going to the correct website/port to get the web page is completely hidden from the user.
 
-`REVPROXY` has the following format: `urltarget|destination`
+`REVPROXY` has the following format: `urltarget|destination[|user1|pass1[|user2|pass2[|...|...]]]`
 For example, for REVPROXY=readsb|http://10.0.0.191:8080, a user browsing to http://mydomain/readsb will be proxied to a service located at http://10.0.0.191:8080. The user's browser will *never* see the internal IP address.
 Note - both the `urltarget` and the `destination` must be URLs or directories, and cannot be a file name.
 You can provide a comma separated list of `urltarget|destination` pairs, similar to the example in the default `docker-compose.yml`.
+The optional `|user1|pass1|user2|pass2|...|...` addons define the allowed username/password combination for this specific revproxy.
 
 `REDIRECT` redirects the user's browser to a specific address. In contrast to `REVPROXY`, the Webproxy does NOT "front" the rendering of the website. This can be useful if there is information that you want to be available within your own subnet, but not to the outside world.
 The format for `REDIRECT` is similar to that of `REVPROXY`: `urltarget|redirection`
@@ -97,26 +98,73 @@ docker exec -it webproxy certbot certificates
 ```
 
 ### GeoIP Filtering
-The Reverse Webproxy can filter incoming requests by originating IP. It uses an external GeoIP database that maps IP addresses to countries. This database is updated regularly with the latest mappings. Note - this GeoIP IP to Location mapping is not perfect, and users with a VPN can circumvent GeoIP filtering without much problems. 
+The Reverse Webproxy can filter incoming requests by originating IP. It uses an external GeoIP database that maps IP addresses to countries. This database is updated regularly with the latest mappings. Note - this GeoIP IP to Location mapping is not perfect, and users with a VPN can circumvent GeoIP filtering without much problems.
 
 | Parameter | Values | Description |
 |-----------|--------|-------------|
 | `GEOIP_DEFAULT` |\<empty\>*, `ALLOW`, `DISALLOW`|Empty: GeoIP filtering is disabled; `ALLOW`: only those countries listed in the `GEOIP_COUNTRIES` parameter are permitted; `DISALLOW`: the countries listed in `GEOIP_COUNTRIES` are filtered.|
 | `GEOIP_COUNTRIES` | | Comma-separated list of 2-letter country abbreviations, for example `RU,CN,BY,RS` (which means Russia, China, Bielorus, Serbia).|
 | `GEOIP_RESPONSECODE` | 3-digit HTTP response code | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesnt exist), `418` (I am a teapot - used to tell requestors to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See https://developer.mozilla.org/en-US/docs/Web/HTTP/Status |
-   
-### BlockBot
+
+### BlockBot Filtering
 The BlockBot feature filters out HTTP requests based on a fuzzy match of the HTTP User Agent field against a list of potential matches. This can be used to somewhat effectively filter out bots that are trying to scrape your website. The `BLOCKBOT` parameter included `docker-compose.yml` file has an example of a bot filter.
-   
+
 | Parameter | Values | Description |
 |-----------|--------|-------------|
 | `BLOCKBOT` | string snippets of User Agent fields | Comma-separated strings, for example `google,bing,yandex,msnbot`. If this parameter is empty, the BlockBot functionality is disabled.
 | `BLOCKBOT_RESPONSECODE` | 3-digit HTTP response code | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesnt exist), `418` (I am a teapot - used to tell requestors to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See https://developer.mozilla.org/en-US/docs/Web/HTTP/Status |
 
+### `iptables` blocking
+As an option, the system can use `iptables` to block any IP match of GeoIp or BlockBot. If a request comes from an ip address that is blocked via `iptables`, the server will simply not respond at all to the request - as if the tcp/ip address simply wasn't available. This decreases the load on the system, and mostly slows down or prevents DDOS attacks.
+
+The system will scan the logs for any BlockBot or GeoIP filtered request, and adds any IP address for which a return value of `$BLOCKBOT_RESPONSECODE` or `$GEOIP_RESPONSECODE` to the `iptables` blocked list, unless the IP is part of a value or range specified in the `ip-allowlist` (see below). The `iptables` blocker is updated in batches every 60 seconds.
+To enable this behavior, set `IPTABLES_BLOCK` to `ENABLED` or `ON`. You can also specify the time an IP address should stay on the `iptables` block list with the `IPTABLES_JAILTIME` parameter. Additionally, you must add the `NET_ADMIN` capacity to the container; see the [`docker-compose.yml`](docker-compose.yml) for an example.
+
+```
+     cap_add:
+       - NET_ADMIN
+```
+
+Note that it will block all IP address that received a response code of `GEOIP_RESPONSECODE` or `BLOCKBOT_RESPONSECODE`. If you are concerned that this may include occasional IP addresses that incidentally received any of this reponse codes but were not GeoIP or Bot restricted, then either use unique response codes for GeoIP/Bots or don't enable this feature.
+
+As long as the `/run/nginx` volume is mapped (see example in [`docker-compose.yml'](docker-compose.yml)), the blocked IP list is persistent across restarts and recreation of the container.
+
+If you want to remove IP addresses from the blocked list, you can do so manually by removing them with a text editor from the file `ip-blocklist` in the mapped volume. Alternatively, you can use a simple utility to do this while running the container:
+```
+docker exec -it webproxy manage_ipblock
+```
+
+Note that the `IPTABLES_BLOCK` feature enables logging to disk (specifically, `/var/log/nginx/access.log`). You may want to map this directory to a `tmpfs` volume (see example in [`docker-compose.yml'](docker-compose.yml)). Log rotation keeps 24 files of 1 hour each around; the 1 hour log rotation intervals and number of retained backups are configurable with the `LOGROTATE_INTERVAL` and `LOGROTATE_MAXBACKUPS` docker environment variable.
+
+| Parameter | Values | Description |
+|-----------|--------|-------------|
+| `IPTABLES_BLOCK` | `ON`/`ENABLED` or `OFF`/`DISABLED`/blank | If enabled, any IP address match to `GEOIP_RESPONSECODE` or `BLOCKBOT_RESPONSECODE` will be blocked using `iptables`. If disabled or omitted, `iptables` blocking won't be used.|
+| `IPTABLES_JAILTIME` | time in seconds; `0` (default) means forever | The time that an IP Address will remain blocked. If omitted or set to `0`, blocked IP addresses will be blocked in perpetuity, or at least until the IP address is manually removed from the IP Block List. |
+| `LOGROTATE_INTERVAL` | time in seconds; default value `3600` | The time between each run of of log rotation for `/var/log/nginx/access.log` and `/var/log/nginx/error.lo`g |
+| `LOGROTATE_MAXBACKUPS` | integer between `0` and `100`; default value `24` | The number of backup files for `/var/log/nginx/access.log` and `/var/log/nginx/error.log` |
+
+### Basic Authentication
+The container supports a "basic" implementation of Basic Authentication. This is not inherently super-secure, and it exposes the usernames/passwords in clear text to the host system. We are planning to make this more secure in the future, but for now, please use with caution.
+
+The container supports basic authentication for the local web page through the `LOCAL_CREDS` variable, as well as credentials for each of the `REVPROXY`d entries via the `REVPROXY` variable.
+
+| Parameter | Values | Description |
+|-----------|--------|-------------|
+| `AUTH` | `ON` or anything else | If set to `ON`, Basic Authentication is enabled. If set to anything else or omitted, Basic Authentication is disabled.|
+| `LOCAL_CREDS` | | A list of credentials in the format `username1|password1,username2|password2,...`|
+| `REVPROXY` | | A comma separated list in this format:
+```
+REVPROXY=origin1|http://destination1|username1|password1|username2|password2,
+         origin2|http://destination2|username3|password3|username4|password4|username5|password5, 
+         origin3|http://destination3,
+         ...
+```
 ### Advanced Setup
 After you run the container the first time, it will create a directory named `~/.webproxy`. If `AUTOGENERATE=ON`, there will be a `locations.conf` file. There will also be a `locations.conf.example` file that contains setup examples. If you know how to write a `nginx` configuration file, feel free to edit the `locations.conf` and add any options to your liking.
 
 BEFORE restarting the container (important!!) edit `docker-compose.yml` and set `AUTOGENERATE=OFF`. If you don't do this, your newly created `locations.conf` file will be overwritten by the auto-generated one based on the `REVPROXY` and `REDIRECT` settings. (There will be a time-stamped backup file of your `locations.conf` file, so not everything is lost!)
+
+In some systems where IPV6 is disabled or not available, you may have to add this environment parameter: `IPV6=DISABLED`.
 
 ### Host your own web pages
 You can place HTML and other web files in `~/.webproxy/html`. An example `index.html` is already provided, and can be reached by browsing to the root URL of your system.
@@ -125,10 +173,17 @@ Note -- the web server inside the container does NOT run as `root`, so you must 
 Feel free to create additional subdirectories if needed for your project.
 Also note -- the website may not be reachable if you redirected or proxied `/` to some other service.
 
+### Extras
+- Get a URL to a geographic map of all IPs that hit your WebProxy by typing:
+```
+docker exec -it webproxy ipmap
+```
+(Prerequisites: either of these parameters must be set: `IPTABLES_BLOCK=ENABLED` (recommended) or `VERBOSELOG=file` (works but not recommended)
+
 ## Troubleshooting
 
 - Issue: the container log (`docker logs webproxy`) shows error messages like this: `sleep: cannot read realtime clock: Operation not permitted`
-- Solution: you must upgrade `libseccomp2` on your host system to version 2.4 or later. If you are using a Raspberry Pi with Buster based OS, [here](https://github.com/fredclausen/Buster-Docker-Fixes) is a repo with a script that can automatically fix this for you. 
+- Solution: you must upgrade `libseccomp2` on your host system to version 2.4 or later. If you are using a Raspberry Pi with Buster based OS, [here](https://github.com/fredclausen/Buster-Docker-Fixes) is a repo with a script that can automatically fix this for you.
 
 - Issue: `docker-compose up -d` exits with an error
 - Solution: you probably have a typo in `docker-compose.yml`. Make sure that all lines are at the exact indentation level, and that the last entry in the `REVPROXY` and `REDIRECT` lists do not end on a comma.
@@ -143,12 +198,22 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
 - Solution: in VRS, make sure to configure this: VRS Options -> Website -> Website Customisation -> Proxy Type = Reverse
 
 - Issue: Planefinder doesn't work correctly
-- Solution: make sure that you have added the following to the `REVPROXY` variable:
+- Solution: make sure that you have added the following to the `REVPROXY` variable (replace ip address and port with whatever is appropriate for your system):
    ```
    planefinder|http://10.0.0.191:8086,
    ajax|http://10.0.0.191:8086/ajax,
    assets|http://10.0.0.191:8086/assets,
    ```
+
+- Issue: The docker logs show an error like this on start up:
+```
+nginx: [emerg] socket() [::]:80 failed (97: Address family not supported)
+nginx: configuration file /etc/nginx/nginx.conf test failed
+```
+- Solution: Your system doesn't support IPV6 while the container expects this. Solve it by adding this parameter to your `docker-compose.yml`: `IPV6=DISABLED`
+
+- Issue: with `IPTABLES_BLOCK` switched on, it looks like the webproxy is trying to block large lists of ip addresses, even though none (or few) of these addresses have hit the system in the last 60 seconds
+- Solution: You probably didn't add the `NET_ADMIN` capacity to the container. You need to do this in your `docker-compose.yml` file and then recreate the container. See above and see [`docker-compose.yml'](docker-compose.yml) for an example.
 
 - Issue: I'm getting emails from `letsencrypt.com` about the pending expiration of my SSL certificates
 - Solution: ignore them. As long as the container is running and SSL is enabled, the certificates are checked daily for pending expiration and will be renewed 1 month before that date. Sometimes, letsencrypt.com gets confused about the expiration dates and thinks it's earlier than is really the case. You can always check this for yourself by looking at the container logs, or by running this command: `docker exec -it certbot certificates`
