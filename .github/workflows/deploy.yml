@@ -65,7 +65,10 @@ jobs:
       -
         name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: image=moby/buildkit:v0.10.6
+
 
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest
         uses: docker/build-push-action@v2
@@ -105,13 +108,13 @@ jobs:
       # Check out our code
       -
         name: Checkout
-        
+
         uses: actions/checkout@v2
 
       # Set up QEMU for multi-arch builds
       -
         name: Set up QEMU
-        
+
         uses: docker/setup-qemu-action@v1
 
       # # Log into GHCR (so we can push images)
@@ -140,7 +143,9 @@ jobs:
       -
         name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: image=moby/buildkit:v0.10.6
 
       # Get archictecture suffix
       -
@@ -202,7 +207,9 @@ jobs:
       -
         name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: image=moby/buildkit:v0.10.6
 
       # Build "latest"
       -
@@ -252,7 +259,9 @@ jobs:
       -
         name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: image=moby/buildkit:v0.10.6
 
       # Get archictecture suffix
       -
