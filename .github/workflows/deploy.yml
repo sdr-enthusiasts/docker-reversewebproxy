@@ -10,7 +10,6 @@ on:
   # Build and deploy the image on pushes to master branch
   push:
     branches:
-      - master
       - main
 
 env:
@@ -62,13 +61,11 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       # Set up buildx for multi platform builds
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v2
         with:
           driver-opts: image=moby/buildkit:v0.10.6
-
 
       - name: Build & Push ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest
         uses: docker/build-push-action@v2
@@ -92,91 +89,91 @@ jobs:
           tags: ghcr.io/sdr-enthusiasts/webproxy:latest
           labels: ${{ steps.meta.outputs.labels }}
 
-  deploy_ghcr_single_arch:
-    name: Deploy to GHCR
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        docker-platform:
-          - linux/amd64
-          - linux/arm64
-          - linux/arm/v7
-          - linux/i386
-
-    steps:
-
-      # Check out our code
-      -
-        name: Checkout
-
-        uses: actions/checkout@v2
-
-      # Set up QEMU for multi-arch builds
-      -
-        name: Set up QEMU
-
-        uses: docker/setup-qemu-action@v1
-
-      # # Log into GHCR (so we can push images)
-      - name: Login to ghcr.io
-        uses: docker/login-action@v1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      -
-        name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # Get metadata from repo
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v3
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
-      # Set up buildx for multi platform builds
-      -
-        name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          driver-opts: image=moby/buildkit:v0.10.6
-
-      # Get archictecture suffix
-      -
-        name: Get image architecture suffix
-        run: |
-          echo "ARCH_TAG=$(echo '${{ matrix.docker-platform }}' | cut -d '/' -f2- | tr -s '/' '_')" >> $GITHUB_ENV
-      # Show archictecture suffix
-      -
-        name: Show image architecture suffix
-        run: |
-          echo "Architecture suffix: ${{ env.ARCH_TAG }}"
-      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest arch
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./Dockerfile
-          no-cache: true
-          platforms: ${{ matrix.docker-platform }}
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest_${{ env.ARCH_TAG }} , ghcr.io/sdr-enthusiasts/webproxy:latest_${{ env.ARCH_TAG }}
-          labels: ${{ steps.meta.outputs.labels }}
-      - name: Build & Push ghcr.io/sdr-enthusiasts/webproxy:latest arch
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./Dockerfile
-          no-cache: true
-          platforms: ${{ matrix.docker-platform }}
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/sdr-enthusiasts/webproxy:latest_${{ env.ARCH_TAG }}
-          labels: ${{ steps.meta.outputs.labels }}
+  # deploy_ghcr_single_arch:
+  #   name: Deploy to GHCR
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       docker-platform:
+  #         - linux/amd64
+  #         - linux/arm64
+  #         - linux/arm/v7
+  #         - linux/i386
+  #
+  #   steps:
+  #
+  #     # Check out our code
+  #     -
+  #       name: Checkout
+  #
+  #       uses: actions/checkout@v2
+  #
+  #     # Set up QEMU for multi-arch builds
+  #     -
+  #       name: Set up QEMU
+  #
+  #       uses: docker/setup-qemu-action@v1
+  #
+  #     # # Log into GHCR (so we can push images)
+  #     - name: Login to ghcr.io
+  #       uses: docker/login-action@v1
+  #       with:
+  #         registry: ${{ env.REGISTRY }}
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+  #
+  #     -
+  #       name: Login to DockerHub
+  #       uses: docker/login-action@v1
+  #       with:
+  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
+  #         password: ${{ secrets.DOCKERHUB_TOKEN }}
+  #
+  #     # Get metadata from repo
+  #     - name: Extract metadata (tags, labels) for Docker
+  #       id: meta
+  #       uses: docker/metadata-action@v3
+  #       with:
+  #         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+  #
+  #     # Set up buildx for multi platform builds
+  #     -
+  #       name: Set up Docker Buildx
+  #       id: buildx
+  #       uses: docker/setup-buildx-action@v2
+  #       with:
+  #         driver-opts: image=moby/buildkit:v0.10.6
+  #
+  #     # Get archictecture suffix
+  #     -
+  #       name: Get image architecture suffix
+  #       run: |
+  #         echo "ARCH_TAG=$(echo '${{ matrix.docker-platform }}' | cut -d '/' -f2- | tr -s '/' '_')" >> $GITHUB_ENV
+  #     # Show archictecture suffix
+  #     -
+  #       name: Show image architecture suffix
+  #       run: |
+  #         echo "Architecture suffix: ${{ env.ARCH_TAG }}"
+  #     - name: Build & Push ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest arch
+  #       uses: docker/build-push-action@v2
+  #       with:
+  #         context: .
+  #         file: ./Dockerfile
+  #         no-cache: true
+  #         platforms: ${{ matrix.docker-platform }}
+  #         push: ${{ github.event_name != 'pull_request' }}
+  #         tags: ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest_${{ env.ARCH_TAG }} , ghcr.io/sdr-enthusiasts/webproxy:latest_${{ env.ARCH_TAG }}
+  #         labels: ${{ steps.meta.outputs.labels }}
+  #     - name: Build & Push ghcr.io/sdr-enthusiasts/webproxy:latest arch
+  #       uses: docker/build-push-action@v2
+  #       with:
+  #         context: .
+  #         file: ./Dockerfile
+  #         no-cache: true
+  #         platforms: ${{ matrix.docker-platform }}
+  #         push: ${{ github.event_name != 'pull_request' }}
+  #         tags: ghcr.io/sdr-enthusiasts/webproxy:latest_${{ env.ARCH_TAG }}
+  #         labels: ${{ steps.meta.outputs.labels }}
 
   deploy_dockerhub_multiarch:
     name: Deploy to DockerHub (Multi-Arch)
@@ -223,64 +220,64 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: kx1t/webproxy:latest
 
-  deploy_dockerhub_single_arch:
-    name: Deploy to DockerHub
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        docker-platform:
-          - linux/amd64
-          - linux/arm64
-          - linux/arm/v7
-          - linux/i386
-
-    steps:
-
-      # Check out our code
-      -
-        name: Checkout
-        uses: actions/checkout@v2
-
-
-      # Set up QEMU for multi-arch builds
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-
-      # # Log into docker hub (so we can push images)
-      -
-        name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # Set up buildx for multi platform builds
-      -
-        name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          driver-opts: image=moby/buildkit:v0.10.6
-
-      # Get archictecture suffix
-      -
-        name: Get image architecture suffix
-        run: |
-          echo "ARCH_TAG=$(echo '${{ matrix.docker-platform }}' | cut -d '/' -f2- | tr -s '/' '_')" >> $GITHUB_ENV
-      # Show archictecture suffix
-      -
-        name: Show image architecture suffix
-        run: |
-          echo "Architecture suffix: ${{ env.ARCH_TAG }}"
-      # Build "latest"
-      -
-        name: Build & Push - latest
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./Dockerfile
-          no-cache: true
-          platforms: ${{ matrix.docker-platform }}
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: kx1t/webproxy:latest_${{ env.ARCH_TAG }}
+  # deploy_dockerhub_single_arch:
+  #   name: Deploy to DockerHub
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       docker-platform:
+  #         - linux/amd64
+  #         - linux/arm64
+  #         - linux/arm/v7
+  #         - linux/i386
+  #
+  #   steps:
+  #
+  #     # Check out our code
+  #     -
+  #       name: Checkout
+  #       uses: actions/checkout@v2
+  #
+  #
+  #     # Set up QEMU for multi-arch builds
+  #     -
+  #       name: Set up QEMU
+  #       uses: docker/setup-qemu-action@v1
+  #
+  #     # # Log into docker hub (so we can push images)
+  #     -
+  #       name: Login to DockerHub
+  #       uses: docker/login-action@v1
+  #       with:
+  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
+  #         password: ${{ secrets.DOCKERHUB_TOKEN }}
+  #
+  #     # Set up buildx for multi platform builds
+  #     -
+  #       name: Set up Docker Buildx
+  #       id: buildx
+  #       uses: docker/setup-buildx-action@v2
+  #       with:
+  #         driver-opts: image=moby/buildkit:v0.10.6
+  #
+  #     # Get archictecture suffix
+  #     -
+  #       name: Get image architecture suffix
+  #       run: |
+  #         echo "ARCH_TAG=$(echo '${{ matrix.docker-platform }}' | cut -d '/' -f2- | tr -s '/' '_')" >> $GITHUB_ENV
+  #     # Show archictecture suffix
+  #     -
+  #       name: Show image architecture suffix
+  #       run: |
+  #         echo "Architecture suffix: ${{ env.ARCH_TAG }}"
+  #     # Build "latest"
+  #     -
+  #       name: Build & Push - latest
+  #       uses: docker/build-push-action@v2
+  #       with:
+  #         context: .
+  #         file: ./Dockerfile
+  #         no-cache: true
+  #         platforms: ${{ matrix.docker-platform }}
+  #         push: ${{ github.event_name != 'pull_request' }}
+  #         tags: kx1t/webproxy:latest_${{ env.ARCH_TAG }}
