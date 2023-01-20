@@ -6,6 +6,8 @@ ENV LOGROTATE_INTERVAL=3600
 ENV LOGROTATE_MAXBACKUPS=24
 ENV IPTABLES_JAILTIME=0
 
+LABEL org.opencontainers.image.source = "https://github.com/sdr-enthusiasts/docker-reversewebproxy"
+
 RUN set -x && \
 # define packages needed for installation and general management of the container:
     TEMP_PACKAGES=() && \
