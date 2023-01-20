@@ -164,7 +164,7 @@ then
 elif [[ "${VERBOSELOG,,}" == "file" ]]
 then
   echo "[$APPNAME][$(date)] Enabled HTTP logging to files in shared volume"
-  sed -i 's|\(^\s*access_log \).*|\1/run/nginx/access.log ;|' /etc/nginx/nginx.conf
+  sed -i 's|\(^\s*access_log \).*|\1/run/nginx/proxy-host-1_access.log ;|' /etc/nginx/nginx.conf
   sed -i 's|\(^\s*error_log \).*|\1/run/nginx/error.log ;|' /etc/nginx/nginx.conf
 else
   echo "[$APPNAME][$(date)] HTTP logging is disabled"
