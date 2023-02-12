@@ -3,12 +3,12 @@
 
 APPNAME="$(hostname)/nginx-logrotate"
 
-if [[ -n "$LOGROTATE_INTERVAL" ]]
+if [[ -z "$LOGROTATE_INTERVAL" ]]
 then
   LOGROTATE_INTERVAL=3600
 fi
 
-if [[ -n "$LOGROTATE_MAXBACKUPS" ]]
+if [[ -z "$LOGROTATE_MAXBACKUPS" ]]
 then
   LOGROTATE_MAXBACKUPS=24
 fi
