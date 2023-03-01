@@ -26,6 +26,9 @@ RUN set -x && \
         ${KEPT_PACKAGES[@]} \
         ${TEMP_PACKAGES[@]} && \
 #
+# Enable env module:
+    sed -i '/load_module/ a\    load_module modules/ngx_http_env_module.so;' /etc/nginx/nginx.conf && \
+    
 # Clean up:
     apt-get remove -y ${TEMP_PACKAGES[@]} && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
