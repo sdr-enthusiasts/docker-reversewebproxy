@@ -34,6 +34,8 @@ RUN set -x && \
     apt-get clean -y && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/* && \
 #
+# Enable env module:
+    sed -i '/load_module/ a\    load_module modules/ngx_http_env_module.so;' /etc/nginx/nginx.conf && \
 # Do some other stuff
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
     echo "alias nano=\"nano -l\"" >> /root/.bashrc && \
