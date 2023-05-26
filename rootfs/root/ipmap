@@ -50,7 +50,7 @@ case $argv in
   l)
     echo "Map URL for all IP addresses (from container-start or up to a maximum of $((LOGROTATE_INTERVAL * LOGROTATE_MAXBACKUPS / 60)) minutes):"
     echo "$ALL_IPS" \
-      | curl -Ls -XPOST --data-binary @- "https://ipinfo.io/tools/summarize-ips?cli=1" \
+      | curl -Ls -XPOST --data-binary @- "https://ipinfo.io/tools/map?cli=1" \
       | jq '.reportUrl' \
       | tr -d '\"'
     ;;
@@ -58,7 +58,7 @@ case $argv in
   f)
   echo "Map URL for FILTERED (blocked) IP Addresses (from container-start or up to a maximum of $((LOGROTATE_INTERVAL * LOGROTATE_MAXBACKUPS / 60)) minutes):"
   echo "$FILTERED_IPS" \
-    | curl -Ls -XPOST --data-binary @- "https://ipinfo.io/tools/summarize-ips?cli=1" \
+    | curl -Ls -XPOST --data-binary @- "https://ipinfo.io/tools/map?cli=1" \
     | jq '.reportUrl' \
     | tr -d '\"'
   ;;
@@ -66,7 +66,7 @@ case $argv in
   v)
   echo "Map URL for UNFILTERED IP Addresses (from container-start or up to a maximum of $((LOGROTATE_INTERVAL * LOGROTATE_MAXBACKUPS / 60)) minutes):"
   echo "$VALID_IPS" \
-    | curl -Ls -XPOST --data-binary @- "https://ipinfo.io/tools/summarize-ips?cli=1" \
+    | curl -Ls -XPOST --data-binary @- "https://ipinfo.io/tools/map?cli=1" \
     | jq '.reportUrl' \
     | tr -d '\"'
   ;;
