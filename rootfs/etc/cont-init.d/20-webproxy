@@ -70,9 +70,10 @@ then
         fi
 
         # fix prefixes and suffixes if necessary:
-        [[ "${location:0:1}" != "/" ]] && location="/$location"
-        [[ "${destination:0:2}" == "//" ]] && destination="http:$destination"
-        [[ "${destination:0:4}" != "http" ]] && destination="http://$destination"
+        [[ "${location:0:1}" != "/" ]] && location="/$location" || true
+        [[ "${destination:0:2}" == "//" ]] && destination="http:$destination" || true
+        [[ "${destination:0:4}" != "http" ]] && destination="http://$destination" || true
+        [[ "${location:0:2}" == "/=" ]] && location="= ${location:2}" || true
 
         # Now print the location entry:
         printf "location %s {\n" "$location" >> /run/nginx/locations.conf
