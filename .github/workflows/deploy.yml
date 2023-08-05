@@ -50,7 +50,7 @@ jobs:
       dockerhub_profile: kx1t #legacy
       dockerhub_repo: webproxy #legacy
       ghcr_repo_owner: ${{ github.repository_owner }}
-      ghcr_repo: ${{ github.repository }}
+      ghcr_repo: ghcr.io/sdr-enthusiasts/webproxy
       platform_linux_arm32v6_enabled: false
       platform_linux_i386_enabled: false
       # set build_latest to true if github.event.inputs.use_test_image is false
