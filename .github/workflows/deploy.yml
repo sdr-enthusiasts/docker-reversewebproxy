@@ -7,6 +7,11 @@ on:
       reason:
         required: true
         description: "Reason for running this workflow"
+      use_test_image:
+        required: false
+        type: boolean
+        description: "Use base image testpr"
+        default: false
   # Build and deploy the image on pushes to master branch
   push:
     branches:
@@ -19,75 +24,111 @@ env:
   IMAGE: webproxy
 
 jobs:
-  deploy_ghcr_multiarch:
-    name: Deploy to GHCR (Multi-Arch)
+  workflow-dispatch:
+    name: Triggered via Workflow Dispatch?
+    # only run this step if workflow dispatch triggered
+    # log the reason the workflow dispatch was triggered
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.reason != ''
     runs-on: ubuntu-latest
-
-    # Set job-wide environment variables
-    #  - REPO: repo name on dockerhub
-    #  - IMAGE: image name on dockerhub
-
     steps:
+      - name: Log dispatch reason
+        env:
+          INPUTS_REASON: ${{ github.event.inputs.reason }}
+          INPUTS_USE_TEST_IMAGE: ${{ github.event.inputs.use_test_image }}
+        run: |
+          echo "Workflow dispatch reason: $INPUTS_REASON"
+          echo "Use test image: $INPUTS_USE_TEST_IMAGE"
 
-      # Check out our code
-      -
-        name: Checkout
-        uses: actions/checkout@v2
+  build_and_push:
+    name: Image Build & Push
+    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/build_and_push_image.yml@main
+    with:
+      push_enabled: true
+      push_destinations: ghcr.io;dockerhub
+      dockerhub_profile: kx1t #legacy
+      dockerhub_repo: webproxy #legacy
+      ghcr_repo_owner: ${{ github.repository_owner }}
+      ghcr_repo: ${{ github.repository }}
+      platform_linux_arm32v6_enabled: false
+      platform_linux_i386_enabled: false
+      # set build_latest to true if github.event.inputs.use_test_image is false
+      build_latest: ${{ github.event.inputs.use_test_image == 'false' }}
+      build_baseimage_test: ${{ github.event.inputs.use_test_image == 'true' }}
+      # only build the entire stack if we are not using the test image
+      build_version_specific: false
+      build_platform_specific: false
+      build_nohealthcheck: false
+      build_baseimage_url: :python/:python-test-pr
+    secrets:
+      ghcr_token: ${{ secrets.GITHUB_TOKEN }}
+      dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
+  # deploy_ghcr_multiarch:
+  #   name: Deploy to GHCR (Multi-Arch)
+  #   runs-on: ubuntu-latest
 
-      # Set up QEMU for multi-arch builds
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+  #   # Set job-wide environment variables
+  #   #  - REPO: repo name on dockerhub
+  #   #  - IMAGE: image name on dockerhub
 
-      # # Log into GHCR (so we can push images)
-      - name: Login to ghcr.io
-        uses: docker/login-action@v1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      -
-        name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+  #   steps:
+  #     # Check out our code
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
 
-      # Get metadata from repo
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v3
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+  #     # Set up QEMU for multi-arch builds
+  #     - name: Set up QEMU
+  #       uses: docker/setup-qemu-action@v1
 
-      # Set up buildx for multi platform builds
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          driver-opts: image=moby/buildkit:v0.10.6
+  #     # # Log into GHCR (so we can push images)
+  #     - name: Login to ghcr.io
+  #       uses: docker/login-action@v1
+  #       with:
+  #         registry: ${{ env.REGISTRY }}
+  #         username: ${{ github.repository_owner }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Login to DockerHub
+  #       uses: docker/login-action@v1
+  #       with:
+  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
+  #         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build & Push ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./Dockerfile
-          no-cache: true
-          platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/i386
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest
-          labels: ${{ steps.meta.outputs.labels }}
+  #     # Get metadata from repo
+  #     - name: Extract metadata (tags, labels) for Docker
+  #       id: meta
+  #       uses: docker/metadata-action@v3
+  #       with:
+  #         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Build & Push ghcr.io/sdr-enthusiasts/webproxy:latest
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./Dockerfile
-          no-cache: true
-          platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/i386
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/sdr-enthusiasts/webproxy:latest
-          labels: ${{ steps.meta.outputs.labels }}
+  #     # Set up buildx for multi platform builds
+  #     - name: Set up Docker Buildx
+  #       id: buildx
+  #       uses: docker/setup-buildx-action@v2
+  #       with:
+  #         driver-opts: image=moby/buildkit:v0.10.6
+
+  #     - name: Build & Push ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest
+  #       uses: docker/build-push-action@v2
+  #       with:
+  #         context: .
+  #         file: ./Dockerfile
+  #         no-cache: true
+  #         platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/i386
+  #         push: ${{ github.event_name != 'pull_request' }}
+  #         tags: ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest
+  #         labels: ${{ steps.meta.outputs.labels }}
+
+  #     - name: Build & Push ghcr.io/sdr-enthusiasts/webproxy:latest
+  #       uses: docker/build-push-action@v2
+  #       with:
+  #         context: .
+  #         file: ./Dockerfile
+  #         no-cache: true
+  #         platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/i386
+  #         push: ${{ github.event_name != 'pull_request' }}
+  #         tags: ghcr.io/sdr-enthusiasts/webproxy:latest
+  #         labels: ${{ steps.meta.outputs.labels }}
 
   # deploy_ghcr_single_arch:
   #   name: Deploy to GHCR
@@ -175,50 +216,43 @@ jobs:
   #         tags: ghcr.io/sdr-enthusiasts/webproxy:latest_${{ env.ARCH_TAG }}
   #         labels: ${{ steps.meta.outputs.labels }}
 
-  deploy_dockerhub_multiarch:
-    name: Deploy to DockerHub (Multi-Arch)
-    runs-on: ubuntu-latest
+  # deploy_dockerhub_multiarch:
+  #   name: Deploy to DockerHub (Multi-Arch)
+  #   runs-on: ubuntu-latest
 
-    steps:
+  #   steps:
+  #     # Check out our code
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
 
-      # Check out our code
-      -
-        name: Checkout
-        uses: actions/checkout@v2
+  #     # Set up QEMU for multi-arch builds
+  #     - name: Set up QEMU
+  #       uses: docker/setup-qemu-action@v1
 
+  #     # # Log into docker hub (so we can push images)
+  #     - name: Login to DockerHub
+  #       uses: docker/login-action@v1
+  #       with:
+  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
+  #         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Set up QEMU for multi-arch builds
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+  #     # Set up buildx for multi platform builds
+  #     - name: Set up Docker Buildx
+  #       id: buildx
+  #       uses: docker/setup-buildx-action@v2
+  #       with:
+  #         driver-opts: image=moby/buildkit:v0.10.6
 
-      # # Log into docker hub (so we can push images)
-      -
-        name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # Set up buildx for multi platform builds
-      -
-        name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          driver-opts: image=moby/buildkit:v0.10.6
-
-      # Build "latest"
-      -
-        name: Build & Push - latest
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./Dockerfile
-          no-cache: true
-          platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/i386
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: kx1t/webproxy:latest
+  #     # Build "latest"
+  #     - name: Build & Push - latest
+  #       uses: docker/build-push-action@v2
+  #       with:
+  #         context: .
+  #         file: ./Dockerfile
+  #         no-cache: true
+  #         platforms: linux/amd64,linux/arm/v7,linux/arm64,linux/i386
+  #         push: ${{ github.event_name != 'pull_request' }}
+  #         tags: kx1t/webproxy:latest
 
   # deploy_dockerhub_single_arch:
   #   name: Deploy to DockerHub
