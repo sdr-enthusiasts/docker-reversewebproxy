@@ -23,7 +23,8 @@ readarray -d ',' -t cors_array <<< "$CORSHOSTS"
 for cors in "${cors_array[@]}"
 do
     if [[ -n "${cors}" ]]; then
-        printf "add_header Access-Control-Allow-Origin %s;\n" "${cors}" >> /run/nginx/cors_headers.conf       
+        printf "add_header Access-Control-Allow-Origin %s;\n" "${cors}" >> /run/nginx/cors_headers.conf
+        s6wrap --quiet --timestamps --prepend="${APPNAME}" echo "Added CORS exception for ${cors}"
     fi
 done
 exit 0
