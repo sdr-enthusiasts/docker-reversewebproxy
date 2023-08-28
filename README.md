@@ -2,9 +2,26 @@
 
 # Docker-ReverseWebProxy
 
-## ATTENTION Raspberry Pi 3 / Buster users
-This application has recently been updated to use a base image container based on Debian Bullseye.
-Some older, Buster based host systems may need a patch to solve an issue related to the Real Time Clock or container log errors regarding `sleep`. See the Troubleshooting section below.
+## Table of Contents
+
+- [Docker-ReverseWebProxy](#docker-reversewebproxy)
+  - [Table of Contents](#table-of-contents)
+  - [What is it?](#what-is-it)
+  - [How do I get it?](#how-do-i-get-it)
+  - [How do I configure it?](#how-do-i-configure-it)
+    - [General parameters:](#general-parameters)
+    - [Configuration of the Webproxy](#configuration-of-the-webproxy)
+    - [Configuration of SSL](#configuration-of-ssl)
+    - [GeoIP Filtering](#geoip-filtering)
+    - [BlockBot Filtering](#blockbot-filtering)
+    - [`iptables` blocking](#iptables-blocking)
+    - [Basic Authentication](#basic-authentication)
+    - [Advanced Setup](#advanced-setup)
+    - [Host your own web pages](#host-your-own-web-pages)
+    - [Extras](#extras)
+  - [Troubleshooting](#troubleshooting)
+  - [Acknowledgements](#acknowledgements)
+  - [License](#license)
 
 ## What is it?
 
@@ -53,6 +70,7 @@ A "*" means that this is the default value
 |-----------|--------|-------------|
 | `AUTOGENERATE` | `ON`*, `OFF` | Determines if the system will use the `REVPROXY` and `REDIRECT` settings of the `docker-compose.yml` file (`ON`), or a manually generated `locations.conf` file (`OFF`). |
 | `VERBOSELOG` | `ON`*, `OFF` | Determines if the internal web service Access and Error logs will be written to the Docker log (accessible with `docker logs webproxy`) (`ON`), or that logging will be switched `OFF`.
+| `CORSHOSTS` | list of hosts | Comma separated list of host/DNS names of CORS exceptions. These are needed if a website calls into an external API, for example when adding the RainViewer overlay to VRS. Most browsers block this unless the external API target is added to this variable. Default is empty. Example value you can use to add the RainViewer API: `api.rainviewer.com`. Adding `"*"` will disable CORS protection for all hostnames; this is not recommended! |
 
 You may have to adjust your `port:` and your `volumes:` mapping to your liking, especially if you are not running on the Raspberry Pi standard `pi` account.
 
