@@ -64,6 +64,29 @@ jobs:
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
       dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
+ 
+  build_and_push_too:
+    name: Image Build & Push - secondary container target
+    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/build_and_push_image.yml@main
+    with:
+      push_enabled: true
+      push_destinations: ghcr.io;==
+      ghcr_repo_owner: ${{ github.repository_owner }}
+      ghcr_repo: docker-reversewebproxy
+      platform_linux_arm32v6_enabled: false
+      platform_linux_i386_enabled: false
+      # set build_latest to true if github.event.inputs.use_test_image is false
+      build_latest: ${{ github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == ''  }}
+      build_baseimage_test: ${{ github.event.inputs.use_test_image == 'true' || github.event.inputs.use_test_image == ''  }}
+      # only build the entire stack if we are not using the test image
+      build_version_specific: false
+      build_platform_specific: false
+      build_nohealthcheck: false
+      build_baseimage_url: :python/:python-test-pr
+    secrets:
+      ghcr_token: ${{ secrets.GITHUB_TOKEN }}
+      # dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
+      
   # deploy_ghcr_multiarch:
   #   name: Deploy to GHCR (Multi-Arch)
   #   runs-on: ubuntu-latest
