@@ -1,0 +1,51 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash
+
+APPNAME="$(hostname)/nginx-logrotate"
+
+if [[ -z "$LOGROTATE_INTERVAL" ]]
+then
+  LOGROTATE_INTERVAL=3600
+fi
+
+if [[ -z "$LOGROTATE_MAXBACKUPS" ]]
+then
+  LOGROTATE_MAXBACKUPS=24
+fi
+
+echo "[$APPNAME][$(date)] Started as an s6 service; nginx logs are rotated every $LOGROTATE_INTERVAL seconds; up to $LOGROTATE_MAXBACKUPS are kept."
+
+# Sleep for 30 seconds to allow nginx to start and be fully up and running.
+# After that, send USR1 signal to nginx so it updates the file ownership and permissions for the log files
+# Run this in the background so it doesn't interfere with the log rotation sequence
+{ sleep 30 && kill -USR1 "$(</run/nginx.pid)"; } &
+
+while true
+do
+  sleep $LOGROTATE_INTERVAL
+
+  if [[ -f /var/log/nginx/access.log ]]
+  then
+    count=$LOGROTATE_MAXBACKUPS
+    while (( --count > 0 ))
+    do
+      mv -f /var/log/nginx/access.log.$((count-1)) /var/log/nginx/access.log.$count >/dev/null 2>&1
+    done
+    mv -f /var/log/nginx/access.log /var/log/nginx/access.log.0
+    echo "[$APPNAME][$(date)] nginx access logs have been rotated. Next rotation at $(date -d "+$LOGROTATE_INTERVAL seconds")."
+  fi
+
+  if [[ -f /var/log/nginx/error.log ]]
+  then
+    count=$LOGROTATE_MAXBACKUPS
+    while (( --count > 0 ))
+    do
+      mv -f /var/log/nginx/error.log.$((count-1)) /var/log/nginx/error.log.$count >/dev/null 2>&1
+    done
+    mv -f /var/log/nginx/error.log /var/log/nginx/error.log.0
+    echo "[$APPNAME][$(date)] nginx error logs have been rotated. Next rotation at $(date -d "+$LOGROTATE_INTERVAL seconds")."
+  fi
+
+  kill -USR1 "$(</run/nginx.pid)"
+
+done
