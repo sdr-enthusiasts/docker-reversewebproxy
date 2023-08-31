@@ -1,0 +1,38 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash
+
+APPNAME="$(hostname)/30-blockbot"
+echo "[$APPNAME][$(date)] Initial setup -- installing BLOCKBOT service"
+
+mv -f /root/blockstats /usr/local/bin >/dev/null 2>&1
+mv -f /root/ipmap /usr/local/bin >/dev/null 2>&1
+
+if [[ -n "$BLOCKBOT" ]]
+then
+  BLOCKLIST="$(sed 's/,/|/g' <<< "$BLOCKBOT")"
+  echo "[$APPNAME][$(date)] Blocking these bots: $BLOCKBOT"
+  printf "map \$http_user_agent \$limit_bots {\n"           >/etc/nginx/blockbot.conf
+  printf "       default 0;\n"                             >>/etc/nginx/blockbot.conf
+  printf "       ~*(%s) 1;\n" "${BLOCKLIST// /}"           >>/etc/nginx/blockbot.conf
+  printf "}\n"                                             >>/etc/nginx/blockbot.conf
+else
+  echo "[$APPNAME][$(date)] Bot blocking disabled"
+  cp -f /etc/nginx/blockbot.conf.org /etc/nginx/blockbot.conf
+  exit 0
+fi
+
+# If there is a BLOCKBOT_RESPONSECODE, then substitute it.
+# Default code if omitted is 403 (Forbidden). Other codes that may be useful:
+# 402 (payment required, hehe), 404 (doesnt exist), 418 (I am a teapot - used to tell requestors to go away), 410 (Gone), 500 (Internal Server Error),
+# 503 (service unavailable), etc - see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+
+[[ -z "$BLOCKBOT_RESPONSECODE" ]] && BLOCKBOT_RESPONSECODE="403"
+
+if [[ "$BLOCKBOT_RESPONSECODE" -lt 100 ]] || [[ "$BLOCKBOT_RESPONSECODE" -gt 999 ]]
+then
+  echo "[$APPNAME][$(date)] Response code value for blocked bots \"$BLOCKBOT_RESPONSECODE\" is invalid. Defaulting to \"403\"."
+  BLOCKBOT_RESPONSECODE="403"
+else
+  echo "[$APPNAME][$(date)] Setting response code for blocked bots to $BLOCKBOT_RESPONSECODE."
+fi
+sed -i '/\s*if ($limit_bots = 1)/{$!{N;s/\(\s*if ($limit_bots = 1) {\s*\n\s*return \)[0-9]*\(.*\)/\1'"$BLOCKBOT_RESPONSECODE"'\2/;ty;P;D;:y}}' /etc/nginx/sites-available/default >/dev/null 2>&1

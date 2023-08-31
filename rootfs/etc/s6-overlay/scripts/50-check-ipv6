@@ -1,0 +1,21 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash
+#
+# This init script disables IPV6 if the IPV6 env variable is set to "disabled" or "off"
+# This is necessary to deal with systems that have IPV6 switched off - if we don't do this,
+# the nginx test run in 99-test-webproxy will fail.
+
+APPNAME="$(hostname)/50-check-ipv6"
+
+IPV6="${IPV6,,}"
+IPV6="${IPV6:0:3}"
+if [[ "$IPV6" == "dis" ]] || [[ "$IPV6" == "off" ]]
+then
+  sed -i 's/\(\s*listen \[::\]:80\)/#\1/g' /etc/nginx/sites-available/default
+  sed -i 's/\(\s*listen \[::\]:443\)/#\1/g' /etc/nginx/sites-available/default
+  echo "[$APPNAME][$(date)] IPV6 disabled"
+else
+  sed -i 's/#\(\s*listen \[::\]:80\)/\1/g' /etc/nginx/sites-available/default
+  sed -i 's/#\(\s*listen \[::\]:443\)/\1/g' /etc/nginx/sites-available/default
+  echo "[$APPNAME][$(date)] IPV6 enabled (default)"
+fi

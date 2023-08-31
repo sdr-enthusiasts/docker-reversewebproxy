@@ -1,0 +1,26 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash
+
+APPNAME="$(hostname)/ssl-check"
+
+if [[ -f /run/.ssl-enabled ]]
+then
+  echo "[$APPNAME][$(date)] Started as an s6 service. Checks every 24 hours if SSL certs need updating."
+  while :
+  do
+    sleep 1d
+    echo "[$APPNAME][$(date)] Checking if SSL certs need renewing..."
+    /usr/bin/certbot renew --quiet --deploy-hook "killall /usr/sbin/nginx"
+    /usr/bin/certbot certificates
+    # back things up again:
+    chmod u=rwx,go= /run/nginx/.letsencrypt
+    [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]] && mv -f /run/nginx/.letsencrypt/letsencrypt.tgz /run/nginx/.letsencrypt/letsencrypt-backup.tgz
+    find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist
+    tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist >/dev/null 2>&1
+    rm /tmp/tarlist
+    chmod u=rx,go= /run/nginx/.letsencrypt
+  done
+else
+  echo "[$APPNAME][$(date)] SSL is disabled. No checks will be performed."
+  sleep infinity
+fi

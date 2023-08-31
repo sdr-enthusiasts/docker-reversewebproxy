@@ -1,0 +1,22 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash
+
+APPNAME="$(hostname)/test-proxy-init"
+echo "[$APPNAME][$(date)] Final test of nginx before deployment"
+
+# now test the nginx configuration
+if ! /usr/sbin/nginx -g 'daemon off;' -t -q
+then
+    # nginx config problem. Complain and stop the container:
+    echo "--------------------------------------------------"
+    echo "|      STOP ! NGINX configuration problem        |"
+    echo "| This is probably caused by a mal-formed        |"
+    echo "| locations.conf file or by syntax errors in the |"
+    echo "| definition of REVPROXY or REDIRECT in your     |"
+    echo "| docker-compose.yml file. Go check and fix them!|"
+    echo "--------------------------------------------------"
+
+    [[ -z "$DEBUG" ]] && exit 1 || sleep infinity
+fi
+
+exit 0
