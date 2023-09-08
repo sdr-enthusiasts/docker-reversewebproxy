@@ -123,6 +123,7 @@ then
         printf "    auth_basic %s;\n" "$basic_auth" >> /run/nginx/locations.conf
         printf "    %s /run/nginx/.htaccess/.htpasswd-%s;\n" "$abuf" "${location///}" >> /run/nginx/locations.conf
         printf "    proxy_pass %s;\n" "$destination" >> /run/nginx/locations.conf
+        printf "    proxy_http_version 1.1;\n" >> /run/nginx/locations.conf
 
         # Additional line to catch redirects; suggested by @wiedehopf:
         # removed again after discussions
