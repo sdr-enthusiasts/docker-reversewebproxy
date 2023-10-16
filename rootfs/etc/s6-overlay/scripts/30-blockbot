@@ -23,7 +23,7 @@ fi
 
 # If there is a BLOCKBOT_RESPONSECODE, then substitute it.
 # Default code if omitted is 403 (Forbidden). Other codes that may be useful:
-# 402 (payment required, hehe), 404 (doesnt exist), 418 (I am a teapot - used to tell requestors to go away), 410 (Gone), 500 (Internal Server Error),
+# 402 (payment required, hehe), 404 (doesn't exist), 418 (I am a teapot - used to tell requesters to go away), 410 (Gone), 500 (Internal Server Error),
 # 503 (service unavailable), etc - see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
 
 [[ -z "$BLOCKBOT_RESPONSECODE" ]] && BLOCKBOT_RESPONSECODE="403"
