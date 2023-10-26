@@ -16,6 +16,10 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "rust/**"
+      - "Dockerfile**"
+      - "rootfs/**"
 
 env:
   REGISTRY: ghcr.io
@@ -64,7 +68,7 @@ jobs:
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
       dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
- 
+
   build_and_push_too:
     name: Image Build & Push - secondary container target
     uses: sdr-enthusiasts/common-github-workflows/.github/workflows/build_and_push_image.yml@main
