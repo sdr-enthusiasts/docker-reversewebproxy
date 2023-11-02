@@ -212,16 +212,16 @@ jobs:
   #       with:
   #         driver-opts: image=moby/buildkit:v0.10.6
   #
-  #     # Get archictecture suffix
+  #     # Get architecturesuffix
   #     -
-  #       name: Get image architecture suffix
+  #       name: Get image architecturesuffix
   #       run: |
   #         echo "ARCH_TAG=$(echo '${{ matrix.docker-platform }}' | cut -d '/' -f2- | tr -s '/' '_')" >> $GITHUB_ENV
-  #     # Show archictecture suffix
+  #     # Show architecture suffix
   #     -
   #       name: Show image architecture suffix
   #       run: |
-  #         echo "Architecture suffix: ${{ env.ARCH_TAG }}"
+  #         echo "architecture suffix: ${{ env.ARCH_TAG }}"
   #     - name: Build & Push ghcr.io/sdr-enthusiasts/docker-reversewebproxy:latest arch
   #       uses: docker/build-push-action@v2
   #       with:
@@ -321,12 +321,12 @@ jobs:
   #       with:
   #         driver-opts: image=moby/buildkit:v0.10.6
   #
-  #     # Get archictecture suffix
+  #     # Get architecturesuffix
   #     -
   #       name: Get image architecture suffix
   #       run: |
   #         echo "ARCH_TAG=$(echo '${{ matrix.docker-platform }}' | cut -d '/' -f2- | tr -s '/' '_')" >> $GITHUB_ENV
-  #     # Show archictecture suffix
+  #     # Show architecture suffix
   #     -
   #       name: Show image architecture suffix
   #       run: |

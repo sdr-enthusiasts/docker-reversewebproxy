@@ -5,7 +5,7 @@ APPNAME="$(hostname)/80-set-cors"
 
 if [[ -z "${CORSHOSTS}" ]]
 then
-    {   echo "# This file would normally contain the CORS exception headers, but none are defined." 
+    {   echo "# This file would normally contain the CORS exception headers, but none are defined."
         echo "# You can define these headers with the Docker environment variable CORSHOSTS"
     } > /run/nginx/cors_headers.conf
     exit 0

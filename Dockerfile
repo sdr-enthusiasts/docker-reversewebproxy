@@ -8,6 +8,7 @@ ENV IPTABLES_JAILTIME=0
 
 LABEL org.opencontainers.image.source = "https://github.com/sdr-enthusiasts/docker-reversewebproxy"
 
+#hadolint ignore=DL3008,SC3054
 RUN set -x && \
     # define packages needed for installation and general management of the container:
     TEMP_PACKAGES=() && \
