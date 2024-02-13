@@ -11,9 +11,9 @@ mv -f /root/ipmap /usr/local/bin >/dev/null 2>&1
 if [[ -n "$BLOCKBOT" ]]
 then
   # shellcheck disable=SC2001
-  { BLOCKLIST="$(sed 's/,/|/g' <<< "$BLOCKBOT")"
-    "${s6wrap[@]}" echo "Blocking these bots: $BLOCKBOT"
-    printf "map \$http_user_agent \$limit_bots {\n"
+  BLOCKLIST="$(sed 's/,/|/g' <<< "$BLOCKBOT")"
+  "${s6wrap[@]}" echo "Blocking these bots: $BLOCKBOT"
+  { printf "map \$http_user_agent \$limit_bots {\n"
     printf "       default 0;\n"
     printf "       ~*(%s) 1;\n" "${BLOCKLIST// /}"
     printf "}\n"

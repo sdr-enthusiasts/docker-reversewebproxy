@@ -27,8 +27,8 @@ then
   [[ -z "$lastforced" ]] && lastforced=0 || true
   (( mustforce - lastforced > 0 )) && forceinstall="true" || true
   date +%s > /run/nginx/.letsencrypt/.force-reinstall.lastforced
-  "${s6wrap[@]}" echo "Checking if SSL certificates must be reinstalled: Must reinstall if last install was before $(date -d "@$mustforce"). Last reinstall was at $(date -d "@$lastforced"). Will "
-  [[ "$forceinstall" == "true" ]] && echo "reinstall certificates." || echo "not reinstall certificates."
+  "${s6wrap[@]}" echo "Checking if SSL certificates must be reinstalled: Must reinstall if last install was before $(date -d "@$mustforce")."
+  "${s6wrap[@]}" echo "Last reinstall was at $(date -d "@$lastforced"). Will $(if [[ "$forceinstall" != "true" ]]; then printf "not "; fi)reinstall certificates."
 fi
 
 # if there is a backup and $forceinstall is not true, restore it
