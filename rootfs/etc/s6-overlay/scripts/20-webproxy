@@ -7,7 +7,7 @@ source /scripts/common
 
 # create run directory. This is where the locations.conf file will be located.
 # Create the correct ownership and permissions for the /var/log/nginx directory:
-adduser -U www-data >/dev/null 2>&1
+adduser -U www-data >/dev/null 2>&1 || true
 mkdir -p /var/log/nginx
 mkdir -p /run/nginx/html
 mkdir -p /run/nginx/.htaccess
@@ -34,11 +34,11 @@ if chk_enabled "$AUTOGENERATE"; then
     [[ -f /run/nginx/locations.conf ]] && mv -f /run/nginx/locations.conf "/run/nginx/locations.conf.bkup-$(date +%y%m%d%H%M%S)"
 
     # keep only the newest 10 backups:
-    org=$(shopt -p nullglob)    # save current nullglob setting
+    org=$(shopt -p nullglob) || true   # save current nullglob setting
     shopt -s nullglob           # set nullglob to avoid ls errors when no backups are present
     # shellcheck disable=SC2010
     ls -tp /run/nginx/locations.conf.bkup-* | grep -v '/$' | tail -n +11 | xargs -d '\n' -r rm --   # remove any backups older than the newest 10
-    $org                        # restore the original shopt nullglob setting
+    if [[ -n "$org" ]]; then $org; fi        # restore the original shopt nullglob setting
 
     # configure the locations.conf file:
     # first read the REVPROXY and REDIRECT environment variables into an array:
