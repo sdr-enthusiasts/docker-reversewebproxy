@@ -222,8 +222,8 @@ If `IPMAPS` is not enabled, the pages will not exist. Any previously generated m
 
 The following related parameters can be set:
 
-| Parameter     | Values                | Description                                                                                                            |
-| ------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------- | -------------- |
+| Parameter | Values | Description |
+| --------- | ------ | ---------------- |
 | `IPMAPS`        | `on`/`enabled`/`true`/`1` or <br/>`off`/`disabled`/`false`/`0`<br/>or empty | If enabled, IPMAPS will be generated as described above. If disabled or empty (default), maps aren't generated |
 | `IPMAPS_INTERVAL`        | value in secs or empty | Interval of generation of the IP Maps. Default if omitted is `900` seconds |
 | `IPMAPS_BASENAME` | partial file name | Base file name of the map URL. Default value is `ipmap-`, which would correspond to `http://ip_addr/ipmap-all.html` / `http://ip_addr/ipmap-filtered.html` / `http://ip_addr/ipmap-allowed.html` |
