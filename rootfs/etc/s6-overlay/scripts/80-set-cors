@@ -26,7 +26,7 @@ do
     if [[ -n "${cors}" ]]; then
         printf "add_header Access-Control-Allow-Origin %s;\n" "${cors}" >> /run/nginx/cors_headers.conf
         # shellcheck disable=SC2154
-        "${s6wrap}" echo "Added CORS exception for ${cors}"
+        "${s6wrap[@]}" echo "Added CORS exception for ${cors}"
     fi
 done
 exit 0
