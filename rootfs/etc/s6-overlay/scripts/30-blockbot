@@ -1,22 +1,25 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash
+#shellcheck shell=bash disable=SC2154,SC1091
 
-APPNAME="$(hostname)/30-blockbot"
-echo "[$APPNAME][$(date)] Initial setup -- installing BLOCKBOT service"
+source /scripts/common
+
+"${s6wrap[@]}" echo "Initial setup -- installing BLOCKBOT service"
 
 mv -f /root/blockstats /usr/local/bin >/dev/null 2>&1
 mv -f /root/ipmap /usr/local/bin >/dev/null 2>&1
 
 if [[ -n "$BLOCKBOT" ]]
 then
-  BLOCKLIST="$(sed 's/,/|/g' <<< "$BLOCKBOT")"
-  echo "[$APPNAME][$(date)] Blocking these bots: $BLOCKBOT"
-  printf "map \$http_user_agent \$limit_bots {\n"           >/etc/nginx/blockbot.conf
-  printf "       default 0;\n"                             >>/etc/nginx/blockbot.conf
-  printf "       ~*(%s) 1;\n" "${BLOCKLIST// /}"           >>/etc/nginx/blockbot.conf
-  printf "}\n"                                             >>/etc/nginx/blockbot.conf
+  # shellcheck disable=SC2001
+  { BLOCKLIST="$(sed 's/,/|/g' <<< "$BLOCKBOT")"
+    "${s6wrap[@]}" echo "Blocking these bots: $BLOCKBOT"
+    printf "map \$http_user_agent \$limit_bots {\n"
+    printf "       default 0;\n"
+    printf "       ~*(%s) 1;\n" "${BLOCKLIST// /}"
+    printf "}\n"
+  } >/etc/nginx/blockbot.conf
 else
-  echo "[$APPNAME][$(date)] Bot blocking disabled"
+  "${s6wrap[@]}" echo "Bot blocking disabled"
   cp -f /etc/nginx/blockbot.conf.org /etc/nginx/blockbot.conf
   exit 0
 fi
@@ -30,9 +33,10 @@ fi
 
 if [[ "$BLOCKBOT_RESPONSECODE" -lt 100 ]] || [[ "$BLOCKBOT_RESPONSECODE" -gt 999 ]]
 then
-  echo "[$APPNAME][$(date)] Response code value for blocked bots \"$BLOCKBOT_RESPONSECODE\" is invalid. Defaulting to \"403\"."
+  "${s6wrap[@]}" echo "Response code value for blocked bots \"$BLOCKBOT_RESPONSECODE\" is invalid. Defaulting to \"403\"."
   BLOCKBOT_RESPONSECODE="403"
 else
-  echo "[$APPNAME][$(date)] Setting response code for blocked bots to $BLOCKBOT_RESPONSECODE."
+  "${s6wrap[@]}" echo "Setting response code for blocked bots to $BLOCKBOT_RESPONSECODE."
 fi
+# shellcheck disable=SC2016
 sed -i '/\s*if ($limit_bots = 1)/{$!{N;s/\(\s*if ($limit_bots = 1) {\s*\n\s*return \)[0-9]*\(.*\)/\1'"$BLOCKBOT_RESPONSECODE"'\2/;ty;P;D;:y}}' /etc/nginx/sites-available/default >/dev/null 2>&1

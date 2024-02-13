@@ -1,21 +1,21 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash disable=SC2145
+#shellcheck shell=bash disable=SC2145,SC1091,SC2154,SC2015
 
-APPNAME="$(hostname)/40-geoip"
+source /scripts/common
+
 GEOIPDIR="/usr/share/GeoIP"
 NGINXGEOIPCNF="/etc/nginx/geoip_countries.conf"
 
-echo "[$APPNAME][$(date)] Set up of GeoIP Database and corresponding nginx configuration"
+"${s6wrap[@]}" echo "Set up of GeoIP Database and corresponding nginx configuration"
 
 #Moving geoip_countries.conf to the right place
-echo "[$APPNAME][$(date)] Copy geoip_countries.conf to the right place, delete old version first"
+"${s6wrap[@]}" echo "Copy geoip_countries.conf to the right place, delete old version first"
 rm -f /etc/nginx/geoip_countries.conf
 cp -f /root/geoip_countries.conf /etc/nginx/geoip_countries.conf
 
 #Nothing set up in the docker-compose.yml? Then set default yes and abort the rest of the script
-if ! [[ -n "$GEOIP_DEFAULT" ]]
-then
- echo "[$APPNAME][$(date)] GEOIP_DEFAULT not set, aborting further GeoIP setup."
+if [[ -z "$GEOIP_DEFAULT" ]]; then
+ "${s6wrap[@]}" echo "GEOIP_DEFAULT not set, aborting further GeoIP setup."
  sed -i '/^#defaultsetting.*/a default yes;' $NGINXGEOIPCNF
  exit 0
 fi
@@ -31,7 +31,7 @@ if [[ -f /run/nginx/.geoip/GeoIP.bckup ]];
  then
   if [ "$(( $(date +"%s") - $(stat -c "%Y" /run/nginx/.geoip/GeoIP.bckup) ))" -gt "90000" ]
    then
-    echo "[$APPNAME][$(date)] Found DB Backup which is older than 3 hours. Deleting"
+    "${s6wrap[@]}" echo "Found DB Backup which is older than 3 hours. Deleting"
     rm -f /run/nginx/.geoip/*.gz
     rm -f /run/nginx/.geoip/GeoIP.bckup
   fi
@@ -41,11 +41,11 @@ fi
 if [[ -f /run/nginx/.geoip/GeoIP.dat.gz && -f /run/nginx/.geoip/GeoIPv6.dat.gz ]]
  then
   backupworks=true
-  echo "[$APPNAME][$(date)] Found a Backup, installing"
+  "${s6wrap[@]}" echo "Found a Backup, installing"
   [[ -f /run/nginx/.geoip/GeoIP.dat.gz ]] && cp /run/nginx/.geoip/GeoIP.dat.gz /"$GEOIPDIR"
   [[ -f /run/nginx/.geoip/GeoIPv6.dat.gz ]] && cp /run/nginx/.geoip/GeoIPv6.dat.gz /"$GEOIPDIR"
  else backupworks=false
- echo "[$APPNAME][$(date)] No Backup found, continue"
+ "${s6wrap[@]}" echo "No Backup found, continue"
 fi
 
 
@@ -57,57 +57,43 @@ if [[ "$backupworks" == "false" ]]
   ! curl --fail -sL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://mailfud.org/geoip-legacy/GeoIPv6.dat.gz && geoipfail=true || true
   if [[ "$geoipfail" == "false" ]]
   then
-  echo "[$APPNAME][$(date)] Successfully downloaded DB from mailfud.org"
+  "${s6wrap[@]}" echo "Successfully downloaded DB from mailfud.org"
   fi
 fi
 
 #as there is a download limit from mailfud, backup the files to /run/nginx/.geoip/ and create a file as timestamp for further processing
 if [[ "$backupworks" == "false" ]] && [[ "$geoipfail" == "false" ]]
 then
-echo "[$APPNAME][$(date)] Backup mailfud GeoIP DB to /run/nginx/.geoip"
+"${s6wrap[@]}" echo "Backup mailfud GeoIP DB to /run/nginx/.geoip"
   cp "$GEOIPDIR"/GeoIP.dat.gz /run/nginx/.geoip
   cp "$GEOIPDIR"/GeoIPv6.dat.gz /run/nginx/.geoip
   touch /run/nginx/.geoip/GeoIP.bckup
 fi
 
-#If the mailfud download fails, lets see if we have a backup and try to copy it into the right place.
-#if [[ "$geoipfail" == "true" ]] && [[ "$backupworks" == "false" ]]
-#then
-#  if [[ -f /run/nginx/.geoip/GeoIP.dat.gz && -f /run/nginx/.geoip/GeoIPv6.dat.gz ]];
-#   then
-#    backupfail=false
-#    echo "[$APPNAME][$(date)] Using backuped DB"
-#    [[ -f /run/nginx/.geoip/GeoIP.dat.gz ]] && cp /run/nginx/.geoip/GeoIP.dat.gz /"$GEOIPDIR"
-#    [[ -f /run/nginx/.geoip/GeoIPv6.dat.gz ]] && cp /run/nginx/.geoip/GeoIPv6.dat.gz /"$GEOIPDIR"
-#   else backupfail=true
-#   echo "[$APPNAME][$(date)] Nothing to backup, Download from mailfud seemingly didn't work"
-#  fi
-#fi
-
 # if we couldn't get the mailfud DB and the backup is not working either, let's fall back to another database:
 if [[ "$geoipfail" == "true" ]] && [[ "$backupworks" == "false" ]]
 then
   centminfail=false
-  echo "[$APPNAME][$(date)] Couldn't download the mailfud GeoIP DB or use a backup. Now trying centminmod"
+  "${s6wrap[@]}" echo "Couldn't download the mailfud GeoIP DB or use a backup. Now trying centminmod"
   ! curl --fail -sL -o "$GEOIPDIR"/GeoIP.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIP.dat.gz && centminfail=true || true
   ! curl --fail -sL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIPv6.dat.gz && centminfail=true || true
 fi
 
 if [[ "$geoipfail" == "true" ]] && [[ "$backupworks" == "false" ]] && [[ "$centminfail" == "false" ]]
 then
-  echo "[$APPNAME][$(date)] Successfully downloaded DB from centminmod.com"
+  "${s6wrap[@]}" echo "Successfully downloaded DB from centminmod.com"
 fi
 
 #If nothing of the above did work out, we just use what we got through apt install
 if [[ "$geoipfail" == "true" ]] && [[ "$backupworks" == "false" ]] && [[ "$centminfail" == "true" ]]
 then
-  echo "[$APPNAME][$(date)] Couldn't retrieve any newer GeoIP databases. Your database may be out of date."
+  "${s6wrap[@]}" echo "Couldn't retrieve any newer GeoIP databases. Your database may be out of date."
 else
-  echo "[$APPNAME][$(date)] DB successfully installed"
+  "${s6wrap[@]}" echo "DB successfully installed"
 fi
 
 #Now we need to unzip what we got - if we got any
-echo "[$APPNAME][$(date)] Unpacking downloaded DB"
+"${s6wrap[@]}" echo "Unpacking downloaded DB"
 [[ -f "$GEOIPDIR"/GeoIP.dat.gz ]] && gunzip -f "$GEOIPDIR"/GeoIP.dat.gz
 [[ -f "$GEOIPDIR"/GeoIPv6.dat.gz ]] && gunzip -f "$GEOIPDIR"/GeoIPv6.dat.gz
 
@@ -117,7 +103,7 @@ IFS=',' read -ra include_list <<< "$GEOIP_COUNTRIES"
 #set the default GeoIP in /etc/nginx/nginx.conf - if the variable was set up in docker-compose but with unexpected content, fall back to default yes
 case "$GEOIP_DEFAULT" in
   allow|ALLOW)
-    echo "[$APPNAME][$(date)] Default is set to allow every country but block these: ${include_list[@]}"
+    "${s6wrap[@]}" echo "Default is set to allow every country but block these: ${include_list[@]}"
     sed -i '/^#defaultsetting.*/a default yes;' $NGINXGEOIPCNF
     for a in "${include_list[@]}"
     do
@@ -126,7 +112,7 @@ case "$GEOIP_DEFAULT" in
     ;;
 
   block|BLOCK)
-  echo "[$APPNAME][$(date)] Default is set to block every country and only allow these: ${include_list[@]}"
+  "${s6wrap[@]}" echo "Default is set to block every country and only allow these: ${include_list[@]}"
   sed -i '/^#defaultsetting.*/a default no;' $NGINXGEOIPCNF
   for a in "${include_list[@]}"
     do
@@ -134,7 +120,7 @@ case "$GEOIP_DEFAULT" in
   done
   ;;
   *)
-  echo "[$APPNAME][$(date)] Configuration not set or has a wrong value (use only allow or block). Defaulting to allow all"
+  "${s6wrap[@]}" echo "Configuration not set or has a wrong value (use only allow or block). Defaulting to allow all"
   sed -i '/^#defaultsetting.*/a default yes;' $NGINXGEOIPCNF
 
   ;;
@@ -146,10 +132,11 @@ esac
 # 503 (service unavailable), etc - see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
 if [[ -n "$GEOIP_RESPONSECODE" ]] && [[ "$GEOIP_RESPONSECODE" -ge 100 ]]  && [[ "$GEOIP_RESPONSECODE" -le 999 ]]
 then
-  echo "[$APPNAME][$(date)] Setting response code for blocked bots to $GEOIP_RESPONSECODE"
+  "${s6wrap[@]}" echo "Setting response code for blocked bots to $GEOIP_RESPONSECODE"
+  # shellcheck disable=SC2016
   sed -i '/\s*if ($allowed_country = no)/{$!{N;s/\(\s*if ($allowed_country = no) {\s*\n\s*return \)[0-9]*\(.*\)/\1'"$GEOIP_RESPONSECODE"'\2/;ty;P;D;:y}}' /etc/nginx/sites-available/default >/dev/null 2>&1
 fi
 
-echo "[$APPNAME][$(date)] Finished setting up GeoIP"
+"${s6wrap[@]}" echo "Finished setting up GeoIP"
 
 exit

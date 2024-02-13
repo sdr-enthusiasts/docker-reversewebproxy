@@ -1,15 +1,15 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash disable=SC2145,SC2076
+#shellcheck shell=bash disable=SC2145,SC2076,SC1091,SC2154,SC2015
 
-APPNAME="$(hostname)/10-ssl"
-echo "[$APPNAME][$(date)] Started SSL initialization"
+source /scripts/common
+
+"${s6wrap[@]}" echo "Started SSL initialization"
 
 rm -f /run/.ssl-enabled
 
 # If SSL is not ENABLED, stop forevah
-if [[ "${SSL^^}" != "ENABLED" ]]
-then
-    echo "[$APPNAME][$(date)] SSL disabled. No initialization needed."
+if ! chk_enabled "${SSL}"; then
+    "${s6wrap[@]}" echo "SSL disabled. No initialization needed."
     exit 0
 fi
 
@@ -27,14 +27,14 @@ then
   [[ -z "$lastforced" ]] && lastforced=0 || true
   (( mustforce - lastforced > 0 )) && forceinstall="true" || true
   date +%s > /run/nginx/.letsencrypt/.force-reinstall.lastforced
-  echo -n "[$APPNAME][$(date)] Checking if SSL certificates must be reinstalled: Must reinstall if last install was before $(date -d "@$mustforce"). Last reinstall was at $(date -d "@$lastforced"). Will "
+  "${s6wrap[@]}" echo "Checking if SSL certificates must be reinstalled: Must reinstall if last install was before $(date -d "@$mustforce"). Last reinstall was at $(date -d "@$lastforced"). Will "
   [[ "$forceinstall" == "true" ]] && echo "reinstall certificates." || echo "not reinstall certificates."
 fi
 
 # if there is a backup and $forceinstall is not true, restore it
 if [[ -f /run/nginx/.letsencrypt/letsencrypt.tgz ]] && [[ "$forceinstall" != "true" ]]
 then
-    echo "[$APPNAME][$(date)] Backup of certificates found. Restoring..."
+    "${s6wrap[@]}" echo "Backup of certificates found. Restoring..."
     tar --overwrite -xzf /run/nginx/.letsencrypt/letsencrypt.tgz -C /  >/dev/null 2>&1
 elif [[ -d /etc/letsencrypt ]]
 then
@@ -51,40 +51,41 @@ fi
 touch /run/nginx/locations.conf
 
 # Do some checks to ensure that there is enough info to request domains:
+# shellcheck disable=SC2153
 if (( ${#SSL_DOMAIN[@]} == 0 ))
 then
     # No domains in environment files. Complain and stop trying to install certificates:
-    echo "[$APPNAME][$(date)] --------------------------------------------------"
-    echo "[$APPNAME][$(date)] |    WARNING ! NGINX SSL configuration problem   |"
-    echo "[$APPNAME][$(date)] | You must define at least 1 SSL_DOMAIN in your  |"
-    echo "[$APPNAME][$(date)] | docker-compose.yml file. Go check and fix it!  |"
-    echo "[$APPNAME][$(date)] | The container will continue without SSL.       |"
-    echo "[$APPNAME][$(date)] --------------------------------------------------"
+    "${s6wrap[@]}" echo "--------------------------------------------------"
+    "${s6wrap[@]}" echo "|    WARNING ! NGINX SSL configuration problem   |"
+    "${s6wrap[@]}" echo "| You must define at least 1 SSL_DOMAIN in your  |"
+    "${s6wrap[@]}" echo "| docker-compose.yml file. Go check and fix it!  |"
+    "${s6wrap[@]}" echo "| The container will continue without SSL.       |"
+    "${s6wrap[@]}" echo "--------------------------------------------------"
     exit 0
 fi
 
 if ! grep -E "\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}\b" <<< "$SSL_EMAIL" >/dev/null
 then
     # No domains in environment files. Complain and stop trying to install certificates:
-    echo "[$APPNAME][$(date)] --------------------------------------------------------"
-    echo "[$APPNAME][$(date)] |       WARNING ! NGINX SSL configuration problem      |"
-    echo "[$APPNAME][$(date)] | You must provide a valid email in SSL_EMAIL in your  |"
-    echo "[$APPNAME][$(date)] | docker-compose.yml file. Go check and fix it!        |"
-    echo "[$APPNAME][$(date)] | The container will continue without SSL.             |"
-    echo "[$APPNAME][$(date)] --------------------------------------------------------"
+    "${s6wrap[@]}" echo "--------------------------------------------------------"
+    "${s6wrap[@]}" echo "|       WARNING ! NGINX SSL configuration problem      |"
+    "${s6wrap[@]}" echo "| You must provide a valid email in SSL_EMAIL in your  |"
+    "${s6wrap[@]}" echo "| docker-compose.yml file. Go check and fix it!        |"
+    "${s6wrap[@]}" echo "| The container will continue without SSL.             |"
+    "${s6wrap[@]}" echo "--------------------------------------------------------"
     exit 0
 fi
 
 if [[ "${SSL_TOS,,}" != "accept" ]]
 then
     # No domains in environment files. Complain and stop trying to install certificates:
-    echo "[$APPNAME][$(date)] --------------------------------------------------------------------------"
-    echo "[$APPNAME][$(date)] |      WARNING ! NGINX SSL configuration problem                         |"
-    echo "[$APPNAME][$(date)] | You must accept the ACME Account TOS found at                          |"
-    echo "[$APPNAME][$(date)] | https://letsencrypt.org/repository/#let-s-encrypt-subscriber-agreement |"
-    echo "[$APPNAME][$(date)] | and set SSL_TOS=ACCEPT in your docker-compose.yml file.                |"
-    echo "[$APPNAME][$(date)] | Go check and fix it! The container will continue without SSL.          |"
-    echo "[$APPNAME][$(date)] --------------------------------------------------------------------------"
+    "${s6wrap[@]}" echo "--------------------------------------------------------------------------"
+    "${s6wrap[@]}" echo "|      WARNING ! NGINX SSL configuration problem                         |"
+    "${s6wrap[@]}" echo "| You must accept the ACME Account TOS found at                          |"
+    "${s6wrap[@]}" echo "| https://letsencrypt.org/repository/#let-s-encrypt-subscriber-agreement |"
+    "${s6wrap[@]}" echo "| and set SSL_TOS=ACCEPT in your docker-compose.yml file.                |"
+    "${s6wrap[@]}" echo "| Go check and fix it! The container will continue without SSL.          |"
+    "${s6wrap[@]}" echo "--------------------------------------------------------------------------"
     exit 0
 else
     agree_tos="--agree-tos"
@@ -97,6 +98,7 @@ newdomains=()
 #shellcheck disable=SC2207
 domains=($(/usr/bin/certbot certificates 2>/dev/null | awk '/Domains:/ { $1=""; print substr($0,2) }'))
 
+# shellcheck disable=SC2086
 IFS="," read -ra SSL_DOMAINS <<< "$(echo $SSL_DOMAIN|tr -d '[:blank:]')"
 for (( i=0; i<${#SSL_DOMAINS[@]}; i++ ))
 do
@@ -104,9 +106,17 @@ do
 done
 
 # Figure out if we want to redirect all queries to SSL?
-[[ "${SSL_REDIRECT,,}" == "enabled" ]] && redirect="--redirect" || redirect=""
+if chk_enabled "${SSL_REDIRECT}"; then
+    redirect="--redirect"
+else
+    redirect=""
+fi
 
-(( ${#newdomains[@]} > 0 )) && echo "[$APPNAME][$(date)] New domains detected - attempting to get certificates for ${newdomains[@]}" || echo "[$APPNAME][$(date)] No new domains detected"
+if (( ${#newdomains[@]} > 0 )); then 
+    "${s6wrap[@]}" echo "New domains detected - attempting to get certificates for ${newdomains[@]}"
+else
+    "${s6wrap[@]}" echo "No new domains detected"
+fi
 
 # prepend "-d " before each domain name:
 newdomains=( "${newdomains[@]/#/-d }" )
@@ -118,17 +128,17 @@ then
     # Something went wrong
     echo Error in:
     echo "/usr/bin/certbot run --quiet --nginx ${agree_tos} ${redirect} -m \"${SSL_EMAIL}\" ${newdomains[@]}"
-    echo "[$APPNAME][$(date)] --------------------------------------------------"
-    echo "[$APPNAME][$(date)] | STOP ! NGINX CertBot SSL installation problem  |"
-    echo "[$APPNAME][$(date)] | Please see the error message above.            |"
-    echo "[$APPNAME][$(date)] |                                                |"
-    echo "[$APPNAME][$(date)] | The container will continue without SSL.       |"
-    echo "[$APPNAME][$(date)] --------------------------------------------------"
+    "${s6wrap[@]}" echo "--------------------------------------------------"
+    "${s6wrap[@]}" echo "| STOP ! NGINX CertBot SSL installation problem  |"
+    "${s6wrap[@]}" echo "| Please see the error message above.            |"
+    "${s6wrap[@]}" echo "|                                                |"
+    "${s6wrap[@]}" echo "| The container will continue without SSL.       |"
+    "${s6wrap[@]}" echo "--------------------------------------------------"
     exit 0
 else
-    echo "[$APPNAME][$(date)] SSL Certificates installed for these domains:"
+    "${s6wrap[@]}" echo "SSL Certificates installed for these domains:"
     /usr/bin/certbot certificates
-    [[ "${SSL_REDIRECT,,}" == "enabled" ]] && echo "[$APPNAME][$(date)] All web traffic will be redirected to SSL."
+    [[ "${SSL_REDIRECT,,}" == "enabled" ]] && "${s6wrap[@]}" echo "All web traffic will be redirected to SSL."
 
     # back things up again, keep a copy of the previous TGZ if there was one:
     mkdir -p /run/nginx/.letsencrypt
@@ -143,6 +153,6 @@ else
 
     touch /run/.ssl-enabled
 
-    echo "[$APPNAME][$(date)] Nginx will start with SSL enabled."
-    echo "[$APPNAME][$(date)] The container will check every 24 hours to see if the certificates need renewal."
+    "${s6wrap[@]}" echo "Nginx will start with SSL enabled."
+    "${s6wrap[@]}" echo "The container will check every 24 hours to see if the certificates need renewal."
 fi

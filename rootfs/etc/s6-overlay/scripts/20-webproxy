@@ -1,8 +1,9 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash disable=SC2174
+#shellcheck shell=bash disable=SC2174,SC1091,SC2154,SC2015
 
-APPNAME="$(hostname)/20-webproxy"
-echo "[$APPNAME][$(date)] Initial setup -- installing NXINX web service"
+source /scripts/common
+
+"${s6wrap[@]}" echo "Initial setup -- installing NXINX web service"
 
 # create run directory. This is where the locations.conf file will be located.
 # Create the correct ownership and permissions for the /var/log/nginx directory:
@@ -27,9 +28,8 @@ touch /var/log/nginx/error.log
 chmod a+rw /var/log/nginx/access.log /var/log/nginx/error.log
 
 # auto-create the locations.conf file if $AUTOGENERATE is set to yes
-if [[ "$AUTOGENERATE" == "ON" ]]
-then
-    echo "[$APPNAME][$(date)] Auto-generating locations.conf file"
+if chk_enabled "$AUTOGENERATE"; then
+    "${s6wrap[@]}" echo "Auto-generating locations.conf file"
     # back up any existing locations.conf file:
     [[ -f /run/nginx/locations.conf ]] && mv -f /run/nginx/locations.conf "/run/nginx/locations.conf.bkup-$(date +%y%m%d%H%M%S)"
 
@@ -60,13 +60,13 @@ then
 
         if [[ -z "$location" ]] || [[ -z "$destination" ]]
         then
-            echo "[$APPNAME][$(date)] WARNING: Skipping empty location or destination for REDIRECT $location:$destination"
+            "${s6wrap[@]}" echo "WARNING: Skipping empty location or destination for REDIRECT $location:$destination"
             continue;
         fi
 
         if [[ -n "$creds" ]]
         then
-            echo "[$APPNAME][$(date)] WARNING: Auth credentials not supported REDIRECT ($location:$destination). Implemented without authentications"
+            "${s6wrap[@]}" echo "WARNING: Auth credentials not supported REDIRECT ($location:$destination). Implemented without authentications"
         fi
 
         # fix prefixes and suffixes if necessary:
@@ -76,9 +76,10 @@ then
         [[ "${location:0:2}" == "/=" ]] && location="= ${location:2}" || true
 
         # Now print the location entry:
-        printf "location %s {\n" "$location" >> /run/nginx/locations.conf
-        printf "    return 301 %s;\n" "$destination"  >> /run/nginx/locations.conf
-        printf "}\n\n"  >> /run/nginx/locations.conf
+        {   printf "location %s {\n" "$location" 
+            printf "    return 301 %s;\n" "$destination"
+            printf "}\n\n"
+        } >> /run/nginx/locations.conf
 
     done
 
@@ -99,7 +100,7 @@ then
 
         if [[ -z "$location" ]] || [[ -z "$destination" ]]
         then
-            echo "[$APPNAME][$(date)] WARNING: Skipping empty location or destination for REDIRECT $location:$destination"
+            "${s6wrap[@]}" echo "WARNING: Skipping empty location or destination for REDIRECT $location:$destination"
             continue;
         fi
 
@@ -119,19 +120,20 @@ then
         [[ "${destination: -1}" != "/" ]] && destination="$destination/"
 
         # Now print the location entry:
-        printf "location %s {\n" "/$location/" >> /run/nginx/locations.conf
-        printf "    auth_basic %s;\n" "$basic_auth" >> /run/nginx/locations.conf
-        printf "    %s /run/nginx/.htaccess/.htpasswd-%s;\n" "$abuf" "${location///}" >> /run/nginx/locations.conf
-        printf "    proxy_pass %s;\n" "$destination" >> /run/nginx/locations.conf
-        printf "    proxy_http_version 1.1;\n" >> /run/nginx/locations.conf
+        {   printf "location %s {\n" "/$location/"
+            printf "    auth_basic %s;\n" "$basic_auth"
+            printf "    %s /run/nginx/.htaccess/.htpasswd-%s;\n" "$abuf" "${location///}"
+            printf "    proxy_pass %s;\n" "$destination"
+            printf "    proxy_http_version 1.1;\n"
 
-        # Additional line to catch redirects; suggested by @wiedehopf:
-        # removed again after discussions
-        # printf "    proxy_redirect ~^(/|http://[^/]*/)(.*) %s\$2;\n" "$location" >> /run/nginx/locations.conf
-        printf "    proxy_redirect / /%s/;\n" "$location" >> /run/nginx/locations.conf
-        # close off the location entry:
-        printf "}\n\n"  >> /run/nginx/locations.conf
-        touch /run/nginx/.htaccess/.htpasswd-${location///} # make sure that the passwd file exists even if it's empty or not used
+            # Additional line to catch redirects; suggested by @wiedehopf:
+            # removed again after discussions
+            # printf "    proxy_redirect ~^(/|http://[^/]*/)(.*) %s\$2;\n" "$location" >> /run/nginx/locations.conf
+            printf "    proxy_redirect / /%s/;\n" "$location"
+            # close off the location entry:
+            printf "}\n\n"
+          }  >> /run/nginx/locations.conf
+        touch "/run/nginx/.htaccess/.htpasswd-${location///}" # make sure that the passwd file exists even if it's empty or not used
     done
 
     # Finally add the default index files to this configuration:
@@ -142,16 +144,16 @@ then
 elif [[ ! -f /run/nginx/locations.conf ]]
 then
     # No locations.conf is found, and none is generated either. Complain and stop the container:
-    echo "-------------------------------------------------"
-    echo "|           STOP ! You must either:             |"
-    echo "| set AUTOGENERATE=ON in docker-compose.yml     |"
-    echo "| or provide a well-formed locations.conf file  |"
-    echo "| Please do so and then restart the container.  |"
-    echo "-------------------------------------------------"
+    "${s6wrap[@]}" echo "-------------------------------------------------"
+    "${s6wrap[@]}" echo "|           STOP ! You must either:             |"
+    "${s6wrap[@]}" echo "| set AUTOGENERATE=ON in docker-compose.yml     |"
+    "${s6wrap[@]}" echo "| or provide a well-formed locations.conf file  |"
+    "${s6wrap[@]}" echo "| Please do so and then restart the container.  |"
+    "${s6wrap[@]}" echo "-------------------------------------------------"
 
     [[ -z "$DEBUG" ]] && exit 1 || sleep infinity
 else
-    echo "[$APPNAME][$(date)] Using user-provided locations.conf file"
+    "${s6wrap[@]}" echo "Using user-provided locations.conf file"
 fi
 
 # now enable default:
@@ -160,16 +162,16 @@ ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 # set logging to what VERBOSELOG says. Default is off, "ON" means to stdout, "FILE" means to access.log/error.log file in external volume
 if [[ "${VERBOSELOG,,}" == "on" ]] || [[ "${VERBOSELOG,,}" == "true" ]]
 then
-  echo "[$APPNAME][$(date)] Enabled HTTP logging to container logs"
+  "${s6wrap[@]}" echo "Enabled HTTP logging to container logs"
   sed -i 's|\(^\s*access_log \).*|\1/dev/stdout ;|' /etc/nginx/nginx.conf
   sed -i 's|\(^\s*error_log \).*|\1/dev/stdout ;|' /etc/nginx/nginx.conf
 elif [[ "${VERBOSELOG,,}" == "file" ]]
 then
-  echo "[$APPNAME][$(date)] Enabled HTTP logging to files in shared volume"
+  "${s6wrap[@]}" echo "Enabled HTTP logging to files in shared volume"
   sed -i 's|\(^\s*access_log \).*|\1/run/nginx/access.log ;|' /etc/nginx/nginx.conf
   sed -i 's|\(^\s*error_log \).*|\1/run/nginx/error.log ;|' /etc/nginx/nginx.conf
 else
-  echo "[$APPNAME][$(date)] HTTP logging is disabled"
+  "${s6wrap[@]}" echo "HTTP logging is disabled"
 fi
 
 

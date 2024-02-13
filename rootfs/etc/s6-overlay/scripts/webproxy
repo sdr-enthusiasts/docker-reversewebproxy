@@ -1,17 +1,17 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash
+#shellcheck shell=bash disable=SC2154,SC1091
 
-APPNAME="$(hostname)/reverse-proxy"
+source /scripts/common
 
-echo "[$APPNAME][$(date)] Started as an s6 service"
-echo "[$APPNAME][$(date)] Starting the NGINX service..."
+"${s6wrap[@]}" echo "Started as an s6 service"
+"${s6wrap[@]}" echo "Starting the NGINX service..."
 
 while true
 do
     touch /tmp/nginx.up
-    /usr/sbin/nginx -g 'daemon off;'
+    "${s6wrap[@]}" /usr/sbin/nginx -g 'daemon off;'
     rm -f /tmp/nginx.up
-    echo "[$APPNAME][$(date)] NGINX Service has exited."
+    "${s6wrap[@]}" echo "NGINX Service has exited."
     sleep 10
-    echo "[$APPNAME][$(date)] Restarting NGINX Service now..."
+    "${s6wrap[@]}" echo "Restarting NGINX Service now..."
 done

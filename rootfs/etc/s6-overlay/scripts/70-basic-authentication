@@ -1,11 +1,13 @@
 #!/command/with-contenv bash
 #shellcheck shell=bash disable=SC2174
 
-APPNAME="$(hostname)/70-basic-authentication"
+# shellcheck disable=SC1091
+source /scripts/common
 
 if [[ "${AUTH,,}" != "on" ]]
 then
-    echo "[$APPNAME][$(date)] Basic Authentication is not enabled. Continuing."
+    # shellcheck disable=SC2154
+    "${s6wrap[@]}" echo "Basic Authentication is not enabled. Continuing."
     exit 0
 fi
 
@@ -28,11 +30,11 @@ then
         password="${cred##*|}"
         if [[ -z "$username" ]] || [[ -z "$password" ]]
         then
-            echo "[$APPNAME][$(date)] WARNING: Entry $n of CREDENTIALS variable is wrongly formatted. Skipping..."
+            "${s6wrap[@]}" echo "WARNING: Entry $n of CREDENTIALS variable is wrongly formatted. Skipping..."
             (( errors++ ))
             continue
         fi
-        printf "%s:%s\n" "$username" "$(openssl passwd -5 $password)" >> /run/nginx/.htaccess/.htpasswd_global
+        printf "%s:%s\n" "$username" "$(openssl passwd -5 "$password")" >> /run/nginx/.htaccess/.htpasswd_global
     done
 
     # Make sure that the default file is correctly set up:
@@ -80,7 +82,7 @@ do
             creds="${creds#*|}"           # now there's only the next user|pass|user|pass etc left
             # note - if there is no more username|pass, then $creds will contain the last password but no '|'
             # write credentials to password file:
-            printf "%s:%s\n" "$username" "$(openssl passwd -5 $password)" >> "/run/nginx/.htaccess/.htpasswd-${location}"
+            printf "%s:%s\n" "$username" "$(openssl passwd -5 "$password")" >> "/run/nginx/.htaccess/.htpasswd-${location}"
         done
     fi
 done
