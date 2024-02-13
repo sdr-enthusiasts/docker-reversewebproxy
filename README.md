@@ -216,9 +216,9 @@ If `IPMAPS` is not enabled, the pages will not exist. Any previously generated m
 
 | URL | Map Type |
 | --- | -------- |
-| `/ipmaps-all.html` | Redirection to a map with **all** visitors |
-| `/ipmaps-filtered.html` | Redirection to a map with only visitors who were denied access due to Geo-IP block or BotBlock |
-| `/ipmaps-accepted.html` | Redirection to a map with only those visitors that passed the filtering and that were allowed to browse to the resource they tried to access |
+| `/ipmap-all.html` | Redirection to a map with **all** visitors |
+| `/ipmap-filtered.html` | Redirection to a map with only visitors who were denied access due to Geo-IP block or BotBlock |
+| `/ipmap-accepted.html` | Redirection to a map with only those visitors that passed the filtering and that were allowed to browse to the resource they tried to access |
 
 The following related parameters can be set:
 
@@ -226,7 +226,7 @@ The following related parameters can be set:
 | ------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------- | -------------- |
 | `IPMAPS`        | `on`/`enabled`/`true`/`1` or <br/>`off`/`disabled`/`false`/`0`<br/>or empty | If enabled, IPMAPS will be generated as described above. If disabled or empty (default), maps aren't generated |
 | `IPMAPS_INTERVAL`        | value in secs or empty | Interval of generation of the IP Maps. Default if omitted is `900` seconds |
-| `IPMAPS_BASENAME` | partial file name | Base file name of the map URL. Default value is `ipmaps-`, which would correspond to `http://ip_addr/ipmaps-all.html` / `http://ip_addr/ipmaps-filtered.html` / `http://ip_addr/ipmaps-allowed.html` |
+| `IPMAPS_BASENAME` | partial file name | Base file name of the map URL. Default value is `ipmap-`, which would correspond to `http://ip_addr/ipmap-all.html` / `http://ip_addr/ipmap-filtered.html` / `http://ip_addr/ipmap-allowed.html` |
 
 ### Extras
 

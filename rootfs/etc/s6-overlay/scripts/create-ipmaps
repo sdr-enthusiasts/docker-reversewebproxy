@@ -12,7 +12,7 @@ IPMAPS_INTERVAL="${IPMAPS_INTERVAL:-900}"
 IPMAPS_BASENAME="${IPMAPS_BASENAME:-ipmap-}"
 HTMLDIR="/run/nginx/html"
 
-notavail_template='<html><body><h1>Map Currently Unavailable</h1><p>This map is currently not available; please try again later. Last update:##TIME##</body><html>'
+notavail_template='<html><body><h1>Map Currently Unavailable</h1><p>This map is currently not available; please try again later. Last update: ##TIME##</body><html>'
 redir_template='<html><head><meta http-equiv="refresh" content="0; URL=##REDIRURL##" /></head></html>'
 
 if ! chk_enabled "$IPMAPS"; then
