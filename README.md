@@ -9,7 +9,7 @@
   - [What is it?](#what-is-it)
   - [How do I get it?](#how-do-i-get-it)
   - [How do I configure it?](#how-do-i-configure-it)
-    - [General parameters:](#general-parameters)
+    - [General parameters](#general-parameters)
     - [Configuration of the Webproxy](#configuration-of-the-webproxy)
     - [Configuration of SSL](#configuration-of-ssl)
     - [GeoIP Filtering](#geoip-filtering)
@@ -18,6 +18,7 @@
     - [Basic Authentication](#basic-authentication)
     - [Advanced Setup](#advanced-setup)
     - [Host your own web pages](#host-your-own-web-pages)
+      - [Automatic creation of web pages with geographic map of visitors](#automatic-creation-of-web-pages-with-geographic-map-of-visitors)
     - [Extras](#extras)
   - [Troubleshooting](#troubleshooting)
   - [Acknowledgements](#acknowledgements)
@@ -35,14 +36,14 @@ The following example highlights this:
 
 | Web Service | Original address              | New Address with Webproxy |
 | ----------- | ----------------------------- | ------------------------- |
-| readsb      | http://10.0.0.191:8080        | http://myip/readsb        |
-| piaware     | http://10.0.0.191:8081        | http://myip/piaware       |
-| tar1090     | http://10.0.0.191:8082        | http://myip/tar1090       |
-| planefence  | http://10.0.0.191:8083        | http://myip/planefence    |
-| planefinder | http://10.0.0.191:8086        | http://myip/planefinder   |
-| graphs      | http://10.0.0.191:8080/graphs | http://myip/graphs        |
-| radar       | http://10.0.0.191:8080/radar  | http://myip/radar         |
-| acarshub    | http://10.0.0.188             | http://myip/acarshub      |
+| readsb      | <http://10.0.0.191:8080>        | <http://myip/readsb>        |
+| piaware     | <http://10.0.0.191:8081>        | <http://myip/piaware>       |
+| tar1090     | <http://10.0.0.191:8082>        | <http://myip/tar1090>       |
+| planefence  | <http://10.0.0.191:8083>        | <http://myip/planefence>    |
+| planefinder | <http://10.0.0.191:8086>        | <http://myip/planefinder>   |
+| graphs      | <http://10.0.0.191:8080/graphs> | <http://myip/graphs>        |
+| radar       | <http://10.0.0.191:8080/radar>  | <http://myip/radar>         |
+| acarshub    | <http://10.0.0.188>             | <http://myip/acarshub>      |
 
 ## How do I get it?
 
@@ -51,7 +52,7 @@ This is less than 5 minutes of work -- use [this script](https://github.com/sdr-
 
 Once this is done, create a working directory and download the `docker-compose.yml` file:
 
-```
+```bash
 sudo mkdir -p -m 777 /opt/webproxy && cd /opt/webproxy
 wget https://raw.githubusercontent.com/kx1t/docker-reversewebproxy/main/docker-compose.yml
 ```
@@ -67,13 +68,13 @@ With that, you are ready to run the proxy!
 
 The Webproxy can be entirely configured in the `docker-compose.yml`, or, optionally, you can create a more advanced setup manually. You can also start with the `docker-compose.yml` configuration and then add to this manually in the future. Here's how:
 
-### General parameters:
+### General parameters
 
 A "_" means that this is the default value
 | Parameter | Values | Description |
 |-----------|--------|-------------|
-| `AUTOGENERATE` | `ON`_, `OFF` | Determines if the system will use the `REVPROXY` and `REDIRECT` settings of the `docker-compose.yml` file (`ON`), or a manually generated `locations.conf` file (`OFF`). |
-| `VERBOSELOG` | `ON`_, `OFF` | Determines if the internal web service Access and Error logs will be written to the Docker log (accessible with `docker logs webproxy`) (`ON`), or that logging will be switched `OFF`.
+| `AUTOGENERATE` | `ON`, `OFF` | Determines if the system will use the `REVPROXY` and `REDIRECT` settings of the `docker-compose.yml` file (`ON`), or a manually generated `locations.conf` file (`OFF`). |
+| `VERBOSELOG` | `ON`, `OFF` | Determines if the internal web service Access and Error logs will be written to the Docker log (accessible with `docker logs webproxy`) (`ON`), or that logging will be switched `OFF` |
 | `CORSHOSTS` | list of hosts | Comma separated list of host/DNS names of CORS exceptions. These are needed if a website calls into an external API, for example when adding the RainViewer overlay to VRS. Most browsers block this unless the external API target is added to this variable. Default is empty. Example value you can use to add the RainViewer API: `api.rainviewer.com`. Adding `"_"` will disable CORS protection for all hostnames; this is not recommended! |
 
 You may have to adjust your `port:` and your `volumes:` mapping to your liking, especially if you are not running on the Raspberry Pi standard `pi` account.
@@ -85,7 +86,7 @@ If `AUTOGENERATE=ON`, the system will build a Webproxy based on the `REVPROXY` a
 `REVPROXY` defines the proxy-pairs to serve the `destination` target when the user browses to `urltarget`. The user's browser will never be redirected to an internal IP address for service, all web pages are being served from the Webproxy. As such, the process of going to the correct website/port to get the web page is completely hidden from the user.
 
 `REVPROXY` has the following format: `urltarget|destination[|user1|pass1[|user2|pass2[|...|...]]]`
-For example, for REVPROXY=readsb|http://10.0.0.191:8080, a user browsing to http://mydomain/readsb will be proxied to a service located at http://10.0.0.191:8080. The user's browser will _never_ see the internal IP address.
+For example, for REVPROXY=readsb|<http://10.0.0.191:8080>, a user browsing to <http://mydomain/readsb> will be proxied to a service located at <http://10.0.0.191:8080>. The user's browser will _never_ see the internal IP address.
 Note - both the `urltarget` and the `destination` must be URLs or directories, and cannot be a file name.
 You can provide a comma separated list of `urltarget|destination` pairs, similar to the example in the default `docker-compose.yml`.
 The optional `|user1|pass1|user2|pass2|...|...` addons define the allowed username/password combination for this specific revproxy.
@@ -109,14 +110,14 @@ A "_" means that this is the default value
 | `SSL` | `DISABLED`_, `ENABLED` | Enable the installation of SSL certificates |
 | `SSL_EMAIL` | your email address | A valid email address is needed to get a certificate |
 | `SSL_DOMAIN` | A list of web domains | We will enabled SSL for these. Note - they must be reachable domains at this container for the SSL certificate to be successfully installed! |
-| `SSL_TOS` | `REJECT`_, `ACCEPT` | Indicates your acceptance of the T&S's for the SSL certificateset forth at https://letsencrypt.org/repository/#let-s-encrypt-subscriber-agreement |
-| ` SSL_REDIRECT` | `DISABLED`, `ENABLED`_ | When set to ENABLED, all incoming non-SSL traffic is redirected to use SSL
+| `SSL_TOS` | `REJECT`_, `ACCEPT` | Indicates your acceptance of the T&S's for the SSL certificateset forth at <https://letsencrypt.org/repository/#let-s-encrypt-subscriber-agreement> |
+| `SSL_REDIRECT` | `DISABLED`, `ENABLED` | When set to ENABLED, all incoming non-SSL traffic is redirected to use SSL |
 
 Note: your SSL certificates are valid for 90 days. The container will check daily if they need renewing, and will do so of there's less than a month before the expiration date.
 **LetsEncrypt will start sending you emails about the pending expiration about 45 days before the deadline. Sometimes, the expiration date in this email doesn't correspond to the real expiration date of the certificates. You can safely ignore these emails as long as your container is running.**
 If you want to check the official expiration date of your certificates, this command will show you:
 
-```
+```bash
 docker exec -it webproxy certbot certificates
 ```
 
@@ -128,7 +129,7 @@ The Reverse Webproxy can filter incoming requests by originating IP. It uses an 
 | -------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GEOIP_DEFAULT`      | \<empty\>\*, `ALLOW`, `DISALLOW` | Empty: GeoIP filtering is disabled; `ALLOW`: only those countries listed in the `GEOIP_COUNTRIES` parameter are permitted; `DISALLOW`: the countries listed in `GEOIP_COUNTRIES` are filtered.                                                                                                                               |
 | `GEOIP_COUNTRIES`    |                                  | Comma-separated list of 2-letter country abbreviations, for example `RU,CN,BY,RS` (which means Russia, China, Bielorus, Serbia).                                                                                                                                                                                             |
-| `GEOIP_RESPONSECODE` | 3-digit HTTP response code       | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesn't exist), `418` (I am a teapot - used to tell requesters to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See https://developer.mozilla.org/en-US/docs/Web/HTTP/Status |
+| `GEOIP_RESPONSECODE` | 3-digit HTTP response code       | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesn't exist), `418` (I am a teapot - used to tell requesters to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status> |
 
 ### BlockBot Filtering
 
@@ -137,7 +138,7 @@ The BlockBot feature filters out HTTP requests based on a fuzzy match of the HTT
 | Parameter               | Values                               | Description                                                                                                                                                                                                                                                                                                                  |
 | ----------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `BLOCKBOT`              | string snippets of User Agent fields | Comma-separated strings, for example `google,bing,yandex,msnbot`. If this parameter is empty, the BlockBot functionality is disabled.                                                                                                                                                                                        |
-| `BLOCKBOT_RESPONSECODE` | 3-digit HTTP response code           | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesn't exist), `418` (I am a teapot - used to tell requesters to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See https://developer.mozilla.org/en-US/docs/Web/HTTP/Status |
+| `BLOCKBOT_RESPONSECODE` | 3-digit HTTP response code           | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesn't exist), `418` (I am a teapot - used to tell requesters to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status> |
 
 ### `iptables` blocking
 
@@ -146,7 +147,7 @@ As an option, the system can use `iptables` to block any IP match of GeoIp or Bl
 The system will scan the logs for any BlockBot or GeoIP filtered request, and adds any IP address for which a return value of `$BLOCKBOT_RESPONSECODE` or `$GEOIP_RESPONSECODE` to the `iptables` blocked list, unless the IP is part of a value or range specified in the `ip-allowlist` (see below). The `iptables` blocker is updated in batches every 60 seconds.
 To enable this behavior, set `IPTABLES_BLOCK` to `ENABLED` or `ON`. You can also specify the time an IP address should stay on the `iptables` block list with the `IPTABLES_JAILTIME` parameter. Additionally, you must add the `NET_ADMIN` capacity to the container; see the [`docker-compose.yml`](docker-compose.yml) for an example.
 
-```
+```yaml
      cap_add:
        - NET_ADMIN
 ```
@@ -157,11 +158,11 @@ As long as the `/run/nginx` volume is mapped (see example in [`docker-compose.ym
 
 If you want to remove IP addresses from the blocked list, you can do so manually by removing them with a text editor from the file `ip-blocklist` in the mapped volume. Alternatively, you can use a simple utility to do this while running the container:
 
-```
+```bash
 docker exec -it webproxy manage_ipblock
 ```
 
-Note that the `IPTABLES_BLOCK` feature enables logging to disk (specifically, `/var/log/nginx/access.log`). You may want to map this directory to a `tmpfs` volume (see example in [`docker-compose.yml'](docker-compose.yml)). Log rotation keeps 24 files of 1 hour each around; the 1 hour log rotation intervals and number of retained backups are configurable with the `LOGROTATE_INTERVAL` and `LOGROTATE_MAXBACKUPS` docker environment variable.
+Note that the `IPTABLES_BLOCK` feature enables logging to disk (specifically, `/var/log/nginx/access.log`). You may want to map this directory to a `tmpfs` volume \(see example in [`docker-compose.yml'](docker-compose.yml)\). Log rotation keeps 24 files of 1 hour each around; the 1 hour log rotation intervals and number of retained backups are configurable with the`LOGROTATE_INTERVAL` and `LOGROTATE_MAXBACKUPS` docker environment variable.
 
 | Parameter              | Values                                            | Description                                                                                                                                                                                                 |
 | ---------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -182,7 +183,7 @@ The container supports basic authentication for the local web page through the `
 | `LOCAL_CREDS` |                       | A list of credentials in the format `username1                                                                         | password1,username2 | password2,...` |
 | `REVPROXY`    |                       | A comma separated list in this format:                                                                                 |
 
-```
+```yaml
 REVPROXY=origin1|http://destination1|username1|password1|username2|password2,
          origin2|http://destination2|username3|password3|username4|password4|username5|password5,
          origin3|http://destination3,
@@ -205,11 +206,33 @@ Note -- the web server inside the container does NOT run as `root`, so you must 
 Feel free to create additional subdirectories if needed for your project.
 Also note -- the website may not be reachable if you redirected or proxied `/` to some other service.
 
+#### Automatic creation of web pages with geographic map of visitors
+
+If you set `IPMAPS=true`, the container will try to automatically create IP maps of the visitors to your website. This includes any visit that goes to a URL that is handled by the WebProxy, regardless if it's rendering a local page, being sent to a reverse proxy address, or being redirected somewhere else. The website will automatically generate the following pages that are updated every 15 minutes. You can change the defaults by defining the parameters below.
+
+The system uses <http://iponfo.io/tools/map> to create these maps from the webserver's access logs.
+
+If `IPMAPS` is not enabled, the pages will not exist. Any previously generated map redirects will be deleted.
+
+| URL | Map Type |
+| --- | -------- |
+| `/ipmap-all.html` | Redirection to a map with **all** visitors |
+| `/ipmap-filtered.html` | Redirection to a map with only visitors who were denied access due to Geo-IP block or BotBlock |
+| `/ipmap-accepted.html` | Redirection to a map with only those visitors that passed the filtering and that were allowed to browse to the resource they tried to access |
+
+The following related parameters can be set:
+
+| Parameter | Values | Description |
+| --------- | ------ | ---------------- |
+| `IPMAPS`        | `on`/`enabled`/`true`/`1` or <br/>`off`/`disabled`/`false`/`0`<br/>or empty | If enabled, IPMAPS will be generated as described above. If disabled or empty (default), maps aren't generated |
+| `IPMAPS_INTERVAL`        | value in secs or empty | Interval of generation of the IP Maps. Default if omitted is `900` seconds |
+| `IPMAPS_BASENAME` | partial file name | Base file name of the map URL. Default value is `ipmap-`, which would correspond to `http://ip_addr/ipmap-all.html` / `http://ip_addr/ipmap-filtered.html` / `http://ip_addr/ipmap-allowed.html` |
+
 ### Extras
 
 - Get a URL to a geographic map of all IPs that hit your WebProxy by typing:
 
-```
+```bash
 docker exec -it webproxy ipmap
 ```
 
@@ -235,7 +258,7 @@ docker exec -it webproxy ipmap
 - Issue: Planefinder doesn't work correctly
 - Solution: make sure that you have added the following to the `REVPROXY` variable (replace ip address and port with whatever is appropriate for your system):
 
-  ```
+  ```yaml
   planefinder|http://10.0.0.191:8086,
   ajax|http://10.0.0.191:8086/ajax,
   assets|http://10.0.0.191:8086/assets,
@@ -243,7 +266,7 @@ docker exec -it webproxy ipmap
 
 - Issue: The docker logs show an error like this on start up:
 
-```
+```text
 nginx: [emerg] socket() [::]:80 failed (97: Address family not supported)
 nginx: configuration file /etc/nginx/nginx.conf test failed
 ```
@@ -260,7 +283,7 @@ nginx: configuration file /etc/nginx/nginx.conf test failed
 - Solution: This is caused by certificates that have been added to `webproxy` at different points in time. To fix it, back up any web pages that are directly served by the container, and recreate the entire setup. Please note that doing this more than 5 times in a week will lock you out and prevent you from recreating existing certificates for up to a week, so USE THIS SOLUTION SPARINGLY.
   The solution assumes that the container name is `webproxy` and that its working directory is `~/.webproxy` . If this is different, you may have to adapt the commands accordingly. It's preferable to feed the script line by line rather than all at once, so you can monitor the outcome.
 
-```
+```bash
 cd ~  # go to the home directory
 docker stop webproxy    # stop the webproxy container
 
@@ -301,4 +324,4 @@ without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with this program.
-If not, see https://www.gnu.org/licenses/.
+If not, see <https://www.gnu.org/licenses/>.

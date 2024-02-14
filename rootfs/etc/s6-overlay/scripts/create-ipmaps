@@ -1,0 +1,55 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash disable=SC2154,SC2089
+
+# shellcheck disable=SC1091
+source /scripts/common
+
+# Advise to keep IPMAPS_INTERVAL < about 900 secs - this corresponds to 2920 requests
+# per month, well below the maximum of 4000 requests from a single IP address for the
+# free API of https://ipinfo.io/
+
+IPMAPS_INTERVAL="${IPMAPS_INTERVAL:-900}"
+IPMAPS_BASENAME="${IPMAPS_BASENAME:-ipmap-}"
+HTMLDIR="/run/nginx/html"
+
+notavail_template='<html><body><h1>Map Currently Unavailable</h1><p>This map is currently not available; please try again later. Last update: ##TIME##</body><html>'
+redir_template='<html><head><meta http-equiv="refresh" content="0; URL=##REDIRURL##" /></head></html>'
+
+if ! chk_enabled "$IPMAPS"; then
+  rm -f "${HTMLDIR}/${IPMAPS_BASENAME}"*.html
+  exec sleep infinity
+fi
+
+while :; do
+
+  ipmap_all="$(/usr/local/bin/ipmap -l 2>/dev/null| tail -1)" || true
+  ipmap_filtered="$(/usr/local/bin/ipmap -f 2>/dev/null| tail -1)" || true
+  ipmap_accepted="$(/usr/local/bin/ipmap -v 2>/dev/null| tail -1)" || true
+
+  "${s6wrap[@]}" echo "Updating ${IPMAPS_BASENAME}all.html --> $ipmap_all"
+  { if [[ "${ipmap_all:0:4}" == "http" ]]; then
+      echo "${redir_template//##REDIRURL##/$ipmap_all}"
+    else
+      echo "${notavail_template//##TIME##/$(date)}"
+    fi
+  } > "${HTMLDIR}/${IPMAPS_BASENAME}all.html"
+
+  "${s6wrap[@]}" echo "Updating ${IPMAPS_BASENAME}filtered.html --> $ipmap_filtered"
+  { if [[ "${ipmap_filtered:0:4}" == "http" ]]; then
+      echo "${redir_template//##REDIRURL##/$ipmap_filtered}"
+    else
+      echo "${notavail_template//##TIME##/$(date)}"
+    fi
+  } > "${HTMLDIR}/${IPMAPS_BASENAME}filtered.html"
+  
+  "${s6wrap[@]}" echo "Updating ${IPMAPS_BASENAME}accepted.html --> $ipmap_accepted"
+  { if [[ "${ipmap_accepted:0:4}" == "http" ]]; then
+      echo "${redir_template//##REDIRURL##/$ipmap_accepted}"
+    else
+      echo "${notavail_template//##TIME##/$(date)}"
+    fi
+  } > "${HTMLDIR}/${IPMAPS_BASENAME}accepted.html"
+
+  sleep "$IPMAPS_INTERVAL"
+
+done
