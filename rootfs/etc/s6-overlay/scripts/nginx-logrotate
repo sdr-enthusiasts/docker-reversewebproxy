@@ -3,15 +3,8 @@
 
 source /scripts/common
 
-if [[ -z "$LOGROTATE_INTERVAL" ]]
-then
-  LOGROTATE_INTERVAL=3600
-fi
-
-if [[ -z "$LOGROTATE_MAXBACKUPS" ]]
-then
-  LOGROTATE_MAXBACKUPS=24
-fi
+LOGROTATE_INTERVAL="${LOGROTATE_INTERVAL:-3600}"
+LOGROTATE_MAXBACKUPS="${LOGROTATE_MAXBACKUPS:-24}"
 
 "${s6wrap[@]}" echo "Started as an s6 service; nginx logs are rotated every $LOGROTATE_INTERVAL seconds; up to $LOGROTATE_MAXBACKUPS are kept."
 
