@@ -6,17 +6,8 @@ source /scripts/common
 
 SLEEPTIME=60
 
-# check if the IPTABLES_BLOCK is disabled and if so, stop execution of this service:
-IPTABLES_BLOCK="${IPTABLES_BLOCK,,}"
-IPTABLES_BLOCK="${IPTABLES_BLOCK:0:3}"
-if [[ "$IPTABLES_BLOCK" != "ena" ]] && [[ "$IPTABLES_BLOCK" != "on" ]]
-then
-  "${s6wrap[@]}" echo "Bot blocking is disabled"
-  sleep infinity
-fi
-
-if [[ -z "$BLOCKBOT" ]]
-then
+# check if the IPTABLES_BLOCK is not enabled and if so, stop execution of this service:
+if ! chk_enabled "$IPTABLES_BLOCK" || [[ -z "$BLOCKBOT" ]]; then
   "${s6wrap[@]}" echo "Bot blocking is disabled"
   sleep infinity
 fi
@@ -25,65 +16,67 @@ fi
 
 while true
 do
-  # Read access log and process any GEOIP or BLOCKBOT response codes. Note - also naturally occurring responses with these codes are picked up:
-  awk -v "g=$GEOIP_RESPONSECODE" -v "b=$BLOCKBOT_RESPONSECODE" -v "d=$(date +%s)" '{if ($9 == b || $9 == g) print $1 " " $9 " " d}' /var/log/nginx/access.log >> /run/nginx/ip-blocklist
+  # Do stuff if the access log file exists. Sometimes, it doesn't exist if there isn't much traffic
+  if [[ -f /var/log/nginx/access.log ]]; then
+    # Read access log and process any GEOIP or BLOCKBOT response codes. Note - also naturally occurring responses with these codes are picked up:
+    awk -v "g=$GEOIP_RESPONSECODE" -v "b=$BLOCKBOT_RESPONSECODE" -v "d=$(date +%s)" '{if ($9 == b || $9 == g) print $1 " " $9 " " d}' /var/log/nginx/access.log >> /run/nginx/ip-blocklist
 
-  # Read $BLOCKBOT into an array and remove all leading/trailing spaces:
-  readarray -d "," -t BOT_ARRAY <<< "$BLOCKBOT"
-  for ((n=0; n<${#BOT_ARRAY[*]}; n++))
-  do
-    # this is slightly inefficient as it iterates through the entire array.
-    # However, all-at-once solutions like "y=($(printf '%s\n' "${x[@]}"|xargs))" appear to split each element at any internal whitespace :(
-    BOT_ARRAY[n]="$(xargs <<< "${BOT_ARRAY[n]}")"
-  done
-  # Parse through the log files and to the blocklist.
-  # It's OK to add duplicates; `sort -u` will only keep the first (oldest) occurrence
-  grep -i -h -w -f <(printf '%s\n' "${BOT_ARRAY[@]}") /var/log/nginx/access.log 2>/dev/null | awk -v "d=$(date +%s)" '{print $1 " logs_crawler " d}' >> /run/nginx/ip-blocklist
-
-  sort -u -k 1,1 /run/nginx/ip-blocklist | sort -n > /tmp/ip-blocklist
-  mv -f /tmp/ip-blocklist /run/nginx/ip-blocklist
-
-  # Re-process the blocklist and add them to the IP tables for DROPping:
-  blocktable=()
-  if [[ -f /run/nginx/ip-blocklist ]]
-  then
-    while read -ra line
+    # Read $BLOCKBOT into an array and remove all leading/trailing spaces:
+    readarray -d "," -t BOT_ARRAY <<< "$BLOCKBOT"
+    for ((n=0; n<${#BOT_ARRAY[*]}; n++))
     do
-      if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! grep -f /run/nginx/ip-allowlist >/dev/null 2>&1 <<< "${line[0]}" && ! iptables -C INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
-      then
-        iptables -I INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
-        blocktable+=("${line[0]}")
-      fi
-    done < /run/nginx/ip-blocklist
-  fi
+      # this is slightly inefficient as it iterates through the entire array.
+      # However, all-at-once solutions like "y=($(printf '%s\n' "${x[@]}"|xargs))" appear to split each element at any internal whitespace :(
+      BOT_ARRAY[n]="$(xargs <<< "${BOT_ARRAY[n]}")"
+    done
+    # Parse through the log files and to the blocklist.
+    # It's OK to add duplicates; `sort -u` will only keep the first (oldest) occurrence
+    grep -i -h -w -f <(printf '%s\n' "${BOT_ARRAY[@]}") /var/log/nginx/access.log 2>/dev/null | awk -v "d=$(date +%s)" '{print $1 " logs_crawler " d}' >> /run/nginx/ip-blocklist
 
-  # Notify the logs of any additions to the blocklist:
-  if (( ${#blocktable[@]} > 0 ))
-  then
-    "${s6wrap[@]}" echo "These ${#blocktable[@]} IP(s) have been added to the iptables Block List: ${blocktable[@]}. Currently, there are $(sed -e '/^$/d ; /^#/d' /run/nginx/ip-blocklist |wc -l) blocked IP addresses."
-  fi
+    sort -u -k 1,1 /run/nginx/ip-blocklist | sort -n > /tmp/ip-blocklist
+    mv -f /tmp/ip-blocklist /run/nginx/ip-blocklist
 
-  # Go through the blocklist and determine if any entries have timed out:
-  if (( IPJAILTIME > 0 ))
-  then
-    deletes=()
-    cp /run/nginx/ip-blocklist /tmp
-    while read -ra line
-    do
-      if [[ -n "${line[2]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && (( line[2] > 0 )) && (( line[2] + IPJAILTIME < $(date +%s) )) || grep -f /run/nginx/ip-allowlist >/dev/null 2>&1 <<< "${line[0]}"
-      then
-        sed -i '/^'"${line[0]}"'/d' /run/nginx/ip-blocklist
-        iptables -D INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
-        deletes+=("${line[0]}")
-      fi
-    done < /tmp/ip-blocklist
-    rm -f /tmp/ip-blocklist
-    if [[ "${#deletes[*]}" -gt 0 ]]
+    # Re-process the blocklist and add them to the IP tables for DROPping:
+    blocktable=()
+    if [[ -f /run/nginx/ip-blocklist ]]
     then
-      "${s6wrap[@]}" echo "These ${#deletes[@]} IP(s) have timed out and have been removed from the Block List: ${deletes[@]}. Currently, there are $(sed -e '/^$/d ; /^#/d' /run/nginx/ip-blocklist |wc -l) blocked IP addresses."
+      while read -ra line
+      do
+        if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! grep -f /run/nginx/ip-allowlist >/dev/null 2>&1 <<< "${line[0]}" && ! iptables -C INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
+        then
+          iptables -I INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
+          blocktable+=("${line[0]}")
+        fi
+      done < /run/nginx/ip-blocklist
+    fi
+
+    # Notify the logs of any additions to the blocklist:
+    if (( ${#blocktable[@]} > 0 ))
+    then
+      "${s6wrap[@]}" echo "These ${#blocktable[@]} IP(s) have been added to the iptables Block List: ${blocktable[@]}. Currently, there are $(sed -e '/^$/d ; /^#/d' /run/nginx/ip-blocklist |wc -l) blocked IP addresses."
+    fi
+
+    # Go through the blocklist and determine if any entries have timed out:
+    if (( IPJAILTIME > 0 ))
+    then
+      deletes=()
+      cp /run/nginx/ip-blocklist /tmp
+      while read -ra line
+      do
+        if [[ -n "${line[2]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && (( line[2] > 0 )) && (( line[2] + IPJAILTIME < $(date +%s) )) || grep -f /run/nginx/ip-allowlist >/dev/null 2>&1 <<< "${line[0]}"
+        then
+          sed -i '/^'"${line[0]}"'/d' /run/nginx/ip-blocklist
+          iptables -D INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
+          deletes+=("${line[0]}")
+        fi
+      done < /tmp/ip-blocklist
+      rm -f /tmp/ip-blocklist
+      if [[ "${#deletes[*]}" -gt 0 ]]
+      then
+        "${s6wrap[@]}" echo "These ${#deletes[@]} IP(s) have timed out and have been removed from the Block List: ${deletes[@]}. Currently, there are $(sed -e '/^$/d ; /^#/d' /run/nginx/ip-blocklist |wc -l) blocked IP addresses."
+      fi
     fi
   fi
-
   # Sleep a while before repeating everything:
   sleep $SLEEPTIME
 

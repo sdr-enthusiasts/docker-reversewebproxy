@@ -160,16 +160,10 @@ fi
 ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 # set logging to what VERBOSELOG says. Default is off, "ON" means to stdout, "FILE" means to access.log/error.log file in external volume
-if chk_enabled "${VERBOSELOG}"
-then
-  "${s6wrap[@]}" echo "Enabled HTTP logging to container logs"
-  sed -i 's|\(^\s*access_log \).*|\1/dev/stdout ;|' /etc/nginx/nginx.conf
-  sed -i 's|\(^\s*error_log \).*|\1/dev/stdout ;|' /etc/nginx/nginx.conf
-elif [[ "${VERBOSELOG,,}" == "file" ]]
-then
-  "${s6wrap[@]}" echo "Enabled HTTP logging to files in shared volume"
-  sed -i 's|\(^\s*access_log \).*|\1/run/nginx/access.log ;|' /etc/nginx/nginx.conf
-  sed -i 's|\(^\s*error_log \).*|\1/run/nginx/error.log ;|' /etc/nginx/nginx.conf
+if chk_enabled "${VERBOSELOG}" || [[ "${VERBOSELOG,,}" == "file" ]] || chk_enabled "$IPMAPS" || chk_enabled "$IPTABLES_BLOCK"; then
+  "${s6wrap[@]}" echo "Enabled HTTP logging"
+  sed -i 's|\(^\s*access_log\).*|\1 /var/log/nginx/access.log ;|' /etc/nginx/nginx.conf
+  sed -i 's|\(^\s*error_log\).*|\1 /var/log/nginx/error.log ;|' /etc/nginx/nginx.conf
 else
   "${s6wrap[@]}" echo "HTTP logging is disabled"
 fi

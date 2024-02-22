@@ -29,9 +29,9 @@ do
     count=$LOGROTATE_MAXBACKUPS
     while (( --count > 0 ))
     do
-      mv -f /var/log/nginx/access.log.$((count-1)) /var/log/nginx/access.log.$count >/dev/null 2>&1
+      mv -f /var/log/nginx/access.log.$((count-1)) /var/log/nginx/access.log.$count >/dev/null 2>&1 || true
     done
-    mv -f /var/log/nginx/access.log /var/log/nginx/access.log.0
+    mv -f /var/log/nginx/access.log /var/log/nginx/access.log.0 || true
     "${s6wrap[@]}" echo "nginx access logs have been rotated. Next rotation at $(date -d "+$LOGROTATE_INTERVAL seconds")."
   fi
 
@@ -40,9 +40,9 @@ do
     count=$LOGROTATE_MAXBACKUPS
     while (( --count > 0 ))
     do
-      mv -f /var/log/nginx/error.log.$((count-1)) /var/log/nginx/error.log.$count >/dev/null 2>&1
+      mv -f /var/log/nginx/error.log.$((count-1)) /var/log/nginx/error.log.$count >/dev/null 2>&1 || true
     done
-    mv -f /var/log/nginx/error.log /var/log/nginx/error.log.0
+    mv -f /var/log/nginx/error.log /var/log/nginx/error.log.0 || true
     "${s6wrap[@]}" echo "nginx error logs have been rotated. Next rotation at $(date -d "+$LOGROTATE_INTERVAL seconds")."
   fi
 
