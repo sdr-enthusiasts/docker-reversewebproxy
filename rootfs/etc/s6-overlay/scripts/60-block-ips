@@ -8,21 +8,11 @@
 # shellcheck disable=SC1091
 source /scripts/common
 
-IPTABLES_BLOCK="${IPTABLES_BLOCK,,}"
-IPTABLES_BLOCK="${IPTABLES_BLOCK:0:3}"
-
 cp -f /root/manage_ipblock /usr/local/bin >/dev/null 2>&1
 
-if [[ "$IPTABLES_BLOCK" != "ena" ]] && [[ "$IPTABLES_BLOCK" != "on" ]]
-then
+if ! chk_enabled "$IPTABLES_BLOCK" || [[ -z "$BLOCKBOT" ]]; then
   # shellcheck disable=SC2154
-  "${s6wrap[@]}" echo "Bot blocking is disabled. Continuing..."
-  exit 0
-fi
-
-if [[ -z "$BLOCKBOT" ]]
-then
-  "${s6wrap[@]}" echo "Bot blocking is disabled. Continuing..."
+  "${s6wrap[@]}" echo "Bot blocking is not enabled. Continuing..."
   exit 0
 fi
 

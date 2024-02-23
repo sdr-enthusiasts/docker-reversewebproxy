@@ -20,7 +20,7 @@ services:
       # locations.conf file. Then, before restarting, please make sure to set AUTOGENERATE=OFF below.
       - AUTOGENERATE=ON
       # ----------------------------------------------------------------------------------------
-      # VERBOSELOGS indicates if the web server logs are written to the Docker Container logs
+      # VERBOSELOG indicates if the web server logs are written to the Docker Container logs
       # (accessible with `docker logs webproxy`) or that they are discarded. Values are ON (default) or OFF
       - VERBOSELOG=ON
       # ----------------------------------------------------------------------------------------
