@@ -119,8 +119,17 @@ if chk_enabled "$AUTOGENERATE"; then
         [[ "${destination:0:2}" == "//" ]] && destination="http:$destination"
         [[ "${destination: -1}" != "/" ]] && destination="$destination/"
 
+        # check for "=" representing the root path
+        if [[ "${location}" == "=" ]]; then
+            locationpath="/"
+            locationredir="/"
+        else
+            locationpath="/$location/"
+            locationredir="$location"
+        fi
+
         # Now print the location entry:
-        {   printf "location %s {\n" "/$location/"
+        {   printf "location %s {\n" "$locationpath"
             printf "    auth_basic %s;\n" "$basic_auth"
             printf "    %s /run/nginx/.htaccess/.htpasswd-%s;\n" "$abuf" "${location///}"
             printf "    proxy_pass %s;\n" "$destination"
@@ -129,7 +138,7 @@ if chk_enabled "$AUTOGENERATE"; then
             # Additional line to catch redirects; suggested by @wiedehopf:
             # removed again after discussions
             # printf "    proxy_redirect ~^(/|http://[^/]*/)(.*) %s\$2;\n" "$location" >> /run/nginx/locations.conf
-            printf "    proxy_redirect / /%s/;\n" "$location"
+            printf "    proxy_redirect / /%s/;\n" "$locationredir"
             # close off the location entry:
             printf "}\n\n"
           }  >> /run/nginx/locations.conf

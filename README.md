@@ -87,7 +87,7 @@ If `AUTOGENERATE=ON`, the system will build a Webproxy based on the `REVPROXY` a
 
 `REVPROXY` has the following format: `urltarget|destination[|user1|pass1[|user2|pass2[|...|...]]]`
 For example, for REVPROXY=readsb|<http://10.0.0.191:8080>, a user browsing to <http://mydomain/readsb> will be proxied to a service located at <http://10.0.0.191:8080>. The user's browser will _never_ see the internal IP address.
-Note - both the `urltarget` and the `destination` must be URLs or directories, and cannot be a file name.
+Note - both the `urltarget` and the `destination` must be URLs or directories, and cannot be a file name. You can set the `urltarget` to `=` to proxy the root path at <http://mydomain>.
 You can provide a comma separated list of `urltarget|destination` pairs, similar to the example in the default `docker-compose.yml`.
 The optional `|user1|pass1|user2|pass2|...|...` addons define the allowed username/password combination for this specific revproxy.
 
