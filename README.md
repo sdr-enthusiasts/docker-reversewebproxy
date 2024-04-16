@@ -164,7 +164,7 @@ If you want to remove IP addresses from the blocked list, you can do so manually
 docker exec -it webproxy manage_ipblock
 ```
 
-Note that the `IPTABLES_BLOCK` feature enables logging to disk (specifically, `/var/log/nginx/access.log`). You may want to map this directory to a `tmpfs` volume \(see example in [`docker-compose.yml'](docker-compose.yml)\). Log rotation keeps 24 files of 1 hour each around; the 1 hour log rotation intervals and number of retained backups are configurable with the`LOGROTATE_INTERVAL` and `LOGROTATE_MAXBACKUPS` docker environment variable.
+Note that the `IPTABLES_BLOCK` feature enables logging to disk (specifically, `/var/log/nginx/access.log`). You may want to map this directory to a `tmpfs` volume \(see example in [`docker-compose.yml`](docker-compose.yml)\). Log rotation keeps 24 files of 1 hour each around; the 1 hour log rotation intervals and number of retained backups are configurable with the`LOGROTATE_INTERVAL` and `LOGROTATE_MAXBACKUPS` docker environment variable.
 
 | Parameter              | Values                                            | Description                                                                                                                                                                                                 |
 | ---------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
