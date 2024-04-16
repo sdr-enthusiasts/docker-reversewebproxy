@@ -24,27 +24,22 @@ fi
     echo "# These are overwritten automatically at container start. If you want to"
     echo "# set or delete these headers, do this with the Docker environment variable CORSHOSTS"
     echo ""
-} > /run/nginx/cors_headers.conf
 
-# check if any element is "*" or "_"
-if [[ $CORSHOSTS =~ "*" ]]; then
-    {   echo "proxy_hide_header Access-Control-Allow-Origin;"
-        echo 'add_header Access-Control-Allow-Origin *;'
-        echo 'add_header Vary Origin;'
-    } >> /run/nginx/cors_headers.conf
-elif [[ $CORSHOSTS =~ "_" ]]; then
-    {   echo "proxy_hide_header Access-Control-Allow-Origin;"
+    if [[ $CORSHOSTS =~ "_" ]]; then
+        echo "proxy_hide_header Access-Control-Allow-Origin;"
         echo 'add_header Access-Control-Allow-Origin _;'
         echo 'add_header Vary Origin;'
-    } >> /run/nginx/cors_headers.conf
-else
-    {   echo "proxy_hide_header Access-Control-Allow-Origin;"
-        echo 'if ($http_origin ~* "^https?://('"${CORSHOSTS//,/|}"')$") {'
-        echo '   add_header Access-Control-Allow-Origin "$http_origin";'
-        echo '}'
+    elif grep -qs -e ',' <<< "$CORSHOSTS"; then
+        echo "proxy_hide_header Access-Control-Allow-Origin;"
+        echo 'add_header Access-Control-Allow-Origin *;'
         echo 'add_header Vary Origin;'
-    } >> /run/nginx/cors_headers.conf
-fi
+    else
+        echo "proxy_hide_header Access-Control-Allow-Origin;"
+        echo "proxy_hide_header Vary;"
+        echo 'add_header Access-Control-Allow-Origin '"${CORSHOSTS//$'\n'/}"';'
+        echo 'add_header Vary Origin;'
+    fi
+} > /run/nginx/cors_headers.conf
 
 "${s6wrap[@]}" echo "Added CORS exception for ${CORSHOSTS}"
 

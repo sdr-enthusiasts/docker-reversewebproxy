@@ -74,7 +74,7 @@ The Webproxy can be entirely configured in the `docker-compose.yml`, or, optiona
 |-----------|--------|-------------|
 | `AUTOGENERATE` | `ON`, `OFF` | Determines if the system will use the `REVPROXY` and `REDIRECT` settings of the `docker-compose.yml` file (`ON`), or a manually generated `locations.conf` file (`OFF`). |
 | `VERBOSELOG` | `ON`, `OFF` | Determines if the internal web service Access and Error logs will be written to the Docker log (accessible with `docker logs webproxy`) (`ON`), or that logging will be switched `OFF` |
-| `CORSHOSTS` | list of hosts | Comma separated list of host/DNS names of CORS exceptions*.Default is empty. Example value you can use to add the RainViewer API: `api.rainviewer.com`. Adding `*` will enable all hostnames; adding `_` will disable all hostnames |
+| `CORSHOSTS` | hostname(s), or `_`, or empty | Set CORS* via the `Access-Control-Allow-Origin` header. If using a single hostname, only that hostname will be set. If using multiple comma-separated hostnames, the header will be set for "`*`" all hosts, not just those listed. If using "`_`", CORS will be hard-disabled |
 
 *) CORS prevents third-party websites from including linked data (API calls, images, etc.) from your own websites. This is implemented by the browser to prevent theft of your IP or properties. Sometimes, it is desirable to allow specific (or all, or no) third-party websites to access data from your sites, for example when adding the RainViewer API to VRS.
 Note - for VRS, if you are instructed to add CORS exceptions to your VRS Admin, please add those also to the `CORSHOSTS` parameter of the webproxy container.
