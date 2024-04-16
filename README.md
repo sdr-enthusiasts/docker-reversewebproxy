@@ -54,7 +54,7 @@ Once this is done, create a working directory and download the `docker-compose.y
 
 ```bash
 sudo mkdir -p -m 777 /opt/webproxy && cd /opt/webproxy
-wget https://raw.githubusercontent.com/kx1t/docker-reversewebproxy/main/docker-compose.yml
+wget https://raw.githubusercontent.com/sdr-enthusiasts/docker-reversewebproxy/main/docker-compose.yml
 ```
 
 You should EDIT the `docker-compose.yml` file included in this repository and configure it to your liking. See below for options.
@@ -179,10 +179,10 @@ The container supports a "basic" implementation of Basic Authentication. This is
 
 The container supports basic authentication for the local web page through the `LOCAL_CREDS` variable, as well as credentials for each of the `REVPROXY`d entries via the `REVPROXY` variable.
 
-| Parameter     | Values                | Description                                                                                                            |
-| ------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------- | -------------- |
+| Parameter     | Values                | Description |
+| ------------- | --------------------- | -------------- |
 | `AUTH`        | `ON` or anything else | If set to `ON`, Basic Authentication is enabled. If set to anything else or omitted, Basic Authentication is disabled. |
-| `LOCAL_CREDS` |                       | A list of credentials in the format `username1                                                                         | password1,username2 | password2,...` |
+| `LOCAL_CREDS` |                       | A list of credentials in the format `username1\|password1,username2\|password2,...` |
 | `REVPROXY`    |                       | A comma separated list in this format:                                                                                 |
 
 ```yaml
@@ -203,7 +203,7 @@ In some systems where IPV6 is disabled or not available, you may have to add thi
 ### Host your own web pages
 
 You can place HTML and other web files in `~/.webproxy/html`. An example `index.html` is already provided, and can be reached by browsing to the root URL of your system.
-At this time, features like `php` are not enabled. If you are interested in this, please file a feature request at [issues](https://github.com/kx1t/docker-reversewebproxy/issues).
+At this time, features like `php` are not enabled. If you are interested in this, please file a feature request at [issues](https://github.com/sdr-enthusiasts/docker-reversewebproxy/issues).
 Note -- the web server inside the container does NOT run as `root`, so you must make sure that there are read permissions for "all" (`chmod a+r`) for any files you place in the `html` directory.
 Feel free to create additional subdirectories if needed for your project.
 Also note -- the website may not be reachable if you redirected or proxied `/` to some other service.
@@ -315,7 +315,7 @@ docker restart webproxy
 
 The software packages and OS layers included in this project are used with permission under license terms that are distributed with these packages.
 
-The combination of these packages and any additional software written to combine and configure the Webproxy are Copyright 2021 by kx1t, and licensed under the GNU General Public License, version 3 or later. If you desire to use this software with a different license, please contact the author.
+The combination of these packages and any additional software written to combine and configure the Webproxy are Copyright 2021-2024 by Ramon F. Kolb (kx1t), and licensed under the GNU General Public License, version 3 or later. If you desire to use this software with a different license, please contact the author.
 
 Summary of License Terms
 This program is free software: you can redistribute it and/or modify it under the terms of
