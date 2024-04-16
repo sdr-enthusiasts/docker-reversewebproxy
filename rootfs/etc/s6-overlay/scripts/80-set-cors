@@ -28,7 +28,7 @@ fi
     if [[ $CORSHOSTS =~ "_" ]]; then
         echo "proxy_hide_header Access-Control-Allow-Origin;"
         echo 'add_header Access-Control-Allow-Origin _;'
-    elif grep -qs -e ',' <<< "$CORSHOSTS"; then
+    elif [[ $CORSHOSTS =~ "*" ]] || grep -qs -e ',' <<< "$CORSHOSTS"; then
         echo "proxy_hide_header Access-Control-Allow-Origin;"
         echo 'add_header Access-Control-Allow-Origin *;'
     else
