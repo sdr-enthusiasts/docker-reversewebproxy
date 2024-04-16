@@ -24,9 +24,11 @@ readarray -d ',' -t cors_array <<< "$CORSHOSTS"
 for cors in "${cors_array[@]}"
 do
     if [[ -n "${cors}" ]]; then
-        printf "add_header Access-Control-Allow-Origin %s;\n" "${cors}" >> /run/nginx/cors_headers.conf
+
+        printf "proxy_hide_header Access-Control-Allow-Origin;\n" >> /run/nginx/cors_headers.conf
+        printf "add_header Access-Control-Allow-Origin %s;\n" "${cors//$'\n'/}" >> /run/nginx/cors_headers.conf
         # shellcheck disable=SC2154
-        "${s6wrap[@]}" echo "Added CORS exception for ${cors}"
+        "${s6wrap[@]}" echo "Added CORS exception for ${cors//$'\n'/}"
     fi
 done
 exit 0
