@@ -1,6 +1,6 @@
-<img align="right" src="https://raw.githubusercontent.com/sdr-enthusiasts/sdr-enthusiast-assets/main/SDR%20Enthusiasts.svg" height="300">
-
 # Docker-ReverseWebProxy
+
+<img align="right" src="https://raw.githubusercontent.com/sdr-enthusiasts/sdr-enthusiast-assets/main/SDR%20Enthusiasts.svg" height="300">
 
 ## Table of Contents
 
@@ -70,12 +70,14 @@ The Webproxy can be entirely configured in the `docker-compose.yml`, or, optiona
 
 ### General parameters
 
-A "_" means that this is the default value
 | Parameter | Values | Description |
 |-----------|--------|-------------|
 | `AUTOGENERATE` | `ON`, `OFF` | Determines if the system will use the `REVPROXY` and `REDIRECT` settings of the `docker-compose.yml` file (`ON`), or a manually generated `locations.conf` file (`OFF`). |
 | `VERBOSELOG` | `ON`, `OFF` | Determines if the internal web service Access and Error logs will be written to the Docker log (accessible with `docker logs webproxy`) (`ON`), or that logging will be switched `OFF` |
-| `CORSHOSTS` | list of hosts | Comma separated list of host/DNS names of CORS exceptions. These are needed if a website calls into an external API, for example when adding the RainViewer overlay to VRS. Most browsers block this unless the external API target is added to this variable. Default is empty. Example value you can use to add the RainViewer API: `api.rainviewer.com`. Adding `"_"` will disable CORS protection for all hostnames; this is not recommended! |
+| `CORSHOSTS` | hostname(s), or `_`, or empty | Set CORS* via the `Access-Control-Allow-Origin` header. If using a single hostname, only that hostname will be set. If using multiple comma-separated hostnames, the header will be set for "`*`" all hosts, not just those listed. If using "`_`", CORS will be hard-disabled |
+
+*) CORS prevents third-party websites from including linked data (API calls, images, etc.) from your own websites. This is implemented by the browser to prevent theft of your IP or properties. Sometimes, it is desirable to allow specific (or all, or no) third-party websites to access data from your sites, for example when adding the RainViewer API to VRS.
+Note - for VRS, if you are instructed to add CORS exceptions to your VRS Admin, please add those also to the `CORSHOSTS` parameter of the webproxy container.
 
 You may have to adjust your `port:` and your `volumes:` mapping to your liking, especially if you are not running on the Raspberry Pi standard `pi` account.
 
