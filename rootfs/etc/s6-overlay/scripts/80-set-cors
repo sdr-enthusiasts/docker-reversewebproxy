@@ -27,12 +27,10 @@ fi
     echo "proxy_hide_header Access-Control-Allow-Origin;"
     if [[ $CORSHOSTS =~ "_" ]]; then
         echo 'add_header Access-Control-Allow-Origin _;'
-    elif [[ $CORSHOSTS =~ "*" ]] || grep -qs -e ',' <<< "$CORSHOSTS"; then
+    elif [[ $CORSHOSTS =~ "*"|, ]]; then
         echo 'add_header Access-Control-Allow-Origin *;'
     else
-        echo "proxy_hide_header Vary;"
         echo 'add_header Access-Control-Allow-Origin '"${CORSHOSTS//$'\n'/}"';'
-        echo 'add_header Vary Origin;'
     fi
 } > /run/nginx/cors_headers.conf
 
