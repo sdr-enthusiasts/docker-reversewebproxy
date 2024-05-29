@@ -214,7 +214,7 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
 The container can create a publicly available Access Report, controlled by the following parameter:
 | Parameter     | Values                | Description |
 | ------------- | --------------------- | -------------- |
-| `ACCESS_REPORT_PAGE` | `on`, `1`, `true`, `yes`<br/>`off`, `0`, `false`, no, <blank><br/>`pagename.html` | If set to `on` or an equivalent value, an Access Report will be generated at <http(s)://myservername/access-report.html>. If set to a page name, an Access Report will be generated at <http(s)://myservername/`pagename.html`>. If set to `off` or an equivalent value (or if left empty (default)), then no Access Reports will be generated. |
+| `ACCESS_REPORT_PAGE` | `on`, `1`, `true`, `yes`<br/>`off`, `0`, `false`, no, <blank><br/>`pagename.html` | If set to `on` or an equivalent value, an Access Report will be generated at `http(s)://myservername/access-report.html`. If set to a page name, an Access Report will be generated at `http(s)://myservername/pagename.html`. If set to `off` or an equivalent value (or if left empty (default)), then no Access Reports will be generated. |
 | `ACCESS_REPORT_FREQUENCY` | `300` (secs, default) | Value, in seconds, of refresh frequency of the Access Report. To reduce CPU effort and Disk IO, it's recommended not to set this to less than 60 secs |
 
 This access report is created using a tool called [GoAccess](https://goaccess.io/)
