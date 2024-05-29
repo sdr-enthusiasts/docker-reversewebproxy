@@ -4,11 +4,20 @@
 source /scripts/common
 
 "${s6wrap[@]}" echo "Started as an s6 service"
+ACCESS_REPORT_FREQUENCY="${ACCESS_REPORT_FREQUENCY:-60}"
+ACCESSLOG="/var/log/nginx/access.log"
+DBDIR="/run/nginx/.goaccess"
 
 if [[ -z "$ACCESS_REPORT_PAGE" ]] || chk_disabled "$ACCESS_REPORT_PAGE"; then
-    # feature not enabled - remove any remnant reports and sleep forevah
-    rm -f "/run/nginx/html/$REPORTFILE"
+    "${s6wrap[@]}" echo "ACCESS_REPORT_PAGE not enabled - continuing without it"
     exec sleep infinity
+fi
+
+mkdir -p "$DBDIR"
+if compgen -G "$DBDIR/*.dxb" > /dev/null; then
+   BACKUP_AVAIL=true
+else
+   unset BACKUP_AVAIL
 fi
 
 if ! chk_enabled "$ACCESS_REPORT_PAGE"; then
@@ -17,18 +26,16 @@ else
     REPORTFILE="access-report.html"
 fi
 
-ACCESSLOG="/var/log/nginx/access.log"
-
 # wait until the access log is available
 while [[ ! -f "$ACCESSLOG" ]]; do
     sleep 1
 done
 
+"${s6wrap[@]}" echo "Access Reporting Service started. Your report is available at /$REPORTFILE ."
+
 while true
 do
-    "${s6wrap[@]}" echo "Access Reporting Service started. Your report is available at /$REPORTFILE ."
-    goaccess "$ACCESSLOG" -o "/run/nginx/html/$REPORTFILE" --log-format=COMBINED --real-time-html
-    "${s6wrap[@]}" echo "Access Reporting Service has exited."
-    sleep 10
-    "${s6wrap[@]}" echo "Restarting the Access Reporting Service now..."
+    # shellcheck disable=SC2046
+    nice -n 19 goaccess $(echo "$ACCESSLOG -o /run/nginx/html/$REPORTFILE --log-format=COMBINED -d --db-path=$DBDIR --persist ${BACKUP_AVAIL:+--restore}"|xargs) >/dev/null
+    sleep "$ACCESS_REPORT_FREQUENCY" & wait $!
 done
