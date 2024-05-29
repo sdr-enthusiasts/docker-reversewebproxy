@@ -1,0 +1,32 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash disable=SC2154,SC1091
+
+source /scripts/common
+
+"${s6wrap[@]}" echo "Started as an s6 service"
+
+if [[ -z "$ACCESS_REPORT_PAGE" ]] || chk_disabled "$ACCESS_REPORT_PAGE"; then
+    exec sleep infinity
+fi
+
+if ! chk_enabled "$ACCESS_REPORT_PAGE"; then
+    REPORTFILE="$ACCESS_REPORT_PAGE"
+else
+    REPORTFILE="access-report.html"
+fi
+
+ACCESSLOG="/var/log/nginx/access.log"
+
+# wait until the access log is available
+while [[ ! -f "$ACCESSLOG" ]]; do
+    sleep 1
+done
+
+while true
+do
+    "${s6wrap[@]}" echo "Access Reporting Service started. Your report is available at /$REPORTFILE ."
+    goaccess "$ACCESSLOG" -o "/run/nginx/html/$REPORTFILE" --log-format=COMBINED --real-time-html
+    "${s6wrap[@]}" echo "Access Reporting Service has exited."
+    sleep 10
+    "${s6wrap[@]}" echo "Restarting the Access Reporting Service now..."
+done

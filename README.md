@@ -18,6 +18,7 @@
     - [Basic Authentication](#basic-authentication)
     - [Advanced Setup](#advanced-setup)
     - [Host your own web pages](#host-your-own-web-pages)
+      - [Access Report Page using `goaccess`](#access-report-page-using-goaccess)
       - [Automatic creation of web pages with geographic map of visitors](#automatic-creation-of-web-pages-with-geographic-map-of-visitors)
     - [Extras](#extras)
   - [Troubleshooting](#troubleshooting)
@@ -207,6 +208,15 @@ At this time, features like `php` are not enabled. If you are interested in this
 Note -- the web server inside the container does NOT run as `root`, so you must make sure that there are read permissions for "all" (`chmod a+r`) for any files you place in the `html` directory.
 Feel free to create additional subdirectories if needed for your project.
 Also note -- the website may not be reachable if you redirected or proxied `/` to some other service.
+
+#### Access Report Page using `goaccess`
+
+The container can create a publicly available Access Report, controlled by the following parameter:
+| Parameter     | Values                | Description |
+| ------------- | --------------------- | -------------- |
+| `ACCESS_REPORT_PAGE` | `on`, `1`, `true`, `yes`<br/>`off`, `0`, `false`, no, <blank><br/>`pagename.html` | If set to `on` or an equivalent value, an Access Report will be generated at <http(s)://myservername/access-report.html>. If set to a page name, an Access Report will be generated at <http(s)://myservername/`pagename.html`>. If set to `off` or an equivalent value (or if left empty (default)), then no Access Reports will be generated. |
+
+This access report is created using a tool called [GoAccess](https://goaccess.io/)
 
 #### Automatic creation of web pages with geographic map of visitors
 
