@@ -20,6 +20,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(geoip-database) && \
     KEPT_PACKAGES+=(iptables) && \
     KEPT_PACKAGES+=(jq) && \
+    TEMP_PACKAGES+=(gpg) && \
     # added for debugging
     KEPT_PACKAGES+=(procps nano aptitude netcat-openbsd libnginx-mod-http-echo) && \
     #
@@ -28,12 +29,19 @@ RUN set -x && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
     ${KEPT_PACKAGES[@]} \
     ${TEMP_PACKAGES[@]} && \
+    # Added for GoAccess server report - see https://goaccess.io/
+    mkdir -p /usr/share/keyrings && \
+    curl -sSL https://deb.goaccess.io/gnugpg.key | gpg --dearmor > /usr/share/keyrings/goaccess.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/goaccess.gpg arch=$(dpkg --print-architecture)] https://deb.goaccess.io/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/goaccess.list && \
+    apt-get update && \
+    apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
+        goaccess && \
     #
     # Clean up:
     apt-get remove -y ${TEMP_PACKAGES[@]} && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
-    rm -rf /src/* /tmp/* /var/lib/apt/lists/* && \
+    rm -rf /src/* /tmp/* /var/lib/apt/lists/* /usr/share/keyrings/goaccess.gpg && \
     #
     # Do some other stuff
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
