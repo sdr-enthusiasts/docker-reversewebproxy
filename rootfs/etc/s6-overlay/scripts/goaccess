@@ -14,7 +14,7 @@ if [[ -z "$ACCESS_REPORT_PAGE" ]] || chk_disabled "$ACCESS_REPORT_PAGE"; then
 fi
 
 mkdir -p "$DBDIR"
-if compgen -G "$DBDIR/*.dxb" > /dev/null; then
+if compgen -G "$DBDIR/*.db" > /dev/null; then
    BACKUP_AVAIL=true
 else
    unset BACKUP_AVAIL
