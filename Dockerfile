@@ -20,19 +20,22 @@ RUN set -x && \
     KEPT_PACKAGES+=(geoip-database) && \
     KEPT_PACKAGES+=(iptables) && \
     KEPT_PACKAGES+=(jq) && \
+    TEMP_PACKAGES+=(gpg) && \
     # added for debugging
     KEPT_PACKAGES+=(procps nano aptitude netcat-openbsd libnginx-mod-http-echo) && \
-    # Added for GoAccess server report - see https://goaccess.io/
-    mkdir -p /usr/share/keyrings && \
-    curl -sSL https://deb.goaccess.io/gnugpg.key | gpg --dearmor > /usr/share/keyrings/goaccess.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/goaccess.gpg arch=$(dpkg --print-architecture)] https://deb.goaccess.io/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/goaccess.list && \
-    KEPT_PACKAGES+=(goaccess) && \
     #
     # Install all these packages:
     apt-get update && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
     ${KEPT_PACKAGES[@]} \
     ${TEMP_PACKAGES[@]} && \
+    # Added for GoAccess server report - see https://goaccess.io/
+    mkdir -p /usr/share/keyrings && \
+    curl -sSL https://deb.goaccess.io/gnugpg.key | gpg --dearmor > /usr/share/keyrings/goaccess.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/goaccess.gpg arch=$(dpkg --print-architecture)] https://deb.goaccess.io/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/goaccess.list && \
+    apt-get update && \
+    apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
+        go-access && \
     #
     # Clean up:
     apt-get remove -y ${TEMP_PACKAGES[@]} && \
