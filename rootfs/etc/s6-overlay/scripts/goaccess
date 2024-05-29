@@ -6,6 +6,8 @@ source /scripts/common
 "${s6wrap[@]}" echo "Started as an s6 service"
 
 if [[ -z "$ACCESS_REPORT_PAGE" ]] || chk_disabled "$ACCESS_REPORT_PAGE"; then
+    # feature not enabled - remove any remnant reports and sleep forevah
+    rm -f "/run/nginx/html/$REPORTFILE"
     exec sleep infinity
 fi
 
