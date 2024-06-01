@@ -25,7 +25,7 @@ if [[ -n "$BLOCKBOT" ]] || { [[ -n "$BLOCKBOT_REMOTELIST" ]] && ! chk_disabled "
 
   BLOCKLIST="${BLOCKLIST// /}"
 
-  "${s6wrap[@]}" echo "Blocking these bots: $BLOCKBOT"
+  "${s6wrap[@]}" echo "Blocking these bots: $BLOCKLIST"
   { printf "map \$http_user_agent \$limit_bots {\n"
     printf "       default 0;\n"
     printf "       ~*(%s) 1;\n" "${BLOCKLIST// /}"
