@@ -25,6 +25,7 @@ if [[ -n "$BLOCKBOT" ]] || { [[ -n "$BLOCKBOT_REMOTELIST" ]] && ! chk_disabled "
   # shellcheck disable=SC2001
   BLOCKLIST="$(sed 's/,/|/g' <<< "$BLOCKLIST")"
   BLOCKLIST="${BLOCKLIST// /}"
+  BLOCKLIST="${BLOCKLIST//$'\n'/}"
 
   "${s6wrap[@]}" echo "Blocking these bots: $BLOCKLIST"
   { printf "map \$http_user_agent \$limit_bots {\n"
