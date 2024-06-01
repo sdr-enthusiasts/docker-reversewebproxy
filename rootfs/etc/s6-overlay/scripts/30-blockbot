@@ -22,7 +22,8 @@ if [[ -n "$BLOCKBOT" ]] || { [[ -n "$BLOCKBOT_REMOTELIST" ]] && ! chk_disabled "
     fi
     if [[ "${BLOCKLIST: -1}" == "," ]]; then BLOCKLIST="${BLOCKLIST::-1}"; fi
   fi
-
+  # shellcheck disable=SC2001
+  BLOCKLIST="$(sed 's/,/|/g' <<< "$BLOCKLIST")"
   BLOCKLIST="${BLOCKLIST// /}"
 
   "${s6wrap[@]}" echo "Blocking these bots: $BLOCKLIST"
