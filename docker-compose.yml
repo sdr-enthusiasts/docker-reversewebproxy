@@ -135,12 +135,6 @@ services:
       # 503 (service unavailable), etc - see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
       - BLOCKBOT_RESPONSECODE=403
       #
-      # BLOCKBOT_REMOTELIST indicates if we should get a list of blocked User Agent (sub)strings from a remote URL
-      # If set to yes/on/enabled, it will use the list available at https://github.com/sdr-enthusiasts/docker-reversewebproxy/blob/main/blockbot-ua-list
-      # If set to a URL, it will use the list at that URL (make sure you link to the "raw" file!)
-      # If omitted, empty, or set to no/off/disabled, it won't use a remote list
-      - BLOCKBOT_REMOTELIST=ENABLED
-      #
       # IPV6 indicates if IPV6 is enabled or disabled on the host and/or docker system.
       # If you disable IPV6 on your system, you may see a container error if you don't set this parameter to "OFF" or "DISABLED" (case insensitive).
       # If the parameter is omitted, the system will assume that IPV6 is enabled.
