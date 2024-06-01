@@ -10,7 +10,7 @@ source /scripts/common
 
 cp -f /root/manage_ipblock /usr/local/bin >/dev/null 2>&1
 
-if ! chk_enabled "$IPTABLES_BLOCK" || [[ -z "$BLOCKBOT" ]]; then
+if ! chk_enabled "$IPTABLES_BLOCK" || { [[ -z "$BLOCKBOT" ]] && { [[ -z "$BLOCKBOT_REMOTELIST" ]] || chk_disabled "$BLOCKBOT_REMOTELIST";}; }; then
   # shellcheck disable=SC2154
   "${s6wrap[@]}" echo "Bot blocking is not enabled. Continuing..."
   exit 0
