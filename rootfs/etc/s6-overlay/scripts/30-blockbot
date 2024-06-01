@@ -8,26 +8,11 @@ source /scripts/common
 mv -f /root/blockstats /usr/local/bin >/dev/null 2>&1
 mv -f /root/ipmap /usr/local/bin >/dev/null 2>&1
 
-if [[ -n "$BLOCKBOT" ]] || { [[ -n "$BLOCKBOT_REMOTELIST" ]] && ! chk_disabled "$BLOCKBOT_REMOTELIST"; }; then
+if [[ -n "$BLOCKBOT" ]]
+then
   # shellcheck disable=SC2001
   BLOCKLIST="$(sed 's/,/|/g' <<< "$BLOCKBOT")"
-  if [[ -n "$BLOCKBOT_REMOTELIST" ]] && ! chk_disabled "$BLOCKBOT_REMOTELIST"; then
-    if chk_enabled "$BLOCKBOT_REMOTELIST"; then
-      remote_url="https://raw.githubusercontent.com/sdr-enthusiasts/docker-reversewebproxy/main/blockbot-ua-list"
-    else
-      remote_url="$BLOCKBOT_REMOTELIST"
-    fi
-    if BLOCKLIST="$BLOCKLIST,$(curl -ssL "$remote_url")" && [[ "${BLOCKLIST:0:1}" == "," ]]; then
-      BLOCKLIST="${BLOCKLIST:1}"
-    fi
-    if [[ "${BLOCKLIST: -1}" == "," ]]; then BLOCKLIST="${BLOCKLIST::-1}"; fi
-  fi
-  # shellcheck disable=SC2001
-  BLOCKLIST="$(sed 's/,/|/g' <<< "$BLOCKLIST")"
-  BLOCKLIST="${BLOCKLIST// /}"
-  BLOCKLIST="${BLOCKLIST//$'\n'/}"
-
-  "${s6wrap[@]}" echo "Blocking these bots: $BLOCKLIST"
+  "${s6wrap[@]}" echo "Blocking these bots: $BLOCKBOT"
   { printf "map \$http_user_agent \$limit_bots {\n"
     printf "       default 0;\n"
     printf "       ~*(%s) 1;\n" "${BLOCKLIST// /}"
