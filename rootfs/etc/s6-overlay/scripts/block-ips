@@ -36,6 +36,11 @@ fi
     # Read access log and process any GEOIP or BLOCKBOT response codes. Note - also naturally occurring responses with these codes are picked up:
     awk -v "g=$GEOIP_RESPONSECODE" -v "b=$BLOCKBOT_RESPONSECODE" -v "d=$(date +%s)" '{if ($9 == b || $9 == g) print $1 " " $9 " " d}' /var/log/nginx/access.log >> /run/nginx/ip-blocklist
 
+    # Remove IPs that don't have user agents:
+    if chk_enabled "$IPTABLES_BLOCK_NO_USERAGENT"; then
+      awk  -v "d=$(date +%s)" 'BEGIN {FS="[[:space:]]*[][\"][[:space:]]*"; OFS = ","}{if ($8 == "" || $8 == "-") {sub(" - -","",$1); print $1 " no_user_agent " d}}' /var/log/nginx/access.log | sort -u >> /run/nginx/ip-blocklist
+    fi
+
     # Read $BLOCKBOT into an array and remove all leading/trailing spaces:
     readarray -d "," -t BOT_ARRAY <<< "$BLOCKBOT"
     for ((n=0; n<${#BOT_ARRAY[*]}; n++))
