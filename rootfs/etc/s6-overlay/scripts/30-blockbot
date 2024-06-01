@@ -8,8 +8,7 @@ source /scripts/common
 mv -f /root/blockstats /usr/local/bin >/dev/null 2>&1
 mv -f /root/ipmap /usr/local/bin >/dev/null 2>&1
 
-if [[ -n "$BLOCKBOT" ]]
-then
+if [[ -n "$BLOCKBOT" ]] || { [[ -n "$BLOCKBOT_REMOTELIST" ]] && ! chk_disabled "$BLOCKBOT_REMOTELIST"; }; then
   # shellcheck disable=SC2001
   BLOCKLIST="$(sed 's/,/|/g' <<< "$BLOCKBOT")"
   if [[ -n "$BLOCKBOT_REMOTELIST" ]] && ! chk_disabled "$BLOCKBOT_REMOTELIST"; then
