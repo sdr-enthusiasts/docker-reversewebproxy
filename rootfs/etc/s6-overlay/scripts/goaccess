@@ -36,6 +36,6 @@ done
 while true
 do
     # shellcheck disable=SC2046
-    nice -n 19 goaccess $(echo "$ACCESSLOG -o /run/nginx/html/$REPORTFILE --log-format=COMBINED -d --db-path=$DBDIR --persist ${BACKUP_AVAIL:+--restore}"|xargs) >/dev/null
+    "${s6wrap[@]}" nice -n 19 goaccess $(echo "$ACCESSLOG -o /run/nginx/html/$REPORTFILE --log-format=COMBINED -d --db-path=$DBDIR --persist ${BACKUP_AVAIL:+--restore}"|xargs) >/dev/null
     sleep "$ACCESS_REPORT_FREQUENCY" & wait $!
 done
