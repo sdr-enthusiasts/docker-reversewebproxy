@@ -26,6 +26,12 @@ else
     REPORTFILE="access-report.html"
 fi
 
+if chk_disabled "$ACCESS_REPORT_RESOLVE"; then
+    RESOLVE=""
+else
+    RESOLVE="-d"
+fi
+
 # wait until the access log is available
 while [[ ! -f "$ACCESSLOG" ]]; do
     sleep 1
@@ -36,6 +42,6 @@ done
 while true
 do
     # shellcheck disable=SC2046
-    "${s6wrap[@]}" nice -n 19 goaccess $(echo "$ACCESSLOG -o /run/nginx/html/$REPORTFILE --log-format=COMBINED -d --db-path=$DBDIR --persist ${BACKUP_AVAIL:+--restore}"|xargs)
+    "${s6wrap[@]}" nice -n 19 goaccess $(echo "$ACCESSLOG -o /run/nginx/html/$REPORTFILE --log-format=COMBINED $RESOLVE --db-path=$DBDIR --persist ${BACKUP_AVAIL:+--restore}"|xargs)
     sleep "$ACCESS_REPORT_FREQUENCY" & wait $!
 done
