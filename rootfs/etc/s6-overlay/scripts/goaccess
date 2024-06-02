@@ -43,5 +43,6 @@ while true
 do
     # shellcheck disable=SC2046
     "${s6wrap[@]}" nice -n 19 goaccess $(echo "$ACCESSLOG -o /run/nginx/html/$REPORTFILE --log-format=COMBINED $RESOLVE --db-path=$DBDIR --persist ${BACKUP_AVAIL:+--restore}"|xargs)
+    "${s6wrap[@]}" echo "Done!"
     sleep "$ACCESS_REPORT_FREQUENCY" & wait $!
 done
