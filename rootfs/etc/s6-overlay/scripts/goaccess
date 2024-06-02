@@ -31,11 +31,11 @@ while [[ ! -f "$ACCESSLOG" ]]; do
     sleep 1
 done
 
-"${s6wrap[@]}" echo "Access Reporting Service started. Your report is available at /$REPORTFILE ."
+"${s6wrap[@]}" echo "Access Reporting Service started. Your report is available at /$REPORTFILE and is updated every $ACCESS_REPORT_FREQUENCY secs."
 
 while true
 do
     # shellcheck disable=SC2046
-    "${s6wrap[@]}" nice -n 19 goaccess $(echo "$ACCESSLOG -o /run/nginx/html/$REPORTFILE --log-format=COMBINED -d --db-path=$DBDIR --persist ${BACKUP_AVAIL:+--restore}"|xargs) >/dev/null
+    "${s6wrap[@]}" nice -n 19 goaccess $(echo "$ACCESSLOG -o /run/nginx/html/$REPORTFILE --log-format=COMBINED -d --db-path=$DBDIR --persist ${BACKUP_AVAIL:+--restore}"|xargs)
     sleep "$ACCESS_REPORT_FREQUENCY" & wait $!
 done
