@@ -11,8 +11,30 @@ mv -f /root/ipmap /usr/local/bin >/dev/null 2>&1
 if [[ -n "$BLOCKBOT" ]]
 then
   # shellcheck disable=SC2001
-  BLOCKLIST="$(sed 's/,/|/g' <<< "$BLOCKBOT")"
-  "${s6wrap[@]}" echo "Blocking these bots: $BLOCKBOT"
+
+  readarray -t -d ',' BLIST_ARR <<< "$BLOCKBOT"
+  for index in "${!BLIST_ARR[@]}"; do
+    if [[ "${BLIST_ARR[index]:0:4}" == "http" ]]; then
+      # replace any entry that starts with http by content of the equivalent URL
+      if extra_args="$(curl -sSLf "${BLIST_ARR[index]}" 2>/dev/null)" || [[ "${extra_args:0:1}" == "<" ]] ; then 
+        extra_args="${extra_args//$'\n'/,}"
+        readarray -t -d ',' extra_args_arr <<< "$extra_args"
+        "${s6wrap[@]}" echo "Loaded additional BOTBLOCK terms from ${BLIST_ARR[index]}"
+        unset BLIST_ARR[index]
+        BLIST_ARR+=( "${extra_args_arr[@]}" )
+      else
+        "${s6wrap[@]}" echo "Skipping bad URL in BOTBLOCK list: ${BLIST_ARR[index]}"
+        unset BLIST_ARR[index]
+      fi
+    fi
+  done
+
+  BLOCKLIST="$(printf "%s|" "${BLIST_ARR[@]}")"  # print BLIST_ARR with OR separator to BLOCKLIST
+  BLOCKLIST="${BLOCKLIST//$'\n'/|}"  # replace any newlines that may have sneaked in with a OR separator
+  BLOCKLIST="${BLOCKLIST//||/|}"  # replace any double OR separators with a single OR
+  while [[ "${BLOCKLIST: -1}" == "|" ]]; do BLOCKLIST="${BLOCKLIST::-1}"; done  # remove any left-over OR separators from the end of the string
+
+  "${s6wrap[@]}" echo "Blocking these bots: $BLOCKLIST"
   { printf "map \$http_user_agent \$limit_bots {\n"
     printf "       default 0;\n"
     printf "       ~*(%s) 1;\n" "${BLOCKLIST// /}"
