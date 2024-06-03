@@ -20,12 +20,11 @@ then
         extra_args="${extra_args//$'\n'/,}"
         readarray -t -d ',' extra_args_arr <<< "$extra_args"
         "${s6wrap[@]}" echo "Loaded additional BOTBLOCK terms from ${BLIST_ARR[index]}"
-        unset BLIST_ARR[index]
         BLIST_ARR+=( "${extra_args_arr[@]}" )
       else
         "${s6wrap[@]}" echo "Skipping bad URL in BOTBLOCK list: ${BLIST_ARR[index]}"
-        unset BLIST_ARR[index]
       fi
+      unset BLIST_ARR[index]
     fi
   done
 
