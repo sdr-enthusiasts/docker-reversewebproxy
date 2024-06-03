@@ -246,10 +246,10 @@ The following related parameters can be set:
 ### Extras
 
 - Get a URL to a geographic map of all IPs that hit your WebProxy by typing:
-
-```bash
-docker exec -it webproxy ipmap
-```
+  
+  ```bash
+  docker exec -it webproxy ipmap
+  ```
 
 (Prerequisites: either of these parameters must be set: `IPTABLES_BLOCK=ENABLED` (recommended) or `VERBOSELOG=file` (works but not recommended)
 
@@ -283,7 +283,7 @@ docker exec -it webproxy ipmap
 
   - Solution: Your system doesn't support IPV6 while the container expects this. Solve it by adding this parameter to your `docker-compose.yml`: `IPV6=DISABLED`
 - Issue: with `IPTABLES_BLOCK` switched on, it looks like the webproxy is trying to block large lists of ip addresses, even though none (or few) of these addresses have hit the system in the last 60 seconds
-  - Solution: You probably didn't add the `NET_ADMIN` capacity to the container. You need to do this in your `docker-compose.yml` file and then recreate the container. See above and see [`docker-compose.yml'](docker-compose.yml) for an example.
+  - Solution: You probably didn't add the `NET_ADMIN` capacity to the container. You need to do this in your `docker-compose.yml` file and then recreate the container. See above and see [`docker-compose.yml`](docker-compose.yml) for an example.
 - Issue: I'm getting emails from `letsencrypt.com` about the pending expiration of my SSL certificates
   - Solution: ignore them. As long as the container is running and SSL is enabled, the certificates are checked daily for pending expiration and will be renewed 1 month before that date. Sometimes, letsencrypt.com gets confused about the expiration dates and thinks it's earlier than is really the case. You can always check this for yourself by looking at the container logs, or by running this command: `docker exec -it certbot certificates`
 - Issue: when adding new URLs to a system that deployment has SSL certifications, the logs show messages that requesting a certificate for the new URL failed because the user should indicate which of (multiple) accounts should be used.
