@@ -62,7 +62,7 @@ fi
     then
       while read -ra line
       do
-        if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! grep -f /run/nginx/ip-allowlist >/dev/null 2>&1 <<< "${line[0]}" && ! iptables -C INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
+        if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! grep -q "${line[0]}" /run/nginx/ip-allowlist && ! iptables -C INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
         then
           iptables -I INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
           blocktable+=("${line[0]}")
@@ -88,7 +88,7 @@ fi
            && [[ "${line[1]}" != "manual_add" ]] \
            && (( line[2] > 0 )) \
            && (( line[2] + IPJAILTIME < $(date +%s) )) \
-           || grep -f /run/nginx/ip-allowlist >/dev/null 2>&1 <<< "${line[0]}"
+           || grep -q "${line[0]}" /run/nginx/ip-allowlist
         then
           sed -i '/^'"${line[0]}"'/d' /run/nginx/ip-blocklist
           iptables -D INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
