@@ -215,8 +215,9 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
 The container can create a publicly available Access Report, controlled by the following parameter:
 | Parameter     | Values                | Description |
 | ------------- | --------------------- | -------------- |
-| `ACCESS_REPORT_PAGE` | `on`, `1`, `true`, `yes`<br/>`off`, `0`, `false`, no, <blank><br/>`pagename.html` | If set to `on` or an equivalent value, an Access Report will be generated at `http(s)://myservername/access-report.html`. If set to a page name, an Access Report will be generated at `http(s)://myservername/pagename.html`. If set to `off` or an equivalent value (or if left empty (default)), then no Access Reports will be generated. |
+| `ACCESS_REPORT_PAGE` | `on`/`1`/`true`/`yes`<br/>`off`/`0`/`false`/`no`/<blank><br/>`pagename.html` | If set to `on` or an equivalent value, an Access Report will be generated at `http(s)://myservername/access-report.html`. If set to a page name, an Access Report will be generated at `http(s)://myservername/pagename.html`. If set to `off` or an equivalent value (or if left empty (default)), then no Access Reports will be generated. |
 | `ACCESS_REPORT_FREQUENCY` | `300` (secs, default) | Value, in seconds, of refresh frequency of the Access Report. To reduce CPU effort and Disk IO, it's recommended not to set this to less than 60 secs |
+| `ACCESS_REPORT_RESOLVE` | `on`/`1`/`true`/`yes`/<blank><br/>`off`/`0`/`false`/`no` | If left blank (default) or set to `on` or an equivalent value, the Access Report will attempt to resolve any external IP addresses to a domain name. If set to `off` or an equivalent value, the Access Report will not try to resolve any IP addresses. If you have a busy webserver and run on a machine that is either not too fast, or has a slow DNS resolver, you may see that your Access Report page refreshes very slowly or not at all. In this case, please set this parameter to `off` |
 
 This access report is created using a tool called [GoAccess](https://goaccess.io/)
 
