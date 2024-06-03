@@ -25,7 +25,7 @@ then
         "${s6wrap[@]}" echo "Loaded additional BOTBLOCK terms from ${BLIST_ARR[index]}"
         BLIST_ARR+=( "${extra_args_arr[@]}" )
       else
-        "${s6wrap[@]}" echo "Skipping bad URL in BOTBLOCK list: ${BLIST_ARR[index]}"
+        "${s6wrap[@]}" echo "Skipping bad URL in BOTBLOCK list: \"${BLIST_ARR[index]}\" (\"$extra_args\")"
       fi
       unset BLIST_ARR[index]
     fi
