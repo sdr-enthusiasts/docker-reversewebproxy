@@ -289,26 +289,26 @@ docker exec -it webproxy ipmap
 - Issue: when adding new URLs to a system that deployment has SSL certifications, the logs show messages that requesting a certificate for the new URL failed because the user should indicate which of (multiple) accounts should be used.
   - Solution: This is caused by certificates that have been added to `webproxy` at different points in time. To fix it, back up any web pages that are directly served by the container, and recreate the entire setup. Please note that doing this more than 5 times in a week will lock you out and prevent you from recreating existing certificates for up to a week, so USE THIS SOLUTION SPARINGLY. The solution assumes that the container name is `webproxy` and that its mapped working volume is `/opt/webproxy/webproxy` . If this is different, you may have to adapt the commands accordingly. It's preferable to feed the script line by line rather than all at once, so you can monitor the outcome.
 
-```bash
-cd /top/webproxy  # go to the home directory
-docker stop webproxy    # stop the webproxy container
-
-# Back up the web pages and any custom configuration. Sudo is used to ensure also closed directories are backed up
-# Only of the backup is successful, delete the working directory
-sudo tar zcvf web-backup.tgz webproxy/html webproxy/locations.conf && sudo rm -rf webproxy
-
-# Recreate the webproxy. Adapt the location of your "docker-compose.yml" as needed
-docker compose up -d --force-recreate webproxy
-
-# Check in the logs that the issue is fixed:
-sleep 30 && docker logs webproxy
-
-# Restore the files and restart the container once more to ensure the locations.conf file is applied
-sudo tar zxvf web-backup.tgz
-docker restart webproxy
-
-# You can now remove the "web-backup.tgz" file, or save it as a backup of your website.
-```
+    ```bash
+    cd /top/webproxy  # go to the home directory
+    docker stop webproxy    # stop the webproxy container
+    
+    # Back up the web pages and any custom configuration. Sudo is used to ensure also closed directories are backed up
+    # Only of the backup is successful, delete the working directory
+    sudo tar zcvf web-backup.tgz webproxy/html webproxy/locations.conf && sudo rm -rf webproxy
+    
+    # Recreate the webproxy. Adapt the location of your "docker-compose.yml" as needed
+    docker compose up -d --force-recreate webproxy
+    
+    # Check in the logs that the issue is fixed:
+    sleep 30 && docker logs webproxy
+    
+    # Restore the files and restart the container once more to ensure the locations.conf file is applied
+    sudo tar zxvf web-backup.tgz
+    docker restart webproxy
+    
+    # You can now remove the "web-backup.tgz" file, or save it as a backup of your website.
+    ```
 
 ## Acknowledgements
 
