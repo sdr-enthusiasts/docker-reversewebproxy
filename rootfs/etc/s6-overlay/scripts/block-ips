@@ -84,6 +84,7 @@ fi
       while read -ra line
       do
         if [[ -n "${line[2]}" ]] \
+           && [[ -n "${line[0]}" ]] \
            && [[ "${line[0]:0:1}" != "#" ]] \
            && [[ "${line[1]}" != "manual_add" ]] \
            && (( line[2] > 0 )) \
