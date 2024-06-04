@@ -89,7 +89,7 @@ fi
            && [[ "${line[1]}" != "manual_add" ]] \
            && (( line[2] > 0 )) \
            && (( line[2] + IPJAILTIME < $(date +%s) )) \
-           || grep -q "${line[0]}" /run/nginx/ip-allowlist
+           || { [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && grep -q "${line[0]}" /run/nginx/ip-allowlist; }
         then
           sed -i '/^'"${line[0]}"'/d' /run/nginx/ip-blocklist
           iptables -D INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
@@ -97,8 +97,7 @@ fi
         fi
       done < /tmp/ip-blocklist
       rm -f /tmp/ip-blocklist
-      if [[ "${#deletes[*]}" -gt 0 ]]
-      then
+      if [[ "${#deletes[*]}" -gt 0 ]]; then
         "${s6wrap[@]}" echo "These ${#deletes[@]} IP(s) have timed out and have been removed from the Block List: ${deletes[@]}. Currently, there are $(sed -e '/^$/d ; /^#/d' /run/nginx/ip-blocklist |wc -l) blocked IP addresses."
       fi
     fi
