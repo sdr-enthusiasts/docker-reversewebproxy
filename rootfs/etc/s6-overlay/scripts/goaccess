@@ -14,7 +14,7 @@ if [[ -z "$ACCESS_REPORT_PAGE" ]] || chk_disabled "$ACCESS_REPORT_PAGE"; then
 fi
 
 mkdir -p "$DBDIR"
-if compgen -G "$DBDIR/*.dxb" > /dev/null; then
+if compgen -G "$DBDIR/*.db" > /dev/null; then
    BACKUP_AVAIL=true
 else
    unset BACKUP_AVAIL
@@ -26,16 +26,23 @@ else
     REPORTFILE="access-report.html"
 fi
 
+if chk_disabled "$ACCESS_REPORT_RESOLVE"; then
+    RESOLVE=""
+else
+    RESOLVE="-d"
+fi
+
 # wait until the access log is available
 while [[ ! -f "$ACCESSLOG" ]]; do
     sleep 1
 done
 
-"${s6wrap[@]}" echo "Access Reporting Service started. Your report is available at /$REPORTFILE ."
+"${s6wrap[@]}" echo "Access Reporting Service started. Your report is available at /$REPORTFILE and is updated every $ACCESS_REPORT_FREQUENCY secs."
 
 while true
 do
     # shellcheck disable=SC2046
-    nice -n 19 goaccess $(echo "$ACCESSLOG -o /run/nginx/html/$REPORTFILE --log-format=COMBINED -d --db-path=$DBDIR --persist ${BACKUP_AVAIL:+--restore}"|xargs) >/dev/null
+    "${s6wrap[@]}" nice -n 19 goaccess $(echo "$ACCESSLOG -o /run/nginx/html/$REPORTFILE --log-format=COMBINED $RESOLVE --db-path=$DBDIR --persist ${BACKUP_AVAIL:+--restore}"|xargs)
+    "${s6wrap[@]}" echo "Done!"
     sleep "$ACCESS_REPORT_FREQUENCY" & wait $!
 done

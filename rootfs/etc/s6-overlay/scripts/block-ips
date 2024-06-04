@@ -5,6 +5,8 @@
 source /scripts/common
 
 SLEEPTIME=60
+CHECK_EXT_IP_IVAL=1500
+last_ext_ip_check="$(date +%s)"
 
 # check if the IPTABLES_BLOCK is not enabled and if so, stop execution of this service:
 if ! chk_enabled "$IPTABLES_BLOCK" || [[ -z "$BLOCKBOT" ]]; then
@@ -16,10 +18,28 @@ fi
 
 while true
 do
+# Once every $CHECK_EXT_IP_IVAL secs, check if the external IP address is still the same, and add it to the allow-list if needed
+if (( $(date +%s) > last_ext_ip_check + CHECK_EXT_IP_IVAL )); then
+  extip="$(curl -sSL ipinfo.io/ip)"
+  if [[ -n "$extip" ]]; then
+    last_ext_ip_check="$(date +%s)"
+    if [[ -f /run/nginx/ip-allowlist ]] && grep -q "#external-ip" /run/nginx/ip-allowlist; then
+      sed -i 's/^.*\(\s\+#external-ip\)$/'"$extip"'\1/g' /run/nginx/ip-allowlist
+    else
+      echo "$extip #external-ip" >> /run/nginx/ip-allowlist
+    fi
+  fi
+fi
+
   # Do stuff if the access log file exists. Sometimes, it doesn't exist if there isn't much traffic
   if [[ -f /var/log/nginx/access.log ]]; then
     # Read access log and process any GEOIP or BLOCKBOT response codes. Note - also naturally occurring responses with these codes are picked up:
     awk -v "g=$GEOIP_RESPONSECODE" -v "b=$BLOCKBOT_RESPONSECODE" -v "d=$(date +%s)" '{if ($9 == b || $9 == g) print $1 " " $9 " " d}' /var/log/nginx/access.log >> /run/nginx/ip-blocklist
+
+    # Remove IPs that don't have user agents:
+    if chk_enabled "$IPTABLES_BLOCK_NO_USERAGENT"; then
+      awk  -v "d=$(date +%s)" 'BEGIN {FS="[[:space:]]*[][\"][[:space:]]*"; OFS = ","}{if ($8 == "" || $8 == "-") {sub(" - -","",$1); print $1 " no_user_agent " d}}' /var/log/nginx/access.log | sort -u >> /run/nginx/ip-blocklist
+    fi
 
     # Read $BLOCKBOT into an array and remove all leading/trailing spaces:
     readarray -d "," -t BOT_ARRAY <<< "$BLOCKBOT"
@@ -42,7 +62,7 @@ do
     then
       while read -ra line
       do
-        if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! grep -f /run/nginx/ip-allowlist >/dev/null 2>&1 <<< "${line[0]}" && ! iptables -C INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
+        if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! grep -q "${line[0]}" /run/nginx/ip-allowlist && ! iptables -C INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
         then
           iptables -I INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
           blocktable+=("${line[0]}")
@@ -68,7 +88,7 @@ do
            && [[ "${line[1]}" != "manual_add" ]] \
            && (( line[2] > 0 )) \
            && (( line[2] + IPJAILTIME < $(date +%s) )) \
-           || grep -f /run/nginx/ip-allowlist >/dev/null 2>&1 <<< "${line[0]}"
+           || grep -q "${line[0]}" /run/nginx/ip-allowlist
         then
           sed -i '/^'"${line[0]}"'/d' /run/nginx/ip-blocklist
           iptables -D INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1

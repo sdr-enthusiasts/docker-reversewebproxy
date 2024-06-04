@@ -143,6 +143,7 @@ services:
       # IPTABLES_BLOCK switches `iptables` based blocking of IP addresses on or off. Default when omitted = off.
       # See README.md for more explanation. Note -- in order for this to work, you MUST add the NET_ADMIN capacity to the container as shown below.
       - IPTABLES_BLOCK=ENABLED
+      - IPTABLES_BLOCK_NO_USERAGENT=ENABLED
       - IPJAILTIME=21600
     cap_add:
       - NET_ADMIN

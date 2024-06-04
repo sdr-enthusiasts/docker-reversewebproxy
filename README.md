@@ -19,6 +19,7 @@
     - [Advanced Setup](#advanced-setup)
     - [Host your own web pages](#host-your-own-web-pages)
       - [Access Report Page using `goaccess`](#access-report-page-using-goaccess)
+      - [Access Report Page using `goaccess`](#access-report-page-using-goaccess)
       - [Automatic creation of web pages with geographic map of visitors](#automatic-creation-of-web-pages-with-geographic-map-of-visitors)
     - [Extras](#extras)
   - [Troubleshooting](#troubleshooting)
@@ -169,8 +170,9 @@ Note that the `IPTABLES_BLOCK` feature enables logging to disk (specifically, `/
 
 | Parameter              | Values                                            | Description                                                                                                                                                                                                 |
 | ---------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `IPTABLES_BLOCK`       | `ON`/`ENABLED` or `OFF`/`DISABLED`/blank          | If enabled, any IP address match to `GEOIP_RESPONSECODE` or `BLOCKBOT_RESPONSECODE` will be blocked using `iptables`. If disabled or omitted, `iptables` blocking won't be used.                            |
-| `IPTABLES_JAILTIME`    | time in seconds; `0` (default) means forever      | The time that an IP Address will remain blocked. If omitted or set to `0`, blocked IP addresses will be blocked in perpetuity, or at least until the IP address is manually removed from the IP Block List. |
+| `IPTABLES_BLOCK`       | `ON`/`ENABLED` or `OFF`/`DISABLED`/blank          | If enabled, any IP address match to `GEOIP_RESPONSECODE` or `BLOCKBOT_RESPONSECODE` will be blocked using `iptables`. If disabled or omitted, `iptables` blocking won't be used                            |
+| `IPTABLES_BLOCK_NO_USERAGENT` | `ON`/`ENABLED` or `OFF`/`DISABLED`/blank | If enabled, requests from IP addresses that don't contain a User Agent will be blocked |
+| `IPTABLES_JAILTIME`    | time in seconds; `0` (default) means forever      | The time that an IP Address will remain blocked. If omitted or set to `0`, blocked IP addresses will be blocked in perpetuity, or at least until the IP address is manually removed from the IP Block List |
 | `LOGROTATE_INTERVAL`   | time in seconds; default value `3600`             | The time between each run of of log rotation for `/var/log/nginx/access.log` and `/var/log/nginx/error.lo`g                                                                                                 |
 | `LOGROTATE_MAXBACKUPS` | integer between `0` and `100`; default value `24` | The number of backup files for `/var/log/nginx/access.log` and `/var/log/nginx/error.log`                                                                                                                   |
 
@@ -214,8 +216,9 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
 The container can create a publicly available Access Report, controlled by the following parameter:
 | Parameter     | Values                | Description |
 | ------------- | --------------------- | -------------- |
-| `ACCESS_REPORT_PAGE` | `on`, `1`, `true`, `yes`<br/>`off`, `0`, `false`, no, <blank><br/>`pagename.html` | If set to `on` or an equivalent value, an Access Report will be generated at <http(s)://myservername/access-report.html>. If set to a page name, an Access Report will be generated at <http(s)://myservername/`pagename.html`>. If set to `off` or an equivalent value (or if left empty (default)), then no Access Reports will be generated. |
+| `ACCESS_REPORT_PAGE` | `on`/`1`/`true`/`yes`<br/>`off`/`0`/`false`/`no`/<blank><br/>`pagename.html` | If set to `on` or an equivalent value, an Access Report will be generated at `http(s)://myservername/access-report.html`. If set to a page name, an Access Report will be generated at `http(s)://myservername/pagename.html`. If set to `off` or an equivalent value (or if left empty (default)), then no Access Reports will be generated. |
 | `ACCESS_REPORT_FREQUENCY` | `300` (secs, default) | Value, in seconds, of refresh frequency of the Access Report. To reduce CPU effort and Disk IO, it's recommended not to set this to less than 60 secs |
+| `ACCESS_REPORT_RESOLVE` | `on`/`1`/`true`/`yes`/<blank><br/>`off`/`0`/`false`/`no` | If left blank (default) or set to `on` or an equivalent value, the Access Report will attempt to resolve any external IP addresses to a domain name. If set to `off` or an equivalent value, the Access Report will not try to resolve any IP addresses. If you have a busy webserver and run on a machine that is either not too fast, or has a slow DNS resolver, you may see that your Access Report page refreshes very slowly or not at all. In this case, please set this parameter to `off` |
 
 This access report is created using a tool called [GoAccess](https://goaccess.io/)
 
@@ -244,78 +247,69 @@ The following related parameters can be set:
 ### Extras
 
 - Get a URL to a geographic map of all IPs that hit your WebProxy by typing:
-
-```bash
-docker exec -it webproxy ipmap
-```
+  
+  ```bash
+  docker exec -it webproxy ipmap
+  ```
 
 (Prerequisites: either of these parameters must be set: `IPTABLES_BLOCK=ENABLED` (recommended) or `VERBOSELOG=file` (works but not recommended)
 
 ## Troubleshooting
 
 - Issue: the container log (`docker logs webproxy`) shows error messages like this: `sleep: cannot read realtime clock: Operation not permitted`
-- Solution: you must upgrade `libseccomp2` on your host system to version 2.4 or later. If you are using a Raspberry Pi with Buster based OS, [here](https://github.com/fredclausen/Buster-Docker-Fixes) is a repo with a script that can automatically fix this for you.
-
+  - Solution: you must upgrade `libseccomp2` on your host system to version 2.4 or later. If you are using a Raspberry Pi with Buster based OS, [here](https://github.com/fredclausen/Buster-Docker-Fixes) is a repo with a script that can automatically fix this for you
 - Issue: `docker-compose up -d` exits with an error
-- Solution: you probably have a typo in `docker-compose.yml`. Make sure that all lines are at the exact indentation level, and that the last entry in the `REVPROXY` and `REDIRECT` lists do not end on a comma.
-
+  - Solution: you probably have a typo in `docker-compose.yml`. Make sure that all lines are at the exact indentation level, and that the last entry in the `REVPROXY` and `REDIRECT` lists do not end on a comma
 - Issue: The container complaints about port mappings during start-up
-- Solution: you probably are already running another service on the same port on your host machine. The port exposed to the world is the first `80` in `- PORTS: 80:80` in `docker-compose.yml`. You can do one of two things: scour your system for other web services on that port (another container? `lighttpd`? `nginx`?) and disable that service (or put it on another port), or change the first `80` to some other port number. For `docker` containers, you can check the ports that are used by each container with this command: `docker ps`
-
+  - Solution: you probably are already running another service on the same port on your host machine. The port exposed to the world is the first `80` in `- PORTS: 80:80` in `docker-compose.yml`. You can do one of two things: scour your system for other web services on that port (another container? `lighttpd`? `nginx`?) and disable that service (or put it on another port), or change the first `80` to some other port number. For `docker` containers, you can check the ports that are used by each container with this command: `docker ps`
 - Issue: Everything starts up fine, but the website doesn't render any pages
-- Solution: Please take a look at the container log (`docker logs webproxy`) to see if there are any errors. The log will be explicit about some of the more obvious issues.
-
+  - Solution: Please take a look at the container log (`docker logs webproxy`) to see if there are any errors. The log will be explicit about some of the more obvious issues
 - Issue: I have troubles getting the Webproxy to work with VRS (Virtual Radar Server)
-- Solution: in VRS, make sure to configure this: VRS Options -> Website -> Website Customisation -> Proxy Type = Reverse
-
+  - Solution: in VRS, make sure to configure this: VRS Options -> Website -> Website Customisation -> Proxy Type = Reverse
 - Issue: Planefinder doesn't work correctly
-- Solution: make sure that you have added the following to the `REVPROXY` variable (replace ip address and port with whatever is appropriate for your system):
+  - Solution: make sure that you have added the following to the `REVPROXY` variable (replace ip address and port with whatever is appropriate for your system):
 
-  ```yaml
-  planefinder|http://10.0.0.191:8086,
-  ajax|http://10.0.0.191:8086/ajax,
-  assets|http://10.0.0.191:8086/assets,
-  ```
+    ```yaml
+    planefinder|http://10.0.0.191:8086,
+    ajax|http://10.0.0.191:8086/ajax,
+    assets|http://10.0.0.191:8086/assets,
+    ```
 
 - Issue: The docker logs show an error like this on start up:
 
-```text
-nginx: [emerg] socket() [::]:80 failed (97: Address family not supported)
-nginx: configuration file /etc/nginx/nginx.conf test failed
-```
+  ```text
+  nginx: [emerg] socket() [::]:80 failed (97: Address family not supported)
+  nginx: configuration file /etc/nginx/nginx.conf test failed
+  ```
 
-- Solution: Your system doesn't support IPV6 while the container expects this. Solve it by adding this parameter to your `docker-compose.yml`: `IPV6=DISABLED`
-
+  - Solution: Your system doesn't support IPV6 while the container expects this. Solve it by adding this parameter to your `docker-compose.yml`: `IPV6=DISABLED`
 - Issue: with `IPTABLES_BLOCK` switched on, it looks like the webproxy is trying to block large lists of ip addresses, even though none (or few) of these addresses have hit the system in the last 60 seconds
-- Solution: You probably didn't add the `NET_ADMIN` capacity to the container. You need to do this in your `docker-compose.yml` file and then recreate the container. See above and see [`docker-compose.yml'](docker-compose.yml) for an example.
-
+  - Solution: You probably didn't add the `NET_ADMIN` capacity to the container. You need to do this in your `docker-compose.yml` file and then recreate the container. See above and see [`docker-compose.yml`](docker-compose.yml) for an example.
 - Issue: I'm getting emails from `letsencrypt.com` about the pending expiration of my SSL certificates
-- Solution: ignore them. As long as the container is running and SSL is enabled, the certificates are checked daily for pending expiration and will be renewed 1 month before that date. Sometimes, letsencrypt.com gets confused about the expiration dates and thinks it's earlier than is really the case. You can always check this for yourself by looking at the container logs, or by running this command: `docker exec -it certbot certificates`
-
+  - Solution: ignore them. As long as the container is running and SSL is enabled, the certificates are checked daily for pending expiration and will be renewed 1 month before that date. Sometimes, letsencrypt.com gets confused about the expiration dates and thinks it's earlier than is really the case. You can always check this for yourself by looking at the container logs, or by running this command: `docker exec -it certbot certificates`
 - Issue: when adding new URLs to a system that deployment has SSL certifications, the logs show messages that requesting a certificate for the new URL failed because the user should indicate which of (multiple) accounts should be used.
-- Solution: This is caused by certificates that have been added to `webproxy` at different points in time. To fix it, back up any web pages that are directly served by the container, and recreate the entire setup. Please note that doing this more than 5 times in a week will lock you out and prevent you from recreating existing certificates for up to a week, so USE THIS SOLUTION SPARINGLY.
-  The solution assumes that the container name is `webproxy` and that its working directory is `~/.webproxy` . If this is different, you may have to adapt the commands accordingly. It's preferable to feed the script line by line rather than all at once, so you can monitor the outcome.
+  - Solution: This is caused by certificates that have been added to `webproxy` at different points in time. To fix it, back up any web pages that are directly served by the container, and recreate the entire setup. Please note that doing this more than 5 times in a week will lock you out and prevent you from recreating existing certificates for up to a week, so USE THIS SOLUTION SPARINGLY. The solution assumes that the container name is `webproxy` and that its mapped working volume is `/opt/webproxy/webproxy` . If this is different, you may have to adapt the commands accordingly. It's preferable to feed the script line by line rather than all at once, so you can monitor the outcome.
 
-```bash
-cd ~  # go to the home directory
-docker stop webproxy    # stop the webproxy container
-
-# Back up the web pages and any custom configuration. Sudo is used to ensure also closed directories are backed up
-# Only of the backup is successful, delete the working directory
-sudo tar zcvf web-backup.tgz .webproxy/html .webproxy/locations.conf && sudo rm -rf .webproxy
-
-# Recreate the webproxy. Adapt the location of your "docker-compose.yml" as needed
-docker-compose -f /opt/webproxy/docker-compose.yml up -d
-
-# Check in the logs that the issue is fixed:
-sleep 30 && docker logs webproxy
-
-# Restore the files and restart the container once more to ensure the locations.conf file is applied
-sudo tar zxvf web-backup.tgz
-docker restart webproxy
-
-# You can now remove the "web-backup.tgz" file, or save it as a backup of your website.
-```
+    ```bash
+    cd /top/webproxy  # go to the home directory
+    docker stop webproxy    # stop the webproxy container
+    
+    # Back up the web pages and any custom configuration. Sudo is used to ensure also closed directories are backed up
+    # Only of the backup is successful, delete the working directory
+    sudo tar zcvf web-backup.tgz webproxy/html webproxy/locations.conf && sudo rm -rf webproxy
+    
+    # Recreate the webproxy. Adapt the location of your "docker-compose.yml" as needed
+    docker compose up -d --force-recreate webproxy
+    
+    # Check in the logs that the issue is fixed:
+    sleep 30 && docker logs webproxy
+    
+    # Restore the files and restart the container once more to ensure the locations.conf file is applied
+    sudo tar zxvf web-backup.tgz
+    docker restart webproxy
+    
+    # You can now remove the "web-backup.tgz" file, or save it as a backup of your website.
+    ```
 
 ## Acknowledgements
 
