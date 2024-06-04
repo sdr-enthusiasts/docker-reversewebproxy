@@ -5,8 +5,8 @@ source /scripts/common
 
 "${s6wrap[@]}" echo "Initial setup -- installing BLOCKBOT service"
 
-mv -f /root/blockstats /usr/local/bin >/dev/null 2>&1
-mv -f /root/ipmap /usr/local/bin >/dev/null 2>&1
+mv -f /root/blockstats /usr/local/bin >/dev/null 2>&1 || true
+mv -f /root/ipmap /usr/local/bin >/dev/null 2>&1 || true
 
 if [[ -n "$BLOCKBOT" ]]
 then
