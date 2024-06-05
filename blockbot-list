@@ -32,6 +32,7 @@ FlashGet
 Foto
 Friendica
 FROMURL
+GenomeCrawlerd
 GetRight
 GetWeb!
 Go-Ahead-Got-It
@@ -50,6 +51,7 @@ htmlparser
 HTTrack
 Indy
 InterGET
+InternetMeasurement
 JetCar
 jsonlite
 larbin
@@ -63,6 +65,7 @@ Navroad
 NearSite
 Nessus
 NetAnts
+Netcraft
 NetSpider
 NetSystemsResearch
 NetZIP
@@ -81,6 +84,7 @@ Pyth
 Python
 Python-Requests
 Quester
+r00ts3c
 rafula
 RealDownload
 ReGet
@@ -90,6 +94,7 @@ Semrushbot
 scan
 scoop.it
 scpitspi-rs
+sindresorhus
 SiteSnagger
 Slurp
 SmartDownload
