@@ -1,0 +1,67 @@
+#!/command/with-contenv bash
+#shellcheck shell=bash disable=SC2154
+
+# shellcheck disable=SC1091
+source /scripts/common
+
+if [[ -z "$BLOCKBOT" ]]; then
+  exec sleep infinity
+fi
+
+BLOCKBOT_UPDATETIME="${BLOCKBOT_UPDATETIME:-21600}" # default update time = 21600 secs = 6 hours
+
+"${s6wrap[@]}" echo "Starting blockbot-list update service. Next check at $(date -d @$(( $(date +%s) + BLOCKBOT_UPDATETIME )))"
+
+old_remotebots=""
+new_remotebots=""
+
+READ_REMOTE_BOTLIST () {
+  local remotebots
+  readarray -t -d ',' BLIST_ARR <<< "$BLOCKBOT"
+  for index in "${!BLIST_ARR[@]}"; do
+    BLIST_ARR[index]="${BLIST_ARR[index]//$'\n'/}"
+    while [[ "${BLIST_ARR[index]:0:1}" == "," ]] || [[ "${BLIST_ARR[index]:0:1}" == " " ]]; do BLIST_ARR[index]="${BLIST_ARR[index]:1}"; done
+    if [[ "${BLIST_ARR[index]:0:4}" == "http" ]]; then
+      # replace any entry that starts with http by content of the equivalent URL
+      if extra_args="$(curl -sSLf -H 'Cache-Control: no-cache' "${BLIST_ARR[index]}" 2>/dev/null)" && [[ "${extra_args:0:1}" != "<" ]] ; then 
+        remotebots="${remotebots}${extra_args//$'\n'/,}"
+      fi
+    fi
+  done
+  echo "${remotebots}"
+}
+
+old_remotebots="$(READ_REMOTE_BOTLIST)"
+
+while :; do
+  sleep "${BLOCKBOT_UPDATETIME}" & wait $!
+  new_remotebots="$(READ_REMOTE_BOTLIST)"
+
+  if [[ "$old_remotebots" != "$new_remotebots" ]]; then
+    readarray -t -d ',' BLIST_ARR <<< "$BLOCKBOT"
+    for index in "${!BLIST_ARR[@]}"; do
+      BLIST_ARR[index]="${BLIST_ARR[index]//$'\n'/}"
+      while [[ "${BLIST_ARR[index]:0:1}" == "," ]] || [[ "${BLIST_ARR[index]:0:1}" == " " ]]; do BLIST_ARR[index]="${BLIST_ARR[index]:1}"; done
+        if [[ "${BLIST_ARR[index]:0:4}" == "http" ]]; then
+          unset "BLIST_ARR[index]"
+        fi
+    done
+    BLOCKLIST="$(printf "%s|" "${BLIST_ARR[@]}")"  # print BLIST_ARR with OR separator to BLOCKLIST
+    BLOCKLIST="$BLOCKLIST|${new_remotebots//,/|}"
+    BLOCKLIST="${BLOCKLIST//$'\n'/|}"  # replace any newlines that may have sneaked in with a OR separator
+    BLOCKLIST="${BLOCKLIST//||/|}"  # replace any double OR separators with a single OR
+    while [[ "${BLOCKLIST: -1}" == "|" ]]; do BLOCKLIST="${BLOCKLIST::-1}"; done  # remove any left-over OR separators from the end of the string
+
+    { printf "map \$http_user_agent \$limit_bots {\n"
+      printf "       default 0;\n"
+      printf "       ~*(%s) 1;\n" "${BLOCKLIST// /}"
+      printf "}\n"
+    } >/etc/nginx/blockbot.conf
+    old_remotebots="$new_remotebots"
+    kill -HUP "$(cat /run/nginx.pid)"
+    "${s6wrap[@]}" echo "Incorporating new remote botblocklist: $BLOCKLIST"
+  else
+    "${s6wrap[@]}" echo "Remote botblocklist has not been changed since last check"
+  fi
+  "${s6wrap[@]}" echo "Next update at $(date -d @$(( $(date +%s) + BLOCKBOT_UPDATETIME )))"
+done
