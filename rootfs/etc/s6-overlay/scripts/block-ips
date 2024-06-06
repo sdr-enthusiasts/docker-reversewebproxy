@@ -34,7 +34,7 @@ fi
   # Do stuff if the access log file exists. Sometimes, it doesn't exist if there isn't much traffic
   if [[ -f /var/log/nginx/access.log ]]; then
     # Read access log and process any GEOIP or BLOCKBOT response codes. Note - also naturally occurring responses with these codes are picked up:
-    awk -v "g=$GEOIP_RESPONSECODE" -v "b=$BLOCKBOT_RESPONSECODE" -v "d=$(date +%s)" '{if ($9 == b || $9 == g) print $1 " " $9 " " d}' /var/log/nginx/access.log >> /run/nginx/ip-blocklist
+    awk -v "g=$GEOIP_RESPONSECODE" -v "b=$BLOCKBOT_RESPONSECODE" -v "d=$(date +%s)" '{if ($9 == b) {print $1 " geo_blocked " d} else if ($9 == g) {print $1 " bot_blocked " d}}' /var/log/nginx/access.log >> /run/nginx/ip-blocklist
 
     # Remove IPs that don't have user agents:
     if chk_enabled "$IPTABLES_BLOCK_NO_USERAGENT"; then
@@ -62,7 +62,7 @@ fi
     then
       while read -ra line
       do
-        if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! grep -f /run/nginx/ip-allowlist >/dev/null 2>&1 <<< "${line[0]}" && ! iptables -C INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
+        if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! grep -q "${line[0]}" /run/nginx/ip-allowlist && ! iptables -C INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
         then
           iptables -I INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
           blocktable+=("${line[0]}")
@@ -84,11 +84,12 @@ fi
       while read -ra line
       do
         if [[ -n "${line[2]}" ]] \
+           && [[ -n "${line[0]}" ]] \
            && [[ "${line[0]:0:1}" != "#" ]] \
            && [[ "${line[1]}" != "manual_add" ]] \
            && (( line[2] > 0 )) \
            && (( line[2] + IPJAILTIME < $(date +%s) )) \
-           || grep -f /run/nginx/ip-allowlist >/dev/null 2>&1 <<< "${line[0]}"
+           || { [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && grep -q "${line[0]}" /run/nginx/ip-allowlist; }
         then
           sed -i '/^'"${line[0]}"'/d' /run/nginx/ip-blocklist
           iptables -D INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
@@ -96,8 +97,7 @@ fi
         fi
       done < /tmp/ip-blocklist
       rm -f /tmp/ip-blocklist
-      if [[ "${#deletes[*]}" -gt 0 ]]
-      then
+      if [[ "${#deletes[*]}" -gt 0 ]]; then
         "${s6wrap[@]}" echo "These ${#deletes[@]} IP(s) have timed out and have been removed from the Block List: ${deletes[@]}. Currently, there are $(sed -e '/^$/d ; /^#/d' /run/nginx/ip-blocklist |wc -l) blocked IP addresses."
       fi
     fi

@@ -56,8 +56,8 @@ function conv_blocklist () {
 
 sed -i 's|^\s*### iptables log entry here|access_log /var/log/nginx/access.log ;|' /etc/nginx/nginx.conf
 
-# Convert old format blocklist file if needed:
-conv_blocklist
+# no longer needed: # Convert old format blocklist file if needed:
+# conv_blocklist
 
 # add external IP to allow list:
 extip="$(curl -sSL ipinfo.io/ip)"

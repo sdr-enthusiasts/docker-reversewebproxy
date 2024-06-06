@@ -118,16 +118,8 @@ services:
       - AUTH=OFF
       - LOCAL_CREDS=
       #
-      # BLOCKBOT blocks bots of which the User Agent contains all or part of these comma-separated strings:
-      - BLOCKBOT=
-        bot,LieBaoFast,UCBrowser,MQQBrowser,Mb2345Browser,https://gdnplus.com,facebookexternalhit,google,bing,yandex,msnbot,wp-login.php,zgrab,zgrab2,
-        AltaVista,Googlebot,Slurp,BlackWidow,Bot,ChinaClaw,Custo,DISCo,Download,Demon,eCatch,EirGrabber,EmailSiphon,EmailWolf,SuperHTTP,Surfbot,WebWhacker,
-        Express,WebPictures,ExtractorPro,EyeNetIE,FlashGet,GetRight,GetWeb!,Go!Zilla,Go-Ahead-Got-It,GrabNet,Grafula,HMView,Go!Zilla,Go-Ahead-Got-It,
-        rafula,HMView,HTTrack,Stripper,Sucker,Indy,InterGET,Ninja,JetCar,Spider,larbin,LeechFTP,Downloader,tool,Navroad,NearSite,NetAnts,tAkeOut,WWWOFFLE,
-        GrabNet,NetSpider,Vampire,NetZIP,Octopus,Offline,PageGrabber,Foto,pavuk,pcBrowser,RealDownload,ReGet,SiteSnagger,SmartDownload,SuperBot,WebSpider,
-        Teleport,VoidEYE,Collector,WebAuto,WebCopier,WebFetch,WebGo,WebLeacher,WebReaper,WebSauger,eXtractor,Quester,WebStripper,WebZIP,Widow,Zeus,
-        Twengabot,htmlparser,libwww,Python,perl,urllib,scan,email,PycURL,Pyth,PyQ,WebCollector,WebCopy,webcraw,PetalBot,ubermetrics,Firefox/45,
-        Vert.x-WebClient,jsonlite,rv:45.0,Nexgate Ruby Client,scoop.it,NetSystemsResearch,Barkrowler,Python-Requests,Expanse,Go-http-client,scpitspi-rs
+      # BLOCKBOT blocks bots of which the User Agent contains all or part of these comma-separated strings. You can also read a comma-separated list from a URL:
+      - BLOCKBOT=https://raw.githubusercontent.com/sdr-enthusiasts/docker-reversewebproxy/main/blockbot-list
       #
       # BLOCKBOT_RESPONSECODE indicates which HTTP response is sent when a bot is blocked.
       # Default code if omitted is 403 (Forbidden). Other codes that may be useful:
