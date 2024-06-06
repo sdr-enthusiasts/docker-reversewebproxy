@@ -142,7 +142,7 @@ The BlockBot feature filters out HTTP requests based on a fuzzy match of the HTT
 | ----------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `BLOCKBOT`              | string snippets of User Agent fields | Comma-separated strings, for example `google,bing,yandex,msnbot`. If the element is a URL (starting with `http`), it will try to download a list from that URL. You can mix UA snippets and URLs to your liking. If this parameter is empty, the BlockBot functionality is disabled. |
 | `BLOCKBOT_RESPONSECODE` | 3-digit HTTP response code           | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesn't exist), `418` (I am a teapot - used to tell requesters to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status> |
-| `BLOCKBOT_UPDATETIME` | Time (in secs) between checks to see if (URL-based) remote lists of `BLOCKBOT` user agent snippets have been updated. Default value is `21600` (secs = 6 hours) |
+| `BLOCKBOT_UPDATETIME` | Time (in secs) | Time (in secs) between checks to see if (URL-based) remote lists of `BLOCKBOT` user agent snippets have been updated. Default value is `21600` (secs = 6 hours) |
 
 ### `iptables` blocking
 
