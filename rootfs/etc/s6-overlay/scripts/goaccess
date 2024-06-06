@@ -42,7 +42,8 @@ done
 while true
 do
     # shellcheck disable=SC2046
-    "${s6wrap[@]}" nice -n 19 goaccess $(echo "$ACCESSLOG -o /run/nginx/html/$REPORTFILE --log-format=COMBINED $RESOLVE --db-path=$DBDIR --persist ${BACKUP_AVAIL:+--restore}"|xargs)
-    "${s6wrap[@]}" echo "Done!"
+    "${s6wrap[@]}" echo "Updating GoAccess Reports Page at /$REPORTFILE"
+    "${s6wrap[@]}" nice -n 19 goaccess $(echo "$ACCESSLOG -o /run/nginx/html/$REPORTFILE --no-parsing-spinner --log-format=COMBINED $RESOLVE --db-path=$DBDIR --persist ${BACKUP_AVAIL:+--restore}"|xargs)
+    "${s6wrap[@]}" echo "Done - next update at $(date -d @$(( $(date +%s) + ACCESS_REPORT_FREQUENCY )))"
     sleep "$ACCESS_REPORT_FREQUENCY" & wait $!
 done
