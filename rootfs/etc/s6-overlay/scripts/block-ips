@@ -65,6 +65,10 @@ fi
       do
         if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! grep -q "${line[0]}" <<< "$old_blocklist" && ! grep -q "${line[0]}" /run/nginx/ip-allowlist && ! iptables -C INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
         then
+          if [[ ${line[0]} =~ ^[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$ ]]; then line[0]="${line[0]}/24"
+          elif [[ ${line[0]} =~ ^[[:digit:]]+\.[[:digit:]]+$ ]]; then line[0]="${line[0]}/16"
+          elif [[ ${line[0]} =~ ^[[:digit:]]+$ ]]; then line[0]="${line[0]}/8"
+          fi
           iptables -I INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
           blocktable+=("${line[0]}")
         fi
@@ -93,6 +97,10 @@ fi
            || { [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && grep -q "${line[0]}" /run/nginx/ip-allowlist; }
         then
           sed -i '/^'"${line[0]}"'/d' /run/nginx/ip-blocklist
+          if [[ ${line[0]} =~ ^[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$ ]]; then line[0]="${line[0]}/24"
+          elif [[ ${line[0]} =~ ^[[:digit:]]+\.[[:digit:]]+$ ]]; then line[0]="${line[0]}/16"
+          elif [[ ${line[0]} =~ ^[[:digit:]]+$ ]]; then line[0]="${line[0]}/8"
+          fi
           iptables -D INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
           deletes+=("${line[0]}")
         fi
