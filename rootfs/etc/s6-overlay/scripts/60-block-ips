@@ -69,42 +69,45 @@ if [[ -n "$extip" ]]; then
   fi
 fi
 
-# read and add any blocked IPs:
-blocktable=()
-if [[ -f /run/nginx/ip-blocklist ]]
-then
-  list_len="$(wc -l < /run/nginx/ip-blocklist)"
-  counter=0
-  dsp="$((list_len / 10 + 1))"
-  while read -ra line
-  do
-    if (( list_len > 500 )) && ! (( counter++ % dsp )); then
-      "${s6wrap[@]}" echo "Processed $(( (counter*100)/list_len ))% of the ip-blocklist"
-    fi
-    if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! grep -qf /run/nginx/ip-allowlist <<< "${line[0]}"
-    then
-      # add the IP from the first field of the line to the iptables block list if...
-      # - the line isn't empty
-      # - the first field of the line doesn't start with "#" (in which case it's a comment)
-      # - the IP isn't in the ip-allowlist (if that file exists)
-      # - the IP isn't already in the iptables block list
-      if [[ ${line[0]} =~ ^[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$ ]]; then line[0]="${line[0]}/24"
-      elif [[ ${line[0]} =~ ^[[:digit:]]+\.[[:digit:]]+$ ]]; then line[0]="${line[0]}/16"
-      elif [[ ${line[0]} =~ ^[[:digit:]]+$ ]]; then line[0]="${line[0]}/8"
+# read and add any blocked IPs. This can all be done in the background so we don't hold up the process when the list is long:
+{
+  blocktable=()
+  if [[ -f /run/nginx/ip-blocklist ]]
+  then
+    list_len="$(wc -l < /run/nginx/ip-blocklist)"
+    counter=0
+    dsp="$((list_len / 10 + 1))"
+    if [[ -f /run/nginx/ip-allowlist ]]; then allowlist="$(</run/nginx/ip-allowlist)"; fi
+    while read -ra line
+    do
+      if (( list_len > 500 )) && ! (( counter++ % dsp )); then
+        "${s6wrap[@]}" echo "Processed $(( (counter*100)/list_len ))% of the ip-blocklist"
       fi
-      iptables -I INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
-      blocktable+=("${line[0]}")
-    fi
-  done < /run/nginx/ip-blocklist
-else
-  # There's no blocklist. Let's copy the template into place:
-  cp /root/ip-blocklist-template /run/nginx/ip-blocklist
-fi
+      if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! [[ $allowlist =~ ${line[0]} ]]
+      then
+        # add the IP from the first field of the line to the iptables block list if...
+        # - the line isn't empty
+        # - the first field of the line doesn't start with "#" (in which case it's a comment)
+        # - the IP isn't in the ip-allowlist (if that file exists)
+        # - the IP isn't already in the iptables block list
+        if [[ ${line[0]} =~ ^[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$ ]]; then line[0]="${line[0]}/24"
+        elif [[ ${line[0]} =~ ^[[:digit:]]+\.[[:digit:]]+$ ]]; then line[0]="${line[0]}/16"
+        elif [[ ${line[0]} =~ ^[[:digit:]]+$ ]]; then line[0]="${line[0]}/8"
+        fi
+        iptables -I INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
+        blocktable+=("${line[0]}")
+      fi
+    done < /run/nginx/ip-blocklist
+  else
+    # There's no blocklist. Let's copy the template into place:
+    cp /root/ip-blocklist-template /run/nginx/ip-blocklist
+  fi
 
-if (( ${#blocktable[@]} > 0 ))
-then
-  "${s6wrap[@]}" echo "These ${#blocktable[@]} IPs were blocked previously and have been added to the iptables block list:"
-  "${s6wrap[@]}" echo "${blocktable[@]}"
-else
-  "${s6wrap[@]}" echo "No previous iptables block list found. Continuing..."
-fi
+  if (( ${#blocktable[@]} > 0 ))
+  then
+    "${s6wrap[@]}" echo "These ${#blocktable[@]} IPs were blocked previously and have been added to the iptables block list:"
+    "${s6wrap[@]}" echo "${blocktable[@]}"
+  else
+    "${s6wrap[@]}" echo "No previous iptables block list found. Continuing..."
+  fi
+} &

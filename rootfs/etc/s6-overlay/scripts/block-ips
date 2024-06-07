@@ -16,20 +16,23 @@ fi
 
 "${s6wrap[@]}" echo "Started as an s6 service"
 
-while true
-do
-# Once every $CHECK_EXT_IP_IVAL secs, check if the external IP address is still the same, and add it to the allow-list if needed
-if (( $(date +%s) > last_ext_ip_check + CHECK_EXT_IP_IVAL )); then
-  extip="$(curl -sSL ipinfo.io/ip)"
-  if [[ -n "$extip" ]]; then
-    last_ext_ip_check="$(date +%s)"
-    if [[ -f /run/nginx/ip-allowlist ]] && grep -q "#external-ip" /run/nginx/ip-allowlist; then
-      sed -i 's/^.*\(\s\+#external-ip\)$/'"$extip"'\1/g' /run/nginx/ip-allowlist
-    else
-      echo "$extip #external-ip" >> /run/nginx/ip-allowlist
+while true; do
+
+  # Sleep a while before checking everything:
+  sleep $SLEEPTIME
+  "${s6wrap[@]}" echo "Starting block-ip check"
+  # Once every $CHECK_EXT_IP_IVAL secs, check if the external IP address is still the same, and add it to the allow-list if needed
+  if (( $(date +%s) > last_ext_ip_check + CHECK_EXT_IP_IVAL )); then
+    extip="$(curl -sSL ipinfo.io/ip)"
+    if [[ -n "$extip" ]]; then
+      last_ext_ip_check="$(date +%s)"
+      if [[ -f /run/nginx/ip-allowlist ]] && grep -q "#external-ip" /run/nginx/ip-allowlist; then
+        sed -i 's/^.*\(\s\+#external-ip\)$/'"$extip"'\1/g' /run/nginx/ip-allowlist
+      else
+        echo "$extip #external-ip" >> /run/nginx/ip-allowlist
+      fi
     fi
   fi
-fi
 
   # Do stuff if the access log file exists. Sometimes, it doesn't exist if there isn't much traffic
   if [[ -f /var/log/nginx/access.log ]]; then
@@ -63,8 +66,7 @@ fi
     then
       while read -ra line
       do
-        if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! grep -q "${line[0]}" <<< "$old_blocklist" && ! grep -q "${line[0]}" /run/nginx/ip-allowlist && ! iptables -C INPUT -s "${line[0]}" -j DROP >/dev/null 2>&1
-        then
+        if [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && ! [[ $old_blocklist =~ ${line[0]} ]]; then
           if [[ ${line[0]} =~ ^[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$ ]]; then line[0]="${line[0]}/24"
           elif [[ ${line[0]} =~ ^[[:digit:]]+\.[[:digit:]]+$ ]]; then line[0]="${line[0]}/16"
           elif [[ ${line[0]} =~ ^[[:digit:]]+$ ]]; then line[0]="${line[0]}/8"
@@ -86,6 +88,7 @@ fi
     then
       deletes=()
       cp /run/nginx/ip-blocklist /tmp
+      allowlist="$(</run/nginx/ip-allowlist)"
       while read -ra line
       do
         if [[ -n "${line[2]}" ]] \
@@ -94,7 +97,7 @@ fi
            && [[ "${line[1]}" != "manual_add" ]] \
            && (( line[2] > 0 )) \
            && (( line[2] + IPJAILTIME < $(date +%s) )) \
-           || { [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && grep -q "${line[0]}" /run/nginx/ip-allowlist; }
+           || { [[ -n "${line[0]}" ]] && [[ "${line[0]:0:1}" != "#" ]] && [[ $allowlist =~ ${line[0]} ]]; }
         then
           sed -i '/^'"${line[0]}"'/d' /run/nginx/ip-blocklist
           if [[ ${line[0]} =~ ^[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$ ]]; then line[0]="${line[0]}/24"
@@ -111,7 +114,5 @@ fi
       fi
     fi
   fi
-  # Sleep a while before repeating everything:
-  sleep $SLEEPTIME
-
+  "${s6wrap[@]}" echo "Done. Next check will start at $(date -d @$(( $(date +%s) + SLEEPTIME )))" 
 done
