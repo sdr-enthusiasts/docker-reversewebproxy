@@ -22,6 +22,8 @@ server {
 
     absolute_redirect off;
 
+    ### proxy_read_timeout tttt;
+
     location / {
         # headers added to resolve issues with websocket connections:
         proxy_set_header Upgrade $http_upgrade;
