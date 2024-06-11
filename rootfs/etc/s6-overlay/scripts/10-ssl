@@ -41,7 +41,7 @@ then
     # If there's no backup but there is /etc/letsencrypt, then let's make sure it's backed up before we do anything else
     mkdir -p /run/nginx/.letsencrypt
     chmod u=rwx,go= /run/nginx/.letsencrypt
-    find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist 2>/dev/null
+    find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist 2>/dev/null | true
     tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist  >/dev/null 2>&1
     rm /tmp/tarlist
     chmod u=rx,go= /run/nginx/.letsencrypt
