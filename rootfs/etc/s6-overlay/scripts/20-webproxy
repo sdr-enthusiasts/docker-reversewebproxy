@@ -156,6 +156,12 @@ else
     "${s6wrap[@]}" echo "Using user-provided locations.conf file"
 fi
 
+# Handle proxy_read_timeout:
+if [[ -n "$PROXY_READ_TIMEOUT" ]]; then
+    if chk_enabled "$PROXY_READ_TIMEOUT"; then PROXY_READ_TIMEOUT="3600"; fi
+    sed -i 's|^\(\s*\)### \(proxy_read_timeout\s\+\)tttt\(;\s*\)|\1\2'"$PROXY_READ_TIMEOUT"'\3|g' /etc/nginx/sites-available/default
+fi
+
 # now enable default:
 ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
@@ -167,7 +173,5 @@ if chk_enabled "${VERBOSELOG}" || [[ "${VERBOSELOG,,}" == "file" ]] || chk_enabl
 else
   "${s6wrap[@]}" echo "HTTP logging is disabled"
 fi
-
-
 
 exit 0
