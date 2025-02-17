@@ -59,7 +59,7 @@ repos:
       - id: black
 
   - repo: https://github.com/pycqa/flake8
-    rev: "e43806be3607110919eff72939fda031776e885a"  # frozen: 7.1.1
+    rev: "bddd87797f8dfc07d2a10c894776018d9bec590b"  # frozen: 7.1.2
     hooks:
       - id: flake8
         args: ["--extend-ignore=W503,W504,E501"]
