@@ -1,21 +1,22 @@
 #!/command/with-contenv bash
-#shellcheck shell=bash disable=SC2174
+#shellcheck shell=bash disable=SC2174,SC2154,SC1091
 
-# shellcheck disable=SC1091
 source /scripts/common
 
-if [[ "${AUTH,,}" != "on" ]]
-then
-    # shellcheck disable=SC2154
+if ! chk_enabled "${AUTH}"; then
+    # Global Authorization is not enabled, let's ensure that it's set to off
+    sed -i 's|^\s*#*\s*auth_basic .*$|        auth_basic off;|g' /etc/nginx/sites-available/default
+    sed -i 's|^\s*#*\s*auth_basic_user_file .*$|        # auth_basic_user_file /file/here;|g' /etc/nginx/sites-available/default
+    rm -f /run/nginx/.htaccess/.htpasswd_global
+    rm -f /run/nginx/.htaccess/.htpasswd-*
+
     "${s6wrap[@]}" echo "Basic Authentication is not enabled. Continuing."
     exit 0
 fi
 
 # -----------------------------------------------------------------------------------------
 # Implement global credentials
-# -----------------------------------------------------------------------------------------
-# Clean old credentials file:
-rm -f /run/nginx/.htaccess/.htpasswd_global
+
 touch /run/nginx/.htaccess/.htpasswd_global
 
 if [[ -n "$LOCAL_CREDS" ]]
@@ -31,7 +32,7 @@ then
         if [[ -z "$username" ]] || [[ -z "$password" ]]
         then
             "${s6wrap[@]}" echo "WARNING: Entry $n of CREDENTIALS variable is wrongly formatted. Skipping..."
-            (( errors++ ))
+            (( errors++ )) || true
             continue
         fi
         printf "%s:%s\n" "$username" "$(openssl passwd -5 "$password")" >> /run/nginx/.htaccess/.htpasswd_global
@@ -63,7 +64,7 @@ do
     destination="${proxy%%|*}"    # all chars up to the (now) first "|"
     destination="${destination//[[:space:]]}" # strip any spaces
     creds="${proxy#*|}"           # now there's only user1|pass1|user2|pass2 etc left
-    grep '|' <<< "$creds" >/dev/null 2>&1 || creds=""   # If there are no '|' in the string, there is no user/pass
+    if ! grep -q '|' <<< "$creds"; then creds=""; fi   # If there are no '|' in the string, there is no user/pass
     #debug: echo "Loc: ${location#* } - Proxy: $destination - Creds: $creds"
 
     # Clean out the password file:
