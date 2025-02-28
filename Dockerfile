@@ -22,7 +22,7 @@ RUN set -x && \
     KEPT_PACKAGES+=(jq) && \
     TEMP_PACKAGES+=(gpg) && \
     # added for debugging
-    KEPT_PACKAGES+=(procps nano aptitude netcat-openbsd libnginx-mod-http-echo) && \
+    KEPT_PACKAGES+=(procps nano netcat-openbsd libnginx-mod-http-echo) && \
     #
     # Install all these packages:
     apt-get update && \
@@ -42,6 +42,9 @@ RUN set -x && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/* /usr/share/keyrings/goaccess.gpg && \
+    # remove pycache
+    { find /usr | grep -E "/__pycache__$" | xargs rm -rf || true; } && \
+    bash /scripts/clean-build.sh && \
     #
     # Do some other stuff
     echo "alias dir=\"ls -alsv\"" >> /root/.bashrc && \
