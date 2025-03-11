@@ -34,6 +34,7 @@ do
     creds="${proxy#*|}"           # now there's only user1|pass1|user2|pass2 etc left
     if ! grep -q '|' <<< "$creds"; then creds=""; fi   # If there are no '|' in the string, there is no user/pass
     #debug: echo "Loc: ${location#* } - Proxy: $destination - Creds: $creds"
+    touch "/run/nginx/.htaccess/.htpasswd-${location}"
 
     if [[ -n "$creds" ]]
     then
