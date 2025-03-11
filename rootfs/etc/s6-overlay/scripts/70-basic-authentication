@@ -15,39 +15,6 @@ if ! chk_enabled "${AUTH}"; then
 fi
 
 # -----------------------------------------------------------------------------------------
-# Implement global credentials
-
-touch /run/nginx/.htaccess/.htpasswd_global
-
-if [[ -n "$LOCAL_CREDS" ]]
-then
-    readarray -d ',' -t creds_array <<< "$LOCAL_CREDS"
-    n=1
-    errors=0
-    # Add global credentials to the file if they exist:
-    for cred in "${creds_array[@]}"
-    do
-        username="${cred%%|*}"
-        password="${cred##*|}"
-        if [[ -z "$username" ]] || [[ -z "$password" ]]
-        then
-            "${s6wrap[@]}" echo "WARNING: Entry $n of CREDENTIALS variable is wrongly formatted. Skipping..."
-            (( errors++ )) || true
-            continue
-        fi
-        printf "%s:%s\n" "$username" "$(openssl passwd -5 "$password")" >> /run/nginx/.htaccess/.htpasswd_global
-    done
-
-    # Make sure that the default file is correctly set up:
-    sed -i 's|^\s*#*\s*auth_basic .*$|        auth_basic "authorization required";|g' /etc/nginx/sites-available/default
-    sed -i 's|^\s*#*\s*auth_basic_user_file .*$|        auth_basic_user_file /run/nginx/.htaccess/.htpasswd_global;|g' /etc/nginx/sites-available/default
-else
-    # Global Authorization is not enabled, let's ensure that it's set to off
-    sed -i 's|^\s*#*\s*auth_basic .*$|        auth_basic off;|g' /etc/nginx/sites-available/default
-    sed -i 's|^\s*#*\s*auth_basic_user_file .*$|        # auth_basic_user_file /file/here;|g' /etc/nginx/sites-available/default
-fi
-
-# -----------------------------------------------------------------------------------------
 # Implement localized credentials for each of the REVPROXY entries
 # -----------------------------------------------------------------------------------------
 # Get the REVPROXY array and put each entry into am array element
@@ -87,3 +54,44 @@ do
         done
     fi
 done
+
+# -----------------------------------------------------------------------------------------
+# Implement global credentials
+
+rm -f /run/nginx/.htaccess/.htpasswd_global
+touch /run/nginx/.htaccess/.htpasswd_global
+
+if [[ -n "${LOCAL_CREDS}" ]]
+then
+    readarray -d ',' -t creds_array <<< "${LOCAL_CREDS}"
+    n=1
+    errors=0
+    # Add global credentials to the file if they exist:
+    for cred in "${creds_array[@]}"
+    do
+        username="${cred%%|*}"
+        password="${cred##*|}"
+        if [[ -z "$username" ]] || [[ -z "$password" ]]
+        then
+            "${s6wrap[@]}" echo "WARNING: Entry $n of CREDENTIALS variable is wrongly formatted. Skipping..."
+            (( errors++ )) || true
+            continue
+        fi
+        printf "%s:%s\n" "$username" "$(openssl passwd -5 "$password")" >> /run/nginx/.htaccess/.htpasswd_global
+        if chk_enabled "${LOCAL_CREDS_ALL_REVPROXIES}"; then
+            for f in /run/nginx/.htaccess/.htpasswd-*; do
+                if ! grep -q "$username" "$f"; then
+                    printf "%s:%s\n" "$username" "$(openssl passwd -5 "$password")" >> "$f"
+                fi
+            done
+        fi
+    done
+
+    # Make sure that the default file is correctly set up:
+    sed -i 's|^\s*#*\s*auth_basic .*$|        auth_basic "authorization required";|g' /etc/nginx/sites-available/default
+    sed -i 's|^\s*#*\s*auth_basic_user_file .*$|        auth_basic_user_file /run/nginx/.htaccess/.htpasswd_global;|g' /etc/nginx/sites-available/default
+else
+    # Global Authorization is not enabled, let's ensure that it's set to off
+    sed -i 's|^\s*#*\s*auth_basic .*$|        auth_basic off;|g' /etc/nginx/sites-available/default
+    sed -i 's|^\s*#*\s*auth_basic_user_file .*$|        # auth_basic_user_file /file/here;|g' /etc/nginx/sites-available/default
+fi
