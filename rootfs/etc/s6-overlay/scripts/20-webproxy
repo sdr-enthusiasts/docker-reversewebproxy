@@ -34,7 +34,7 @@ if chk_enabled "$AUTOGENERATE"; then
     [[ -f /run/nginx/locations.conf ]] && mv -f /run/nginx/locations.conf "/run/nginx/locations.conf.bkup-$(date +%y%m%d%H%M%S)"
 
     # keep only the newest 10 backups:
-    org=$(shopt -p nullglob) || true   # save current nullglob setting
+    org="$(shopt -p nullglob)" || true   # save current nullglob setting
     shopt -s nullglob           # set nullglob to avoid ls errors when no backups are present
     # shellcheck disable=SC2010
     ls -tp /run/nginx/locations.conf.bkup-* | grep -v '/$' | tail -n +11 | xargs -d '\n' -r rm --   # remove any backups older than the newest 10
@@ -47,8 +47,7 @@ if chk_enabled "$AUTOGENERATE"; then
     readarray -d ',' -t redir_array <<< "$REDIRECT"
     #
     # Loop through each of the entries in $redir_array:
-    for proxy in "${redir_array[@]}"
-    do
+    for proxy in "${redir_array[@]}"; do
         location="${proxy%%|*}"       # all chars up to the first "|"
         location="${location//[[:space:]]}"     # strip any spaces
         proxy="${proxy#*|}"           # all chars after the first "|"
@@ -58,14 +57,12 @@ if chk_enabled "$AUTOGENERATE"; then
         grep '|' <<< "$creds" >/dev/null 2>&1 || creds=""   # If there are no '|' in the string, there is no user/pass
         #debug: echo "Loc: ${location#* } - Proxy: $destination - Creds: $creds"
 
-        if [[ -z "$location" ]] || [[ -z "$destination" ]]
-        then
+        if [[ -z "$location" ]] || [[ -z "$destination" ]]; then
             "${s6wrap[@]}" echo "WARNING: Skipping empty location or destination for REDIRECT $location:$destination"
             continue;
         fi
 
-        if [[ -n "$creds" ]]
-        then
+        if [[ -n "$creds" ]]; then 
             "${s6wrap[@]}" echo "WARNING: Auth credentials not supported REDIRECT ($location:$destination). Implemented without authentications"
         fi
 
@@ -84,8 +81,7 @@ if chk_enabled "$AUTOGENERATE"; then
     done
 
     # now loop through the Proxy array and create location elements for each entry:
-    for proxy in "${proxy_array[@]}"
-    do
+    for proxy in "${proxy_array[@]}"; do
         location="${proxy%%|*}"       # all chars up to the first "|"
         location="${location//[[:space:]]}"     # strip any spaces
         while [[ "${location:0:1}" == "/" ]]; do location="${location:1}"; done # strip any / from the front
@@ -98,15 +94,13 @@ if chk_enabled "$AUTOGENERATE"; then
         grep '|' <<< "$creds" >/dev/null 2>&1 || creds=""   # If there are no '|' in the string, there is no user/pass
         #debug: echo "Loc: ${location#* } - Proxy: $destination - Creds: $creds"
 
-        if [[ -z "$location" ]] || [[ -z "$destination" ]]
-        then
+        if [[ -z "$location" ]] || [[ -z "$destination" ]]; then
             "${s6wrap[@]}" echo "WARNING: Skipping empty location or destination for REDIRECT $location:$destination"
             continue;
         fi
 
         # If there are creds and AUTH=ON, then set `auth_basic` to a string. If not, it's `off`.
-        if [[ -n "$creds" ]] && [[ "${AUTH,,}" == "on" ]]
-        then
+        if [[ -n "$creds" ]] || ( chk_enabled "${LOCAL_CREDS_ALL_REVPROXIES}" && [[ -n "${LOCAL_CREDS}" ]] ) && [[ "${AUTH,,}" == "on" ]]; then
             basic_auth="\"Authorization Required\""
             abuf="auth_basic_user_file"
         else
@@ -141,8 +135,7 @@ if chk_enabled "$AUTOGENERATE"; then
     printf "index index.html index.htm index.php index.nginx-debian.html;\n"  >> /run/nginx/locations.conf
     chmod a+r /run/nginx/locations.conf
 
-elif [[ ! -f /run/nginx/locations.conf ]]
-then
+elif [[ ! -f /run/nginx/locations.conf ]]; then
     # No locations.conf is found, and none is generated either. Complain and stop the container:
     "${s6wrap[@]}" echo "-------------------------------------------------"
     "${s6wrap[@]}" echo "|           STOP ! You must either:             |"
@@ -166,7 +159,12 @@ fi
 ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 # set logging to what VERBOSELOG says. Default is off, "ON" means to stdout, "FILE" means to access.log/error.log file in external volume
-if chk_enabled "${VERBOSELOG}" || [[ "${VERBOSELOG,,}" == "file" ]] || chk_enabled "$IPMAPS" || chk_enabled "$IPTABLES_BLOCK" || ( [[ -n "$ACCESS_REPORT_PAGE" ]] && ! chk_disabled "$ACCESS_REPORT_PAGE" ); then
+if chk_enabled "${VERBOSELOG}" \
+    || [[ "${VERBOSELOG,,}" == "file" ]] \
+    || chk_enabled "$IPMAPS" \
+    || chk_enabled "$IPTABLES_BLOCK" \
+    || ( [[ -n "$ACCESS_REPORT_PAGE" ]] \
+    && ! chk_disabled "$ACCESS_REPORT_PAGE" ); then
   "${s6wrap[@]}" echo "Enabled HTTP logging"
   sed -i 's|\(^\s*access_log\).*|\1 /var/log/nginx/access.log ;|' /etc/nginx/nginx.conf
   sed -i 's|\(^\s*error_log\).*|\1 /var/log/nginx/error.log ;|' /etc/nginx/nginx.conf
