@@ -3,12 +3,13 @@
 
 source /scripts/common
 
+# First clean out the existing files
+rm -f /run/nginx/.htaccess/.htpasswd*
+
 if ! chk_enabled "${AUTH}"; then
     # Global Authorization is not enabled, let's ensure that it's set to off
     sed -i 's|^\s*#*\s*auth_basic .*$|        auth_basic off;|g' /etc/nginx/sites-available/default
     sed -i 's|^\s*#*\s*auth_basic_user_file .*$|        # auth_basic_user_file /file/here;|g' /etc/nginx/sites-available/default
-    rm -f /run/nginx/.htaccess/.htpasswd_global
-    rm -f /run/nginx/.htaccess/.htpasswd-*
 
     "${s6wrap[@]}" echo "Basic Authentication is not enabled. Continuing."
     exit 0
@@ -34,9 +35,6 @@ do
     if ! grep -q '|' <<< "$creds"; then creds=""; fi   # If there are no '|' in the string, there is no user/pass
     #debug: echo "Loc: ${location#* } - Proxy: $destination - Creds: $creds"
 
-    # Clean out the password file:
-    rm -f "/run/nginx/.htaccess/.htpasswd-${location}"
-    touch "/run/nginx/.htaccess/.htpasswd-${location}"
     if [[ -n "$creds" ]]
     then
         # Now loop through the credentials, create the password file:
@@ -57,9 +55,6 @@ done
 
 # -----------------------------------------------------------------------------------------
 # Implement global credentials
-
-rm -f /run/nginx/.htaccess/.htpasswd_global
-touch /run/nginx/.htaccess/.htpasswd_global
 
 if [[ -n "${LOCAL_CREDS}" ]]
 then
