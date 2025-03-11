@@ -185,8 +185,9 @@ The container supports basic authentication for the local web page through the `
 
 | Parameter     | Values                | Description |
 | ------------- | --------------------- | -------------- |
-| `AUTH`        | `ON` or anything else | If set to `ON`, Basic Authentication is enabled. If set to anything else or omitted, Basic Authentication is disabled. |
+| `AUTH`        | `on`/`1`/`enabled`/`true` or anything else | If set to `on`, Basic Authentication is enabled. If set to anything else or omitted, Basic Authentication is disabled. |
 | `LOCAL_CREDS` |                       | A list of credentials in the format `username1\|password1,username2\|password2,...` |
+| `LOCAL_CREDS_ALL_REVPROXIES` | `on`/`1`/`enabled`/`true` or anything else | If set to `on`, the local creds will also be assigned to all of the reverse proxy addresses defined with the `REVPROXY` parameter. Note - if the same username is defined for a `REVPROXY` parameter as for `LOCAL_CREDS`, only the password in `REVPROXY` will be used.|
 | `REVPROXY`    |                       | A comma separated list in this format:                                                                                 |
 
 ```yaml
