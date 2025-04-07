@@ -124,6 +124,7 @@ if chk_enabled "$AUTOGENERATE"; then
             # removed again after discussions
             # printf "    proxy_redirect ~^(/|http://[^/]*/)(.*) %s\$2;\n" "$location" >> /run/nginx/locations.conf
             printf "    proxy_redirect / /%s/;\n" "$location"
+            printf "    proxy_set_header  X-Forwarded-Prefix /%s;\n" "${location}"
             # close off the location entry:
             printf "}\n\n"
           }  >> /run/nginx/locations.conf
