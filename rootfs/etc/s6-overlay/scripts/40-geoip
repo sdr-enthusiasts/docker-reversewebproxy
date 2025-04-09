@@ -27,38 +27,32 @@ mkdir -p $GEOIPDIR
 mkdir -p /run/nginx/.geoip
 
 #delete old cached files
-if [[ -f /run/nginx/.geoip/GeoIP.bckup ]];
- then
-  if [ "$(( $(date +"%s") - $(stat -c "%Y" /run/nginx/.geoip/GeoIP.bckup) ))" -gt "90000" ]
-   then
-    "${s6wrap[@]}" echo "Found DB Backup which is older than 3 hours. Deleting"
-    rm -f /run/nginx/.geoip/*.gz
-    rm -f /run/nginx/.geoip/GeoIP.bckup
-  fi
+if [[ -f /run/nginx/.geoip/GeoIP.bckup ]] && (( $(date +"%s") - $(stat -c "%Y" /run/nginx/.geoip/GeoIP.bckup)>  90000 )); then
+  "${s6wrap[@]}" echo "Found DB Backup which is older than 3 hours. Deleting"
+  rm -f /run/nginx/.geoip/*.gz /run/nginx/.geoip/GeoIP.bckup
 fi
 
 #Do we still have a usable backup after deletion? Then use it
-if [[ -f /run/nginx/.geoip/GeoIP.dat.gz && -f /run/nginx/.geoip/GeoIPv6.dat.gz ]]
- then
+if [[ -f /run/nginx/.geoip/GeoIP.dat.gz && -f /run/nginx/.geoip/GeoIPv6.dat.gz ]]; then
   backupworks=true
   "${s6wrap[@]}" echo "Found a Backup, installing"
   [[ -f /run/nginx/.geoip/GeoIP.dat.gz ]] && cp /run/nginx/.geoip/GeoIP.dat.gz /"$GEOIPDIR"
   [[ -f /run/nginx/.geoip/GeoIPv6.dat.gz ]] && cp /run/nginx/.geoip/GeoIPv6.dat.gz /"$GEOIPDIR"
- else backupworks=false
- "${s6wrap[@]}" echo "No Backup found, continue"
+else
+  backupworks=false
+  "${s6wrap[@]}" echo "No Backup found, continue"
 fi
 
 
 # get the GeoIP databases from mailfud
-if [[ "$backupworks" == "false" ]]
- then
-  geoipfail=false
-  ! curl --fail -sL -o "$GEOIPDIR"/GeoIP.dat.gz https://mailfud.org/geoip-legacy/GeoIP.dat.gz && geoipfail=true || true
-  ! curl --fail -sL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://mailfud.org/geoip-legacy/GeoIPv6.dat.gz && geoipfail=true || true
-  if [[ "$geoipfail" == "false" ]]
-  then
+if [[ "$backupworks" == "false" ]] && \
+    ! curl --fail --max-time 60 -sSL -o "$GEOIPDIR"/GeoIP.dat.gz https://mailfud.org/geoip-legacy/GeoIP.dat.gz &&\
+    ! curl --fail --max-time 60 -sSL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://mailfud.org/geoip-legacy/GeoIPv6.dat.gz
+then
   "${s6wrap[@]}" echo "Successfully downloaded DB from mailfud.org"
-  fi
+  geoipfail=false
+else
+  geoipfail=true
 fi
 
 #as there is a download limit from mailfud, backup the files to /run/nginx/.geoip/ and create a file as timestamp for further processing
@@ -75,8 +69,8 @@ if [[ "$geoipfail" == "true" ]] && [[ "$backupworks" == "false" ]]
 then
   centminfail=false
   "${s6wrap[@]}" echo "Couldn't download the mailfud GeoIP DB or use a backup. Now trying centminmod"
-  ! curl --fail -sL -o "$GEOIPDIR"/GeoIP.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIP.dat.gz && centminfail=true || true
-  ! curl --fail -sL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIPv6.dat.gz && centminfail=true || true
+  ! curl --fail --max-time 60 -sSL -o "$GEOIPDIR"/GeoIP.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIP.dat.gz && centminfail=true || true
+  ! curl --fail --max-time 60 -sSL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIPv6.dat.gz && centminfail=true || true
 fi
 
 if [[ "$geoipfail" == "true" ]] && [[ "$backupworks" == "false" ]] && [[ "$centminfail" == "false" ]]
