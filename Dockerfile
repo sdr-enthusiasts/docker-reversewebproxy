@@ -1,4 +1,4 @@
-FROM ghcr.io/sdr-enthusiasts/docker-baseimage:python
+FROM ghcr.io/sdr-enthusiasts/docker-baseimage:base
 
 ENV GEOIP_RESPONSECODE=403
 ENV BLOCKBOT_RESPONSECODE=403
