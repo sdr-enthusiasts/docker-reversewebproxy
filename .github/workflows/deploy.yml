@@ -12,14 +12,6 @@ on:
         type: boolean
         description: "Use base image testpr"
         default: false
-  # Build and deploy the image on pushes to master branch
-  push:
-    branches:
-      - main
-    paths:
-      - "rust/**"
-      - "Dockerfile**"
-      - "rootfs/**"
 
 env:
   REGISTRY: ghcr.io
