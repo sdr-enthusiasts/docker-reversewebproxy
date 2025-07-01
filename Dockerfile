@@ -6,9 +6,10 @@ ENV LOGROTATE_INTERVAL=3600
 ENV LOGROTATE_MAXBACKUPS=24
 ENV IPTABLES_JAILTIME=0
 
-LABEL org.opencontainers.image.source = "https://github.com/sdr-enthusiasts/docker-reversewebproxy"
+LABEL org.opencontainers.image.source="https://github.com/sdr-enthusiasts/docker-reversewebproxy"
 
 #hadolint ignore=DL3008,SC3054
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -x && \
     # define packages needed for installation and general management of the container:
     TEMP_PACKAGES=() && \
@@ -27,18 +28,19 @@ RUN set -x && \
     # Install all these packages:
     apt-get update && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
-    ${KEPT_PACKAGES[@]} \
-    ${TEMP_PACKAGES[@]} && \
+    "${KEPT_PACKAGES[@]}" \
+    "${TEMP_PACKAGES[@]}" && \
     # Added for GoAccess server report - see https://goaccess.io/
     mkdir -p /usr/share/keyrings && \
     curl -sSL https://deb.goaccess.io/gnugpg.key | gpg --dearmor > /usr/share/keyrings/goaccess.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/goaccess.gpg arch=$(dpkg --print-architecture)] https://deb.goaccess.io/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/goaccess.list && \
+    # FIXME: upstream doesn't have a Trixie release. $(lsb_release -cs) is now hardcoded to bookworm.
+    echo "deb [signed-by=/usr/share/keyrings/goaccess.gpg arch=$(dpkg --print-architecture)] https://deb.goaccess.io/ bookworm main" > /etc/apt/sources.list.d/goaccess.list && \
     apt-get update && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
-        goaccess && \
+    goaccess && \
     #
     # Clean up:
-    apt-get remove -y ${TEMP_PACKAGES[@]} && \
+    apt-get remove -y "${TEMP_PACKAGES[@]}" && \
     apt-get autoremove -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -y && \
     apt-get clean -y && \
     rm -rf /src/* /tmp/* /var/lib/apt/lists/* /usr/share/keyrings/goaccess.gpg && \
