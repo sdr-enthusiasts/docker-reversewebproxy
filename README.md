@@ -78,14 +78,14 @@ The Webproxy can be entirely configured in the `docker-compose.yml`, or, optiona
 | `CORSHOSTS` | hostname(s), or `_`, or empty | Set CORS* via the `Access-Control-Allow-Origin` header. If using a single hostname, only that hostname will be set. If using multiple comma-separated hostnames, the header will be set for "`*`" all hosts, not just those listed. If using "`_`", CORS will be hard-disabled |
 | `PROXY_READ_TIMEOUT` | time (secs) or `ON` | This parameter controls the `proxy_read_timeout` parameter for `nginx`. This parameter is an inactivity timeout for reverse-proxied websites. This is needed if you want to keep a connection going with a proxied website, even if this website doesn't send any information for some period of time. An example of this is the [Portainer Container Console](https://github.com/portainer/portainer/issues/2953). If set to a value, it will use this value (in seconds) for timeout. If set to `ON` or `true`, the timeout is set to `3600` seconds (1 hour). If omitted, the default timeout value of 60 secs is used. |
 
-* CORS prevents third-party websites from including linked data (API calls, images, etc.) from your own websites. This is implemented by the browser to prevent theft of your IP or properties. Sometimes, it is desirable to allow specific (or all, or no) third-party websites to access data from your sites, for example when adding the RainViewer API to VRS.
+- CORS prevents third-party websites from including linked data (API calls, images, etc.) from your own websites. This is implemented by the browser to prevent theft of your IP or properties. Sometimes, it is desirable to allow specific (or all, or no) third-party websites to access data from your sites, for example when adding the RainViewer API to VRS.
 Note - for VRS, if you are instructed to add CORS exceptions to your VRS Admin, please add those also to the `CORSHOSTS` parameter of the webproxy container.
 
 You may have to adjust your `port:` and your `volumes:` mapping to your liking, especially if you are not running on the Raspberry Pi standard `pi` account.
 
 ### Configuration of the Webproxy
 
-If `AUTOGENERATE=ON`, the system will build a Webproxy based on the `REVPROXY` and `REDIRECT` parameter values.
+If `AUTOGENERATE=ON`, the system will build a Webproxy based on the `REVPROXY`, `SUBDOMAINS`, and `REDIRECT` parameter values.
 
 `REVPROXY` defines the proxy-pairs to serve the `destination` target when the user browses to `urltarget`. The user's browser will never be redirected to an internal IP address for service, all web pages are being served from the Webproxy. As such, the process of going to the correct website/port to get the web page is completely hidden from the user.
 
@@ -94,6 +94,10 @@ For example, for REVPROXY=readsb|<http://10.0.0.191:8080>, a user browsing to <h
 Note - both the `urltarget` and the `destination` must be URLs or directories, and cannot be a file name.
 You can provide a comma separated list of `urltarget|destination` pairs, similar to the example in the default `docker-compose.yml`.
 The optional `|user1|pass1|user2|pass2|...|...` addons define the allowed username/password combination for this specific revproxy.
+
+`SUBDOMAINS` defines host-based reverse proxy entries and uses the same syntax as `REVPROXY`: `subdomain|destination[|user1|pass1[|user2|pass2[|...|...]]]`
+For example, for `SUBDOMAINS=readsb.mydomain.com|http://10.0.0.191:8080`, a user browsing to <http://readsb.mydomain.com/> will be proxied to <http://10.0.0.191:8080>.
+As with `REVPROXY`, optional credentials are supported when `AUTH=ON`.
 
 `REDIRECT` redirects the user's browser to a specific address. In contrast to `REVPROXY`, the Webproxy does NOT "front" the rendering of the website. This can be useful if there is information that you want to be available within your own subnet, but not to the outside world.
 The format for `REDIRECT` is similar to that of `REVPROXY`: `urltarget|redirection`
@@ -109,11 +113,13 @@ The following settings will enable SSL to be part of the reverse proxy.
 SSL certificates are provided by Lets Encrypt.
 
 A "_" means that this is the default value
+
 | Parameter | Values | Description |
 |-----------|--------|-------------|
 | `SSL` | `DISABLED`_, `ENABLED` | Enable the installation of SSL certificates |
 | `SSL_EMAIL` | your email address | A valid email address is needed to get a certificate |
 | `SSL_DOMAIN` | A list of web domains | We will enabled SSL for these. Note - they must be reachable domains at this container for the SSL certificate to be successfully installed! |
+| `SUBDOMAINS` | A list of subdomain proxy entries | Any host names defined in `SUBDOMAINS` are also automatically added to SSL certificate requests when SSL is enabled. |
 | `SSL_TOS` | `REJECT`_, `ACCEPT` | Indicates your acceptance of the T&S's for the SSL certificateset forth at <https://letsencrypt.org/repository/#let-s-encrypt-subscriber-agreement> |
 | `SSL_REDIRECT` | `DISABLED`, `ENABLED` | When set to ENABLED, all incoming non-SSL traffic is redirected to use SSL |
 
@@ -131,7 +137,7 @@ The Reverse Webproxy can filter incoming requests by originating IP. It uses an 
 
 | Parameter            | Values                           | Description                                                                                                                                                                                                                                                                                                                  |
 | -------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GEOIP_DEFAULT`      | \<empty\>\*, `ALLOW`, `BLOCK` | Empty: GeoIP filtering is disabled; `ALLOW`: ***allow** all* except for the listed countries in `GEOIP_COUNTRIES`, which are blocked; `BLOCK`: ***block** all* except for the listed countries in `GEOIP_COUNTRIES`, which are allowed.                                                                                                                               |
+| `GEOIP_DEFAULT`      | \<empty\>\*, `ALLOW`, `BLOCK` | Empty: GeoIP filtering is disabled; `ALLOW`: _**allow** all_ except for the listed countries in `GEOIP_COUNTRIES`, which are blocked; `BLOCK`: _**block** all_ except for the listed countries in `GEOIP_COUNTRIES`, which are allowed.                                                                                                                               |
 | `GEOIP_COUNTRIES`    |                                  | Comma-separated list of 2-letter country abbreviations, for example `RU,CN,BY,RS` (which means Russia, China, Bielorus, Serbia).                                                                                                                                                                                             |
 | `GEOIP_RESPONSECODE` | 3-digit HTTP response code       | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesn't exist), `418` (I am a teapot - used to tell requesters to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status> |
 
@@ -181,20 +187,25 @@ Note that the `IPTABLES_BLOCK` feature enables logging to disk (specifically, `/
 
 The container supports a "basic" implementation of Basic Authentication. This is not inherently super-secure, and it exposes the usernames/passwords in clear text to the host system. We are planning to make this more secure in the future, but for now, please use with caution.
 
-The container supports basic authentication for the local web page through the `LOCAL_CREDS` variable, as well as credentials for each of the `REVPROXY`d entries via the `REVPROXY` variable.
+The container supports basic authentication for the local web page through the `LOCAL_CREDS` variable, as well as credentials for each of the `REVPROXY` and `SUBDOMAINS` entries via those variables.
 
 | Parameter     | Values                | Description |
 | ------------- | --------------------- | -------------- |
 | `AUTH`        | `on`/`1`/`enabled`/`true` or anything else | If set to `on`, Basic Authentication is enabled. If set to anything else or omitted, Basic Authentication is disabled. |
 | `LOCAL_CREDS` |                       | A list of credentials in the format `username1\|password1,username2\|password2,...` |
-| `LOCAL_CREDS_ALL_REVPROXIES` | `on`/`1`/`enabled`/`true` or anything else | If set to `on`, the local creds will also be assigned to all of the reverse proxy addresses defined with the `REVPROXY` parameter. Note - if the same username is defined for a `REVPROXY` parameter as for `LOCAL_CREDS`, only the password in `REVPROXY` will be used.|
+| `LOCAL_CREDS_ALL_REVPROXIES` | `on`/`1`/`enabled`/`true` or anything else | If set to `on`, the local creds will also be assigned to all of the reverse proxy addresses defined with the `REVPROXY` and `SUBDOMAINS` parameters. Note - if the same username is defined for a proxy-specific parameter as for `LOCAL_CREDS`, only the proxy-specific password will be used.|
 | `REVPROXY`    |                       | A comma separated list in this format:                                                                                 |
+| `SUBDOMAINS`  |                       | A comma separated list in this format (same as `REVPROXY`, but host-based):                                           |
 
 ```yaml
 REVPROXY=origin1|http://destination1|username1|password1|username2|password2,
          origin2|http://destination2|username3|password3|username4|password4|username5|password5,
          origin3|http://destination3,
          ...
+
+SUBDOMAINS=sub1.mydomain.com|http://destination1|username1|password1,
+           sub2.mydomain.com|http://destination2,
+           ...
 ```
 
 ### Advanced Setup
@@ -216,6 +227,7 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
 #### Access Report Page using `goaccess`
 
 The container can create a publicly available Access Report, controlled by the following parameter:
+
 | Parameter     | Values                | Description |
 | ------------- | --------------------- | -------------- |
 | `ACCESS_REPORT_PAGE` | `on`/`1`/`true`/`yes`<br/>`off`/`0`/`false`/`no`/<blank><br/>`pagename.html` | If set to `on` or an equivalent value, an Access Report will be generated at `http(s)://myservername/access-report.html`. If set to a page name, an Access Report will be generated at `http(s)://myservername/pagename.html`. If set to `off` or an equivalent value (or if left empty (default)), then no Access Reports will be generated. |
@@ -259,7 +271,7 @@ The following related parameters can be set:
 ## Troubleshooting
 
 - Issue: the container log (`docker logs webproxy`) shows error messages like this: `sleep: cannot read realtime clock: Operation not permitted`
-  - Solution: you must upgrade `libseccomp2` on your host system to version 2.4 or later. If you are using a Raspberry Pi with Buster based OS, [here](https://github.com/fredclausen/Buster-Docker-Fixes) is a repo with a script that can automatically fix this for you
+  - Solution: you must upgrade `libseccomp2` on your host system to version 2.4 or later. If you are using a Raspberry Pi with Buster based OS, [this Buster Docker fixes repo](https://github.com/fredclausen/Buster-Docker-Fixes) has a script that can automatically fix this for you
 - Issue: `docker-compose up -d` exits with an error
   - Solution: you probably have a typo in `docker-compose.yml`. Make sure that all lines are at the exact indentation level, and that the last entry in the `REVPROXY` and `REDIRECT` lists do not end on a comma
 - Issue: The container complaints about port mappings during start-up

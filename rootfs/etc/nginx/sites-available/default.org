@@ -20,6 +20,8 @@ server {
 
 	server_name _;
 
+	include /run/nginx/subdomains_locations.conf;
+
 	location / {
   	# headers added to resolve issues with websocket connections:
 		proxy_set_header Upgrade $http_upgrade;
@@ -31,6 +33,12 @@ server {
 
 		# First attempt to serve request as file, then
 		# as directory, then fall back to displaying a 404.
+		set $subdomains_target "";
+		include /run/nginx/subdomains_routes.conf;
+		error_page 418 = $subdomains_target;
+		if ($subdomains_target != "") {
+			return 418;
+		}
 		try_files $uri $uri/ =404;
 
   }

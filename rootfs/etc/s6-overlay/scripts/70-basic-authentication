@@ -55,6 +55,39 @@ do
 done
 
 # -----------------------------------------------------------------------------------------
+# Implement localized credentials for each of the SUBDOMAINS entries
+# -----------------------------------------------------------------------------------------
+readarray -d ',' -t subdomains_array <<< "$SUBDOMAINS"
+for subdomain_proxy in "${subdomains_array[@]}"
+do
+    host="${subdomain_proxy%%|*}"
+    host="${host//[[:space:]]}"
+    host="${host,,}"
+    hostsafe="$(printf "%s" "$host" | tr -c '[:alnum:]' '_')"
+    subdomain_proxy="${subdomain_proxy#*|}"
+    destination="${subdomain_proxy%%|*}"
+    destination="${destination//[[:space:]]}"
+    creds="${subdomain_proxy#*|}"
+    if ! grep -q '|' <<< "$creds"; then creds=""; fi
+
+    if [[ -n "${host}" ]]; then touch "/run/nginx/.htaccess/.htpasswd-subdomain-${hostsafe}"; fi
+
+    if [[ -n "$creds" ]]
+    then
+        while grep '|' <<< "$creds" >/dev/null 2>&1
+        do
+            username="${creds%%|*}"
+            username=${username//[[:space:]]}
+            creds="${creds#*|}"
+            password="${creds%%|*}"
+            password="${password//[[:space:]]}"
+            creds="${creds#*|}"
+            printf "%s:%s\n" "$username" "$(openssl passwd -5 "$password")" >> "/run/nginx/.htaccess/.htpasswd-subdomain-${hostsafe}"
+        done
+    fi
+done
+
+# -----------------------------------------------------------------------------------------
 # Implement global credentials
 
 if [[ -n "${LOCAL_CREDS}" ]]

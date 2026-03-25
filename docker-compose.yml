@@ -45,6 +45,15 @@ services:
         radar|http://10.0.0.191:8080/radar,
         acarshub|http://10.0.0.188:80
       # ----------------------------------------------------------------------------------------
+      # SUBDOMAINS has the same format as REVPROXY but uses host names instead of URL paths:
+      #     subdomain|destination[|user1|pass1[|user2|pass2[|...]]]
+      # For example, for SUBDOMAINS=readsb.mydomain.com|http://10.0.0.191:8080,
+      # a user browsing to http://readsb.mydomain.com/ will be proxied to http://10.0.0.191:8080.
+      # If AUTH=ON, optional username/password combinations are handled the same way as REVPROXY.
+      #- SUBDOMAINS=
+      #  readsb.mydomain.com|http://10.0.0.191:8080,
+      #  piaware.mydomain.com|http://10.0.0.191:8081|admin|secret
+      # ----------------------------------------------------------------------------------------
       # REDIRECT has the following format:
       #     urltarget|redirection
       # For example, for REDIRECT=/planefinder/setup.html|http://10.0.0.191:8086/setup.html,
@@ -73,6 +82,8 @@ services:
       # Put 1 or more domain names in SSL_DOMAIN. Note that *ALL OF THESE DOMAINS* must be reachable from the internet
       # and render a website that is served from the container upon the start of the container,
       # otherwise the request to get a certificate for them will fail!
+      #
+      # Any host names listed in SUBDOMAINS are automatically added to certificate requests too.
       #
       # Also note that more than 5 (failed) requests will cause you to be locked out from getting new certificates for
       # 1 week. We, nor LetsEncrypt, can "unlock" you. More info: https://letsencrypt.org/docs/rate-limits/
