@@ -30,7 +30,7 @@ touch /var/log/nginx/error.log
 chmod a+rw /var/log/nginx/access.log /var/log/nginx/error.log
 
 # auto-create the locations.conf file if $AUTOGENERATE is set to yes
-if chk_enabled "$AUTOGENERATE"; then
+if chk_enabled "${AUTOGENERATE:-enabled}"; then
     "${s6wrap[@]}" echo "Auto-generating locations.conf file"
     # back up any existing locations.conf file:
     [[ -f /run/nginx/locations.conf ]] && mv -f /run/nginx/locations.conf "/run/nginx/locations.conf.bkup-$(date +%y%m%d%H%M%S)"
@@ -285,8 +285,8 @@ rm -f "$tmp_default_1"
 # now enable default:
 ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
-# set logging to what VERBOSELOG says. Default is off, "ON" means to stdout, "FILE" means to access.log/error.log file in external volume
-if chk_enabled "${VERBOSELOG}" \
+# set logging to what VERBOSELOG says. Default is on, "ON" means to stdout, "FILE" means to access.log/error.log file in external volume
+if chk_enabled "${VERBOSELOG:-ON}" \
     || [[ "${VERBOSELOG,,}" == "file" ]] \
     || chk_enabled "$IPMAPS" \
     || chk_enabled "$IPTABLES_BLOCK" \
