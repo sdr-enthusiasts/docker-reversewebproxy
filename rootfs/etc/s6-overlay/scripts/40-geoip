@@ -5,6 +5,50 @@ source /scripts/common
 
 GEOIPDIR="/usr/share/GeoIP"
 NGINXGEOIPCNF="/etc/nginx/geoip_countries.conf"
+NGINXGEOIPDBCNF="/etc/nginx/conf.d/geoip.conf"
+CURL_USER_AGENT="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+
+set_geoip_db_enabled() {
+  cat > "$NGINXGEOIPDBCNF" <<'EOF'
+# GeoIP database path
+#
+
+geoip_country /usr/share/GeoIP/GeoIP.dat;
+EOF
+}
+
+set_geoip_db_disabled() {
+  cat > "$NGINXGEOIPDBCNF" <<'EOF'
+# GeoIP disabled: no usable legacy GeoIP database was found.
+EOF
+}
+
+is_valid_gzip() {
+  local file="$1"
+  [[ -f "$file" ]] && gzip -t "$file" >/dev/null 2>&1
+}
+
+download_geoip_pair() {
+  local source_name="$1"
+  local base_url="$2"
+
+  "${s6wrap[@]}" echo "Trying GeoIP DB source: ${source_name}"
+    if curl --fail --max-time 60 -A "$CURL_USER_AGENT" -sSL -o "$GEOIPDIR"/GeoIP.dat.gz "$base_url/GeoIP.dat.gz" && \
+      curl --fail --max-time 60 -A "$CURL_USER_AGENT" -sSL -o "$GEOIPDIR"/GeoIPv6.dat.gz "$base_url/GeoIPv6.dat.gz"
+  then
+    if is_valid_gzip "$GEOIPDIR"/GeoIP.dat.gz && is_valid_gzip "$GEOIPDIR"/GeoIPv6.dat.gz
+    then
+      "${s6wrap[@]}" echo "Successfully downloaded usable DB from ${source_name}"
+      return 0
+    fi
+    "${s6wrap[@]}" echo "Downloaded files from ${source_name}, but one or more files are not valid gzip archives"
+  else
+    "${s6wrap[@]}" echo "Couldn't download a complete DB pair from ${source_name}"
+  fi
+
+  rm -f "$GEOIPDIR"/GeoIP.dat.gz "$GEOIPDIR"/GeoIPv6.dat.gz
+  return 1
+}
 
 "${s6wrap[@]}" echo "Set up of GeoIP Database and corresponding nginx configuration"
 
@@ -17,6 +61,7 @@ cp -f /root/geoip_countries.conf /etc/nginx/geoip_countries.conf
 if [[ -z "$GEOIP_DEFAULT" ]]; then
  "${s6wrap[@]}" echo "GEOIP_DEFAULT not set, aborting further GeoIP setup."
  sed -i '/^#defaultsetting.*/a default yes;' $NGINXGEOIPCNF
+ set_geoip_db_disabled
  exit 0
 fi
 
@@ -33,63 +78,62 @@ if [[ -f /run/nginx/.geoip/GeoIP.bckup ]] && (( $(date +"%s") - $(stat -c "%Y" /
 fi
 
 #Do we still have a usable backup after deletion? Then use it
-if [[ -f /run/nginx/.geoip/GeoIP.dat.gz && -f /run/nginx/.geoip/GeoIPv6.dat.gz ]]; then
+if [[ -f /run/nginx/.geoip/GeoIP.dat.gz && -f /run/nginx/.geoip/GeoIPv6.dat.gz ]] && \
+   is_valid_gzip /run/nginx/.geoip/GeoIP.dat.gz && \
+   is_valid_gzip /run/nginx/.geoip/GeoIPv6.dat.gz
+then
   backupworks=true
   "${s6wrap[@]}" echo "Found a Backup, installing"
   [[ -f /run/nginx/.geoip/GeoIP.dat.gz ]] && cp /run/nginx/.geoip/GeoIP.dat.gz /"$GEOIPDIR"
   [[ -f /run/nginx/.geoip/GeoIPv6.dat.gz ]] && cp /run/nginx/.geoip/GeoIPv6.dat.gz /"$GEOIPDIR"
 else
   backupworks=false
-  "${s6wrap[@]}" echo "No Backup found, continue"
+  if [[ -f /run/nginx/.geoip/GeoIP.dat.gz || -f /run/nginx/.geoip/GeoIPv6.dat.gz ]]; then
+    "${s6wrap[@]}" echo "Found cached GeoIP files, but they are missing or not valid gzip archives. Ignoring cache."
+    rm -f /run/nginx/.geoip/GeoIP.dat.gz /run/nginx/.geoip/GeoIPv6.dat.gz
+  else
+    "${s6wrap[@]}" echo "No Backup found, continue"
+  fi
 fi
 
+geoip_available=false
+
+if [[ "$backupworks" == "true" ]]; then
+  geoip_available=true
+fi
 
 # get the GeoIP databases from mailfud
-if [[ "$backupworks" == "false" ]] && \
-    ! curl --fail --max-time 60 -sSL -o "$GEOIPDIR"/GeoIP.dat.gz https://mailfud.org/geoip-legacy/GeoIP.dat.gz &&\
-    ! curl --fail --max-time 60 -sSL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://mailfud.org/geoip-legacy/GeoIPv6.dat.gz
+if [[ "$geoip_available" == "false" ]] && download_geoip_pair "mailfud.org" "https://mailfud.org/geoip-legacy"
 then
-  "${s6wrap[@]}" echo "Successfully downloaded DB from mailfud.org"
-  geoipfail=false
-else
-  geoipfail=true
-fi
-
-#as there is a download limit from mailfud, backup the files to /run/nginx/.geoip/ and create a file as timestamp for further processing
-if [[ "$backupworks" == "false" ]] && [[ "$geoipfail" == "false" ]]
-then
-"${s6wrap[@]}" echo "Backup mailfud GeoIP DB to /run/nginx/.geoip"
+  geoip_available=true
+  "${s6wrap[@]}" echo "Backup mailfud GeoIP DB to /run/nginx/.geoip"
   cp "$GEOIPDIR"/GeoIP.dat.gz /run/nginx/.geoip
   cp "$GEOIPDIR"/GeoIPv6.dat.gz /run/nginx/.geoip
   touch /run/nginx/.geoip/GeoIP.bckup
 fi
 
-# if we couldn't get the mailfud DB and the backup is not working either, let's fall back to another database:
-if [[ "$geoipfail" == "true" ]] && [[ "$backupworks" == "false" ]]
-then
-  centminfail=false
-  "${s6wrap[@]}" echo "Couldn't download the mailfud GeoIP DB or use a backup. Now trying centminmod"
-  ! curl --fail --max-time 60 -sSL -o "$GEOIPDIR"/GeoIP.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIP.dat.gz && centminfail=true || true
-  ! curl --fail --max-time 60 -sSL -o "$GEOIPDIR"/GeoIPv6.dat.gz https://centminmod.com/centminmodparts/geoip-legacy/GeoIPv6.dat.gz && centminfail=true || true
+#as there is a download limit from mailfud, backup the files to /run/nginx/.geoip/ and create a file as timestamp for further processing
+# if we couldn't get a usable DB from backup or mailfud, let's fall back to another database
+if [[ "$geoip_available" == "false" ]]; then
+  "${s6wrap[@]}" echo "Couldn't use backup or mailfud GeoIP DB. Now trying centminmod"
+  if download_geoip_pair "centminmod.com" "https://centminmod.com/centminmodparts/geoip-legacy"
+  then
+    geoip_available=true
+  fi
 fi
 
-if [[ "$geoipfail" == "true" ]] && [[ "$backupworks" == "false" ]] && [[ "$centminfail" == "false" ]]
-then
-  "${s6wrap[@]}" echo "Successfully downloaded DB from centminmod.com"
-fi
-
-#If nothing of the above did work out, we just use what we got through apt install
-if [[ "$geoipfail" == "true" ]] && [[ "$backupworks" == "false" ]] && [[ "$centminfail" == "true" ]]
-then
-  "${s6wrap[@]}" echo "Couldn't retrieve any newer GeoIP databases. Your database may be out of date."
-else
+if [[ "$geoip_available" == "true" ]]; then
   "${s6wrap[@]}" echo "DB successfully installed"
+  set_geoip_db_enabled
+  "${s6wrap[@]}" echo "Unpacking downloaded DB"
+  [[ -f "$GEOIPDIR"/GeoIP.dat.gz ]] && gunzip -f "$GEOIPDIR"/GeoIP.dat.gz
+  [[ -f "$GEOIPDIR"/GeoIPv6.dat.gz ]] && gunzip -f "$GEOIPDIR"/GeoIPv6.dat.gz
+else
+  "${s6wrap[@]}" echo "No usable GeoIP gzip database could be found from cache or download sources. GeoIP filtering is disabled."
+  set_geoip_db_disabled
+  # Disable GeoIP filtering by allowing all countries.
+  GEOIP_DEFAULT=""
 fi
-
-#Now we need to unzip what we got - if we got any
-"${s6wrap[@]}" echo "Unpacking downloaded DB"
-[[ -f "$GEOIPDIR"/GeoIP.dat.gz ]] && gunzip -f "$GEOIPDIR"/GeoIP.dat.gz
-[[ -f "$GEOIPDIR"/GeoIPv6.dat.gz ]] && gunzip -f "$GEOIPDIR"/GeoIPv6.dat.gz
 
 #read country codes from the variable
 IFS=',' read -ra include_list <<< "$GEOIP_COUNTRIES"
