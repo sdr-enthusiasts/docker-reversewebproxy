@@ -16,6 +16,7 @@
     - [BlockBot Filtering](#blockbot-filtering)
     - [`iptables` blocking](#iptables-blocking)
     - [Basic Authentication](#basic-authentication)
+    - [Subdomain Configuration](#subdomain-configuration)
     - [Advanced Setup](#advanced-setup)
     - [Host your own web pages](#host-your-own-web-pages)
       - [Access Report Page using `goaccess`](#access-report-page-using-goaccess)
@@ -181,6 +182,20 @@ The container supports basic authentication for the local web page through the `
 | `LOCAL_CREDS_ALL_REVPROXIES` | `on`/`1`/`enabled`/`true` or anything else | `OFF` | If set to `on`, the local creds will also be assigned to all of the reverse proxy addresses defined with the `REVPROXY` and `SUBDOMAINS` parameters. Note - if the same username is defined for a proxy-specific parameter as for `LOCAL_CREDS`, only the proxy-specific password will be used.|
 | `REVPROXY`    | comma-separated `origin\|http://destination[\|username\|password[\|...]]` entries | empty | Defines per-path credentials together with destination mappings. Example entries: `origin1\|http://destination1\|username1\|password1\|username2\|password2`, `origin2\|http://destination2\|username3\|password3\|username4\|password4\|username5\|password5`, `origin3\|http://destination3`. |
 | `SUBDOMAINS`  | comma-separated `subdomain\|http://destination[\|username\|password[\|...]]` entries | empty | Defines host-based credentials and mappings (same credential format as `REVPROXY`). Example entries: `sub1.mydomain.com\|http://destination1\|username1\|password1`, `sub2.mydomain.com\|http://destination2`. |
+
+### Subdomain Configuration
+
+Creating a subdomain help for software packages with webpages that do not like to be served from a subdirectory, often because they use hardcoded paths for some of their resources. Examples include RadioSonde, Birdnet, and some other packages. You need a registered domain name for this to work; one where you can add a CNAME record. Often, free dynamic DNS account won't allow you to do this. Personally, I have good experience with CloudFlare for domains, but many other providers work as well. A domain name will cost you $10-$20/year, or if you want something very exclusive, it may be (much) more.
+
+1. Log in to your account at your domain provider and find the DNS section for your domain.
+2. Add a CNAME record for the desired subdomain - for example, for <https://sonde.mydomain.com> to work, set subdomain = "sonde", target = "mydomain.com", TTL=automatic, Proxy=off (if there's an option to set this). Save the record and wait ~5 minutes  for this to become available worldwide
+3. In your Webproxy's `docker-compose.yml` file, add this to the `environment:` section, where `http://radiosonde:5000` corresponds to the internal IP/port or domain/port where your RadioSonde package lives:
+
+    ```yaml
+    - SUBDOMAINS=sonde.mydomains.com|http://radiosonde:5000
+    ```
+
+4. Recreate / restart the webproxy container
 
 ### Advanced Setup
 
