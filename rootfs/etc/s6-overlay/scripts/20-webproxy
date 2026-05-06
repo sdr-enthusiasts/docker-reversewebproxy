@@ -15,6 +15,8 @@ chmod a+rwx /var/log/nginx
 chown www-data:www-data /var/log/nginx
 cp -n /root/locations.conf.example /run/nginx
 cp -n /root/index.html /run/nginx/html
+touch /run/nginx/subdomains_locations.conf
+touch /run/nginx/subdomains_routes.conf
 chmod a+rwx /run/nginx /run/nginx/html
 chmod a+rw /run/nginx/*
 chmod a+rw /run/nginx/html/*
@@ -28,7 +30,7 @@ touch /var/log/nginx/error.log
 chmod a+rw /var/log/nginx/access.log /var/log/nginx/error.log
 
 # auto-create the locations.conf file if $AUTOGENERATE is set to yes
-if chk_enabled "$AUTOGENERATE"; then
+if chk_enabled "${AUTOGENERATE:-enabled}"; then
     "${s6wrap[@]}" echo "Auto-generating locations.conf file"
     # back up any existing locations.conf file:
     [[ -f /run/nginx/locations.conf ]] && mv -f /run/nginx/locations.conf "/run/nginx/locations.conf.bkup-$(date +%y%m%d%H%M%S)"
@@ -45,6 +47,9 @@ if chk_enabled "$AUTOGENERATE"; then
 
     readarray -d ',' -t proxy_array <<< "$REVPROXY"
     readarray -d ',' -t redir_array <<< "$REDIRECT"
+    readarray -d ',' -t subdomain_array <<< "$SUBDOMAINS"
+    : > /run/nginx/subdomains_locations.conf
+    : > /run/nginx/subdomains_routes.conf
     #
     # Loop through each of the entries in $redir_array:
     for proxy in "${redir_array[@]}"; do
@@ -78,6 +83,70 @@ if chk_enabled "$AUTOGENERATE"; then
             printf "}\n\n"
         } >> /run/nginx/locations.conf
 
+    done
+
+    # now loop through the SUBDOMAINS array and create named locations for each host:
+    for subdomain_proxy in "${subdomain_array[@]}"; do
+        host="${subdomain_proxy%%|*}"
+        host="${host//[[:space:]]}"
+        host="${host,,}"
+        subdomain_proxy="${subdomain_proxy#*|}"
+        destination="${subdomain_proxy%%|*}"
+        destination="${destination//[[:space:]]}"
+        creds="${subdomain_proxy#*|}"
+        grep '|' <<< "$creds" >/dev/null 2>&1 || creds=""
+
+        if [[ -z "$host" ]] || [[ -z "$destination" ]]; then
+            "${s6wrap[@]}" echo "WARNING: Skipping empty host or destination for SUBDOMAINS $host:$destination"
+            continue
+        fi
+
+        # If there are creds and AUTH=ON, then set `auth_basic` to a string. If not, it's `off`.
+        if [[ -n "$creds" ]] || ( chk_enabled "${LOCAL_CREDS_ALL_REVPROXIES}" && [[ -n "${LOCAL_CREDS}" ]] ) && [[ "${AUTH,,}" == "on" ]]; then
+            basic_auth="\"Authorization Required\""
+            abuf="auth_basic_user_file"
+        else
+            basic_auth="off"
+            abuf="# auth_basic_user_file"
+        fi
+
+        [[ "${destination:0:4}" != "http" ]] && destination="http://$destination"
+        [[ "${destination:0:2}" == "//" ]] && destination="http:$destination"
+
+        destination_scheme="${destination%%://*}"
+        destination_no_scheme="${destination#*://}"
+        destination_hostport="${destination_no_scheme%%/*}"
+        destination_path="${destination_no_scheme#*/}"
+        if [[ "$destination_path" == "$destination_no_scheme" ]]; then
+            destination_path=""
+        else
+            destination_path="/$destination_path"
+        fi
+        destination_origin="${destination_scheme}://${destination_hostport}"
+
+        host_safe="$(printf "%s" "$host" | tr -c '[:alnum:]' '_')"
+
+        {   printf "if (\$host = %s) {\n" "$host"
+            printf "    set \$subdomains_target @subdomain_%s;\n" "$host_safe"
+            printf "}\n"
+          } >> /run/nginx/subdomains_routes.conf
+
+        {   printf "location @subdomain_%s {\n" "$host_safe"
+            printf "    auth_basic %s;\n" "$basic_auth"
+            printf "    %s /run/nginx/.htaccess/.htpasswd-subdomain-%s;\n" "$abuf" "$host_safe"
+            if [[ -n "$destination_path" ]]; then
+                printf "    rewrite ^ %s\\$uri break;\n" "$destination_path"
+            fi
+            printf "    proxy_pass %s;\n" "$destination_origin"
+            printf "    proxy_set_header Upgrade \$http_upgrade;\n"
+            printf "    proxy_set_header Connection \$http_connection;\n"
+            printf "    proxy_http_version 1.1;\n"
+            printf "    proxy_set_header Host \$http_host;\n"
+            printf "    proxy_set_header X-Real-IP \$remote_addr;\n"
+            printf "    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\n"
+            printf "}\n\n"
+          } >> /run/nginx/subdomains_locations.conf
+        touch "/run/nginx/.htaccess/.htpasswd-subdomain-${host_safe}"
     done
 
     # now loop through the Proxy array and create location elements for each entry:
@@ -139,6 +208,7 @@ if chk_enabled "$AUTOGENERATE"; then
     # Add index.php to the list if you are using PHP
     printf "index index.html index.htm index.php index.nginx-debian.html;\n"  >> /run/nginx/locations.conf
     chmod a+r /run/nginx/locations.conf
+    chmod a+r /run/nginx/subdomains_locations.conf /run/nginx/subdomains_routes.conf
 
 elif [[ ! -f /run/nginx/locations.conf ]]; then
     # No locations.conf is found, and none is generated either. Complain and stop the container:
@@ -160,11 +230,63 @@ if [[ -n "$PROXY_READ_TIMEOUT" ]]; then
     sed -i 's|^\(\s*\)### \(proxy_read_timeout\s\+\)tttt\(;\s*\)|\1\2'"$PROXY_READ_TIMEOUT"'\3|g' /etc/nginx/sites-available/default
 fi
 
+# Ensure SUBDOMAINS dispatch works for all server blocks, including certbot-managed SSL blocks.
+tmp_default_1="$(mktemp)"
+tmp_default_2="$(mktemp)"
+
+# Pass 1: normalize subdomains_locations include placement.
+awk '
+    {
+        # Remove old include lines so re-running this script remains idempotent.
+        if ($0 ~ /^[[:space:]]*include \/run\/nginx\/subdomains_locations\.conf;[[:space:]]*$/) {
+            next
+        }
+        print $0
+        if ($0 ~ /^[[:space:]]*absolute_redirect off;[[:space:]]*$/) {
+            match($0, /^[[:space:]]*/)
+            indent = substr($0, RSTART, RLENGTH)
+            print indent "include /run/nginx/subdomains_locations.conf;"
+        }
+    }
+' /etc/nginx/sites-available/default > "$tmp_default_1"
+
+# Pass 2: normalize subdomain dispatch snippet at server level.
+awk '
+    BEGIN { skip = 0 }
+    {
+        # Remove previously injected dispatch snippet so this pass stays idempotent.
+        if ($0 ~ /^[[:space:]]*set \$subdomains_target "";[[:space:]]*$/) {
+            skip = 5
+            next
+        }
+        if (skip > 0) {
+            skip--
+            next
+        }
+
+        print $0
+
+        if ($0 ~ /^[[:space:]]*include \/run\/nginx\/subdomains_locations\.conf;[[:space:]]*$/) {
+            match($0, /^[[:space:]]*/)
+            indent = substr($0, RSTART, RLENGTH)
+            print indent "set $subdomains_target \"\";"
+            print indent "include /run/nginx/subdomains_routes.conf;"
+            print indent "error_page 418 = $subdomains_target;"
+            print indent "if ($subdomains_target != \"\") {"
+            print indent "    return 418;"
+            print indent "}"
+        }
+    }
+' "$tmp_default_1" > "$tmp_default_2"
+
+mv "$tmp_default_2" /etc/nginx/sites-available/default
+rm -f "$tmp_default_1"
+
 # now enable default:
 ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
-# set logging to what VERBOSELOG says. Default is off, "ON" means to stdout, "FILE" means to access.log/error.log file in external volume
-if chk_enabled "${VERBOSELOG}" \
+# set logging to what VERBOSELOG says. Default is on, "ON" means to stdout, "FILE" means to access.log/error.log file in external volume
+if chk_enabled "${VERBOSELOG:-ON}" \
     || [[ "${VERBOSELOG,,}" == "file" ]] \
     || chk_enabled "$IPMAPS" \
     || chk_enabled "$IPTABLES_BLOCK" \

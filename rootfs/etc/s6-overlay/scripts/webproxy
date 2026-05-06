@@ -9,7 +9,12 @@ source /scripts/common
 while true
 do
     touch /tmp/nginx.up
-    "${s6wrap[@]}" /usr/sbin/nginx -g 'daemon off;'
+    if "${s6wrap[@]}" /usr/sbin/nginx -g 'daemon off;'; then
+        :
+    else
+        nginx_rc=$?
+        "${s6wrap[@]}" echo "NGINX exited with status ${nginx_rc}."
+    fi
     rm -f /tmp/nginx.up
     "${s6wrap[@]}" echo "NGINX Service has exited."
     sleep 10

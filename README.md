@@ -16,6 +16,7 @@
     - [BlockBot Filtering](#blockbot-filtering)
     - [`iptables` blocking](#iptables-blocking)
     - [Basic Authentication](#basic-authentication)
+    - [Subdomain Configuration](#subdomain-configuration)
     - [Advanced Setup](#advanced-setup)
     - [Host your own web pages](#host-your-own-web-pages)
       - [Access Report Page using `goaccess`](#access-report-page-using-goaccess)
@@ -71,35 +72,24 @@ The Webproxy can be entirely configured in the `docker-compose.yml`, or, optiona
 
 ### General parameters
 
-| Parameter | Values | Description |
-|-----------|--------|-------------|
-| `AUTOGENERATE` | `ON`, `OFF` | Determines if the system will use the `REVPROXY` and `REDIRECT` settings of the `docker-compose.yml` file (`ON`), or a manually generated `locations.conf` file (`OFF`). |
-| `VERBOSELOG` | `ON`, `OFF` | Determines if the internal web service Access and Error logs will be written to the Docker log (accessible with `docker logs webproxy`) (`ON`), or that logging will be switched `OFF` |
-| `CORSHOSTS` | hostname(s), or `_`, or empty | Set CORS* via the `Access-Control-Allow-Origin` header. If using a single hostname, only that hostname will be set. If using multiple comma-separated hostnames, the header will be set for "`*`" all hosts, not just those listed. If using "`_`", CORS will be hard-disabled |
-| `PROXY_READ_TIMEOUT` | time (secs) or `ON` | This parameter controls the `proxy_read_timeout` parameter for `nginx`. This parameter is an inactivity timeout for reverse-proxied websites. This is needed if you want to keep a connection going with a proxied website, even if this website doesn't send any information for some period of time. An example of this is the [Portainer Container Console](https://github.com/portainer/portainer/issues/2953). If set to a value, it will use this value (in seconds) for timeout. If set to `ON` or `true`, the timeout is set to `3600` seconds (1 hour). If omitted, the default timeout value of 60 secs is used. |
-
-* CORS prevents third-party websites from including linked data (API calls, images, etc.) from your own websites. This is implemented by the browser to prevent theft of your IP or properties. Sometimes, it is desirable to allow specific (or all, or no) third-party websites to access data from your sites, for example when adding the RainViewer API to VRS.
-Note - for VRS, if you are instructed to add CORS exceptions to your VRS Admin, please add those also to the `CORSHOSTS` parameter of the webproxy container.
+| Parameter | Values | Default | Description |
+|-----------|--------|---------|-------------|
+| `AUTOGENERATE` | `ON`, `OFF` | `ON` | Determines if the system will use the `REVPROXY` and `REDIRECT` settings of the `docker-compose.yml` file (`ON`), or a manually generated `locations.conf` file (`OFF`). |
+| `VERBOSELOG` | `ON`, `OFF` | `ON` | Determines if the internal web service Access and Error logs will be written to the Docker log (accessible with `docker logs webproxy`) (`ON`), or that logging will be switched `OFF` |
+| `CORSHOSTS` | hostname(s), or `_`, or empty | empty | Set CORS via the `Access-Control-Allow-Origin` header. If using a single hostname, only that hostname will be set. If using multiple comma-separated hostnames, the header will be set for "`*`" all hosts, not just those listed. If using "`_`", CORS will be hard-disabled. CORS prevents third-party websites from including linked data (API calls, images, etc.) from your own websites. Example use case: allow access for integrations such as RainViewer in VRS. If VRS requires CORS exceptions, add those hostnames to `CORSHOSTS`. |
+| `PROXY_READ_TIMEOUT` | time (secs) or `ON` | `60` secs | This parameter controls the `proxy_read_timeout` parameter for `nginx`. This parameter is an inactivity timeout for reverse-proxied websites. This is needed if you want to keep a connection going with a proxied website, even if this website doesn't send any information for some period of time. An example of this is the [Portainer Container Console](https://github.com/portainer/portainer/issues/2953). If set to a value, it will use this value (in seconds) for timeout. If set to `ON` or `true`, the timeout is set to `3600` seconds (1 hour). If omitted, the default timeout value of 60 secs is used. |
 
 You may have to adjust your `port:` and your `volumes:` mapping to your liking, especially if you are not running on the Raspberry Pi standard `pi` account.
 
 ### Configuration of the Webproxy
 
-If `AUTOGENERATE=ON`, the system will build a Webproxy based on the `REVPROXY` and `REDIRECT` parameter values.
+If `AUTOGENERATE=ON`, the system will build a Webproxy based on the `REVPROXY`, `SUBDOMAINS`, and `REDIRECT` parameter values.
 
-`REVPROXY` defines the proxy-pairs to serve the `destination` target when the user browses to `urltarget`. The user's browser will never be redirected to an internal IP address for service, all web pages are being served from the Webproxy. As such, the process of going to the correct website/port to get the web page is completely hidden from the user.
-
-`REVPROXY` has the following format: `urltarget|destination[|user1|pass1[|user2|pass2[|...|...]]]`
-For example, for REVPROXY=readsb|<http://10.0.0.191:8080>, a user browsing to <http://mydomain/readsb> will be proxied to a service located at <http://10.0.0.191:8080>. The user's browser will _never_ see the internal IP address.
-Note - both the `urltarget` and the `destination` must be URLs or directories, and cannot be a file name.
-You can provide a comma separated list of `urltarget|destination` pairs, similar to the example in the default `docker-compose.yml`.
-The optional `|user1|pass1|user2|pass2|...|...` addons define the allowed username/password combination for this specific revproxy.
-
-`REDIRECT` redirects the user's browser to a specific address. In contrast to `REVPROXY`, the Webproxy does NOT "front" the rendering of the website. This can be useful if there is information that you want to be available within your own subnet, but not to the outside world.
-The format for `REDIRECT` is similar to that of `REVPROXY`: `urltarget|redirection`
-For example, for `REDIRECT=/planefinder/setup.html|http://10.0.0.191:8086/setup.html`
-Note - for `REDIRECT`, both the urltarget and the redirection MAY BE a URL or a file names.
-Similar to `REVPROXY`, `REDIRECT` can contain comma separated entries. See example in the default `docker-compose.yml`.
+| Parameter | Values | Default | Description |
+|-----------|--------|---------|-------------|
+| `REVPROXY` | `urltarget\|destination[\|user1\|pass1[\|user2\|pass2[\|...\|...]]]` | empty | Defines path-based proxy pairs. When the user browses to `urltarget`, traffic is proxied to `destination` and the browser does not see internal IPs. Both `urltarget` and `destination` must be URLs or directories (not file names). Supports comma-separated entries. Example: `REVPROXY=readsb\|<http://10.0.0.191:8080>` maps <http://mydomain/readsb> to <http://10.0.0.191:8080>. Optional `\|user\|pass` pairs define credentials for that specific proxy entry when `AUTH=ON`. |
+| `SUBDOMAINS` | `subdomain\|destination[\|user1\|pass1[\|user2\|pass2[\|...\|...]]]` | empty | Defines host-based reverse proxy entries with the same credential format as `REVPROXY`. Example: `SUBDOMAINS=readsb.mydomain.com\|<http://10.0.0.191:8080>` maps <http://readsb.mydomain.com/> to <http://10.0.0.191:8080>. For this to work, create DNS records (typically CNAMEs) for the subdomains. Optional credentials are supported when `AUTH=ON`. |
+| `REDIRECT` | `urltarget\|redirection` | empty | Defines browser redirects. Unlike `REVPROXY`, this does not front the destination, it redirects the client directly. `urltarget` and `redirection` may be URLs or file names. Supports comma-separated entries. Example: `REDIRECT=/planefinder/setup.html\|<http://10.0.0.191:8086/setup.html>`. |
 
 ### Configuration of SSL
 
@@ -109,13 +99,15 @@ The following settings will enable SSL to be part of the reverse proxy.
 SSL certificates are provided by Lets Encrypt.
 
 A "_" means that this is the default value
-| Parameter | Values | Description |
-|-----------|--------|-------------|
-| `SSL` | `DISABLED`_, `ENABLED` | Enable the installation of SSL certificates |
-| `SSL_EMAIL` | your email address | A valid email address is needed to get a certificate |
-| `SSL_DOMAIN` | A list of web domains | We will enabled SSL for these. Note - they must be reachable domains at this container for the SSL certificate to be successfully installed! |
-| `SSL_TOS` | `REJECT`_, `ACCEPT` | Indicates your acceptance of the T&S's for the SSL certificateset forth at <https://letsencrypt.org/repository/#let-s-encrypt-subscriber-agreement> |
-| `SSL_REDIRECT` | `DISABLED`, `ENABLED` | When set to ENABLED, all incoming non-SSL traffic is redirected to use SSL |
+
+| Parameter | Values | Default | Description |
+|-----------|--------|---------|-------------|
+| `SSL` | `DISABLED` , `ENABLED` | `DISABLED` | Enable the installation of SSL certificates |
+| `SSL_EMAIL` | your email address | empty | A valid email address is needed to get a certificate |
+| `SSL_DOMAIN` | A list of web domains | empty | We will enabled SSL for these. Note - they must be reachable domains at this container for the SSL certificate to be successfully installed! |
+| `SUBDOMAINS` | A list of subdomain proxy entries | empty | Any host names defined in `SUBDOMAINS` are also automatically added to SSL certificate requests when SSL is enabled. |
+| `SSL_TOS` | `REJECT` , `ACCEPT` | `REJECT` | Indicates your acceptance of the T&S's for the SSL certificat eset forth at <https://letsencrypt.org/repository/#let-s-encrypt-subscriber-agreement>. You MUST set this to `ACCEPT` for LetsEncrypt to issue you with SSL certificates! |
+| `SSL_REDIRECT` | `DISABLED`, `ENABLED` | `ENABLED` | When set to ENABLED, all incoming non-SSL traffic is redirected to use SSL |
 
 Note: your SSL certificates are valid for 90 days. The container will check daily if they need renewing, and will do so of there's less than a month before the expiration date.
 **LetsEncrypt will start sending you emails about the pending expiration about 45 days before the deadline. Sometimes, the expiration date in this email doesn't correspond to the real expiration date of the certificates. You can safely ignore these emails as long as your container is running.**
@@ -129,21 +121,21 @@ docker exec -it webproxy certbot certificates
 
 The Reverse Webproxy can filter incoming requests by originating IP. It uses an external GeoIP database that maps IP addresses to countries. This database is updated regularly with the latest mappings. Note - this GeoIP IP to Location mapping is not perfect, and users with a VPN can circumvent GeoIP filtering without much problems.
 
-| Parameter            | Values                           | Description                                                                                                                                                                                                                                                                                                                  |
-| -------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GEOIP_DEFAULT`      | \<empty\>\*, `ALLOW`, `BLOCK` | Empty: GeoIP filtering is disabled; `ALLOW`: ***allow** all* except for the listed countries in `GEOIP_COUNTRIES`, which are blocked; `BLOCK`: ***block** all* except for the listed countries in `GEOIP_COUNTRIES`, which are allowed.                                                                                                                               |
-| `GEOIP_COUNTRIES`    |                                  | Comma-separated list of 2-letter country abbreviations, for example `RU,CN,BY,RS` (which means Russia, China, Bielorus, Serbia).                                                                                                                                                                                             |
-| `GEOIP_RESPONSECODE` | 3-digit HTTP response code       | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesn't exist), `418` (I am a teapot - used to tell requesters to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status> |
+| Parameter            | Values                           | Default | Description                                                                                                                                                                                                                                                                                                                  |
+| -------------------- | -------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GEOIP_DEFAULT`      | \<empty\>\*, `ALLOW`, `BLOCK` | empty | Empty: GeoIP filtering is disabled; `ALLOW`: _**allow** all_ except for the listed countries in `GEOIP_COUNTRIES`, which are blocked; `BLOCK`: _**block** all_ except for the listed countries in `GEOIP_COUNTRIES`, which are allowed.                                                                                                                               |
+| `GEOIP_COUNTRIES`    |                                  | empty | Comma-separated list of 2-letter country abbreviations, for example `RU,CN,BY,RS` (which means Russia, China, Bielorus, Serbia).                                                                                                                                                                                             |
+| `GEOIP_RESPONSECODE` | 3-digit HTTP response code       | `403` ("Forbidden") | Other codes that may be useful: `402` (payment required), `404` (doesn't exist), `418` (I am a teapot - used to tell requesters to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status> |
 
 ### BlockBot Filtering
 
 The BlockBot feature filters out HTTP requests based on a fuzzy match of the HTTP User Agent field against a list of potential matches. This can be used to somewhat effectively filter out bots that are trying to scrape your website. The `BLOCKBOT` parameter included `docker-compose.yml` file has an example of a bot filter.
 
-| Parameter               | Values                               | Description                                                                                                                                                                                                                                                                                                                  |
-| ----------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BLOCKBOT`              | string snippets of User Agent fields | Comma-separated strings, for example `google,bing,yandex,msnbot`. If the element is a URL (starting with `http`), it will try to download a list from that URL. You can mix UA snippets and URLs to your liking. If this parameter is empty, the BlockBot functionality is disabled. |
-| `BLOCKBOT_RESPONSECODE` | 3-digit HTTP response code           | Default if omitted: `403` ("Forbidden"). Other codes that may be useful: `402` (payment required), `404` (doesn't exist), `418` (I am a teapot - used to tell requesters to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status> |
-| `BLOCKBOT_UPDATETIME` | Time (in secs) | Time (in secs) between checks to see if (URL-based) remote lists of `BLOCKBOT` user agent snippets have been updated. Default value is `21600` (secs = 6 hours) |
+| Parameter               | Values                               | Default | Description                                                                                                                                                                                                                                                                                                                  |
+| ----------------------- | ------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BLOCKBOT`              | string snippets of User Agent fields | empty | Comma-separated strings, for example `google,bing,yandex,msnbot`. If the element is a URL (starting with `http`), it will try to download a list from that URL. You can mix UA snippets and URLs to your liking. If this parameter is empty, the BlockBot functionality is disabled. |
+| `BLOCKBOT_RESPONSECODE` | 3-digit HTTP response code           | `403` ("Forbidden") | Other codes that may be useful: `402` (payment required), `404` (doesn't exist), `418` (I am a teapot - used to tell requesters to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status> |
+| `BLOCKBOT_UPDATETIME` | Time (in secs) | `21600` | Time (in secs) between checks to see if (URL-based) remote lists of `BLOCKBOT` user agent snippets have been updated. Default value is `21600` (secs = 6 hours) |
 
 ### `iptables` blocking
 
@@ -169,33 +161,41 @@ docker exec -it webproxy manage_ipblock
 
 Note that the `IPTABLES_BLOCK` feature enables logging to disk (specifically, `/var/log/nginx/access.log`). You may want to map this directory to a `tmpfs` volume \(see example in [`docker-compose.yml`](docker-compose.yml)\). Log rotation keeps 24 files of 1 hour each around; the 1 hour log rotation intervals and number of retained backups are configurable with the`LOGROTATE_INTERVAL` and `LOGROTATE_MAXBACKUPS` docker environment variable.
 
-| Parameter              | Values                                            | Description                                                                                                                                                                                                 |
-| ---------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `IPTABLES_BLOCK`       | `ON`/`ENABLED` or `OFF`/`DISABLED`/blank          | If enabled, any IP address match to `GEOIP_RESPONSECODE` or `BLOCKBOT_RESPONSECODE` will be blocked using `iptables`. If disabled or omitted, `iptables` blocking won't be used                            |
-| `IPTABLES_BLOCK_NO_USERAGENT` | `ON`/`ENABLED` or `OFF`/`DISABLED`/blank | If enabled, requests from IP addresses that don't contain a User Agent will be blocked |
-| `IPTABLES_JAILTIME`    | time in seconds; `0` (default) means forever      | The time that an IP Address will remain blocked. If omitted or set to `0`, blocked IP addresses will be blocked in perpetuity, or at least until the IP address is manually removed from the IP Block List |
-| `LOGROTATE_INTERVAL`   | time in seconds; default value `3600`             | The time between each run of of log rotation for `/var/log/nginx/access.log` and `/var/log/nginx/error.lo`g                                                                                                 |
-| `LOGROTATE_MAXBACKUPS` | integer between `0` and `100`; default value `24` | The number of backup files for `/var/log/nginx/access.log` and `/var/log/nginx/error.log`                                                                                                                   |
+| Parameter              | Values                                            | Default | Description                                                                                                                                                                                                 |
+| ---------------------- | ------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `IPTABLES_BLOCK`       | `ON`/`ENABLED` or `OFF`/`DISABLED`/blank          | `OFF` | If enabled, any IP address match to `GEOIP_RESPONSECODE` or `BLOCKBOT_RESPONSECODE` will be blocked using `iptables`. If disabled or omitted, `iptables` blocking won't be used                            |
+| `IPTABLES_BLOCK_NO_USERAGENT` | `ON`/`ENABLED` or `OFF`/`DISABLED`/blank | `OFF` | If enabled, requests from IP addresses that don't contain a User Agent will be blocked |
+| `IPTABLES_JAILTIME`    | time in seconds; `0` (default) means forever      | `0` | The time that an IP Address will remain blocked. If omitted or set to `0`, blocked IP addresses will be blocked in perpetuity, or at least until the IP address is manually removed from the IP Block List |
+| `LOGROTATE_INTERVAL`   | time in seconds; default value `3600`             | `3600` | The time between each run of of log rotation for `/var/log/nginx/access.log` and `/var/log/nginx/error.lo`g                                                                                                 |
+| `LOGROTATE_MAXBACKUPS` | integer between `0` and `100`; default value `24` | `24` | The number of backup files for `/var/log/nginx/access.log` and `/var/log/nginx/error.log`                                                                                                                   |
 
 ### Basic Authentication
 
 The container supports a "basic" implementation of Basic Authentication. This is not inherently super-secure, and it exposes the usernames/passwords in clear text to the host system. We are planning to make this more secure in the future, but for now, please use with caution.
 
-The container supports basic authentication for the local web page through the `LOCAL_CREDS` variable, as well as credentials for each of the `REVPROXY`d entries via the `REVPROXY` variable.
+The container supports basic authentication for the local web page through the `LOCAL_CREDS` variable, as well as credentials for each of the `REVPROXY` and `SUBDOMAINS` entries via those variables.
 
-| Parameter     | Values                | Description |
-| ------------- | --------------------- | -------------- |
-| `AUTH`        | `on`/`1`/`enabled`/`true` or anything else | If set to `on`, Basic Authentication is enabled. If set to anything else or omitted, Basic Authentication is disabled. |
-| `LOCAL_CREDS` |                       | A list of credentials in the format `username1\|password1,username2\|password2,...` |
-| `LOCAL_CREDS_ALL_REVPROXIES` | `on`/`1`/`enabled`/`true` or anything else | If set to `on`, the local creds will also be assigned to all of the reverse proxy addresses defined with the `REVPROXY` parameter. Note - if the same username is defined for a `REVPROXY` parameter as for `LOCAL_CREDS`, only the password in `REVPROXY` will be used.|
-| `REVPROXY`    |                       | A comma separated list in this format:                                                                                 |
+| Parameter     | Values                | Default | Description |
+| ------------- | --------------------- | ------- | -------------- |
+| `AUTH`        | `on`/`1`/`enabled`/`true` or anything else | `OFF` | If set to `on`, Basic Authentication is enabled. If set to anything else or omitted, Basic Authentication is disabled. |
+| `LOCAL_CREDS` |                       | empty | A list of credentials in the format `username1\|password1,username2\|password2,...` |
+| `LOCAL_CREDS_ALL_REVPROXIES` | `on`/`1`/`enabled`/`true` or anything else | `OFF` | If set to `on`, the local creds will also be assigned to all of the reverse proxy addresses defined with the `REVPROXY` and `SUBDOMAINS` parameters. Note - if the same username is defined for a proxy-specific parameter as for `LOCAL_CREDS`, only the proxy-specific password will be used.|
+| `REVPROXY`    | comma-separated `origin\|http://destination[\|username\|password[\|...]]` entries | empty | Defines per-path credentials together with destination mappings. Example entries: `origin1\|http://destination1\|username1\|password1\|username2\|password2`, `origin2\|http://destination2\|username3\|password3\|username4\|password4\|username5\|password5`, `origin3\|http://destination3`. |
+| `SUBDOMAINS`  | comma-separated `subdomain\|http://destination[\|username\|password[\|...]]` entries | empty | Defines host-based credentials and mappings (same credential format as `REVPROXY`). Example entries: `sub1.mydomain.com\|http://destination1\|username1\|password1`, `sub2.mydomain.com\|http://destination2`. |
 
-```yaml
-REVPROXY=origin1|http://destination1|username1|password1|username2|password2,
-         origin2|http://destination2|username3|password3|username4|password4|username5|password5,
-         origin3|http://destination3,
-         ...
-```
+### Subdomain Configuration
+
+Creating a subdomain help for software packages with webpages that do not like to be served from a subdirectory, often because they use hardcoded paths for some of their resources. Examples include RadioSonde, Birdnet, and some other packages. You need a registered domain name for this to work; one where you can add a CNAME record. Often, free dynamic DNS account won't allow you to do this. Personally, I have good experience with CloudFlare for domains, but many other providers work as well. A domain name will cost you $10-$20/year, or if you want something very exclusive, it may be (much) more.
+
+1. Log in to your account at your domain provider and find the DNS section for your domain.
+2. Add a CNAME record for the desired subdomain - for example, for <https://sonde.mydomain.com> to work, set subdomain = "sonde", target = "mydomain.com", TTL=automatic, Proxy=off (if there's an option to set this). Save the record and wait ~5 minutes  for this to become available worldwide
+3. In your Webproxy's `docker-compose.yml` file, add this to the `environment:` section, where `http://radiosonde:5000` corresponds to the internal IP/port or domain/port where your RadioSonde package lives:
+
+    ```yaml
+    - SUBDOMAINS=sonde.mydomains.com|http://radiosonde:5000
+    ```
+
+4. Recreate / restart the webproxy container
 
 ### Advanced Setup
 
@@ -216,11 +216,12 @@ Also note -- the website may not be reachable if you redirected or proxied `/` t
 #### Access Report Page using `goaccess`
 
 The container can create a publicly available Access Report, controlled by the following parameter:
-| Parameter     | Values                | Description |
-| ------------- | --------------------- | -------------- |
-| `ACCESS_REPORT_PAGE` | `on`/`1`/`true`/`yes`<br/>`off`/`0`/`false`/`no`/<blank><br/>`pagename.html` | If set to `on` or an equivalent value, an Access Report will be generated at `http(s)://myservername/access-report.html`. If set to a page name, an Access Report will be generated at `http(s)://myservername/pagename.html`. If set to `off` or an equivalent value (or if left empty (default)), then no Access Reports will be generated. |
-| `ACCESS_REPORT_FREQUENCY` | `300` (secs, default) | Value, in seconds, of refresh frequency of the Access Report. To reduce CPU effort and Disk IO, it's recommended not to set this to less than 60 secs |
-| `ACCESS_REPORT_RESOLVE` | `on`/`1`/`true`/`yes`/<blank><br/>`off`/`0`/`false`/`no` | If left blank (default) or set to `on` or an equivalent value, the Access Report will attempt to resolve any external IP addresses to a domain name. If set to `off` or an equivalent value, the Access Report will not try to resolve any IP addresses. If you have a busy webserver and run on a machine that is either not too fast, or has a slow DNS resolver, you may see that your Access Report page refreshes very slowly or not at all. In this case, please set this parameter to `off` |
+
+| Parameter     | Values                | Default | Description |
+| ------------- | --------------------- | ------- | -------------- |
+| `ACCESS_REPORT_PAGE` | `on`/`1`/`true`/`yes`<br/>`off`/`0`/`false`/`no`/<blank><br/>`pagename.html` | empty (`off`) | If set to `on` or an equivalent value, an Access Report will be generated at `http(s)://myservername/access-report.html`. If set to a page name, an Access Report will be generated at `http(s)://myservername/pagename.html`. If set to `off` or an equivalent value (or if left empty (default)), then no Access Reports will be generated. |
+| `ACCESS_REPORT_FREQUENCY` | value in secs | `60` | Value, in seconds, of refresh frequency of the Access Report. To reduce CPU effort and Disk IO, it's recommended not to set this to less than 60 secs |
+| `ACCESS_REPORT_RESOLVE` | `on`/`1`/`true`/`yes`/<blank><br/>`off`/`0`/`false`/`no` | `on` (blank) | If left blank (default) or set to `on` or an equivalent value, the Access Report will attempt to resolve any external IP addresses to a domain name. If set to `off` or an equivalent value, the Access Report will not try to resolve any IP addresses. If you have a busy webserver and run on a machine that is either not too fast, or has a slow DNS resolver, you may see that your Access Report page refreshes very slowly or not at all. In this case, please set this parameter to `off` |
 
 This access report is created using a tool called [GoAccess](https://goaccess.io/)
 
@@ -240,11 +241,11 @@ If `IPMAPS` is not enabled, the pages will not exist. Any previously generated m
 
 The following related parameters can be set:
 
-| Parameter | Values | Description |
-| --------- | ------ | ---------------- |
-| `IPMAPS`        | `on`/`enabled`/`true`/`1` or <br/>`off`/`disabled`/`false`/`0`<br/>or empty | If enabled, IPMAPS will be generated as described above. If disabled or empty (default), maps aren't generated |
-| `IPMAPS_INTERVAL`        | value in secs or empty | Interval of generation of the IP Maps. Default if omitted is `900` seconds |
-| `IPMAPS_BASENAME` | partial file name | Base file name of the map URL. Default value is `ipmap-`, which would correspond to `http://ip_addr/ipmap-all.html` / `http://ip_addr/ipmap-filtered.html` / `http://ip_addr/ipmap-allowed.html` |
+| Parameter | Values | Default | Description |
+| --------- | ------ | ------- | ---------------- |
+| `IPMAPS`        | `on`/`enabled`/`true`/`1` or <br/>`off`/`disabled`/`false`/`0`<br/>or empty | empty (`off`) | If enabled, IPMAPS will be generated as described above. If disabled or empty (default), maps aren't generated |
+| `IPMAPS_INTERVAL`        | value in secs or empty | `900` | Interval of generation of the IP Maps. Default if omitted is `900` seconds |
+| `IPMAPS_BASENAME` | partial file name | `ipmap-` | Base file name of the map URL. Default value is `ipmap-`, which would correspond to `http://ip_addr/ipmap-all.html` / `http://ip_addr/ipmap-filtered.html` / `http://ip_addr/ipmap-allowed.html` |
 
 ### Extras
 
@@ -259,7 +260,7 @@ The following related parameters can be set:
 ## Troubleshooting
 
 - Issue: the container log (`docker logs webproxy`) shows error messages like this: `sleep: cannot read realtime clock: Operation not permitted`
-  - Solution: you must upgrade `libseccomp2` on your host system to version 2.4 or later. If you are using a Raspberry Pi with Buster based OS, [here](https://github.com/fredclausen/Buster-Docker-Fixes) is a repo with a script that can automatically fix this for you
+  - Solution: you must upgrade `libseccomp2` on your host system to version 2.4 or later. If you are using a Raspberry Pi with Buster based OS, [this Buster Docker fixes repo](https://github.com/fredclausen/Buster-Docker-Fixes) has a script that can automatically fix this for you
 - Issue: `docker-compose up -d` exits with an error
   - Solution: you probably have a typo in `docker-compose.yml`. Make sure that all lines are at the exact indentation level, and that the last entry in the `REVPROXY` and `REDIRECT` lists do not end on a comma
 - Issue: The container complaints about port mappings during start-up

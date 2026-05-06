@@ -41,7 +41,7 @@ then
     # If there's no backup but there is /etc/letsencrypt, then let's make sure it's backed up before we do anything else
     mkdir -p /run/nginx/.letsencrypt
     chmod u=rwx,go= /run/nginx/.letsencrypt
-    find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist 2>/dev/null | true
+    find /etc/letsencrypt /var/lib/letsencrypt /etc/nginx/sites-available/default* -print > /tmp/tarlist 2>/dev/null || true
     tar -czf /run/nginx/.letsencrypt/letsencrypt.tgz -T /tmp/tarlist  >/dev/null 2>&1
     rm /tmp/tarlist
     chmod u=rx,go= /run/nginx/.letsencrypt
@@ -49,21 +49,37 @@ fi
 
 # Just make sure that this file exists so `nginx -t` won't complain later on:
 touch /run/nginx/locations.conf
+touch /run/nginx/subdomains_locations.conf
+touch /run/nginx/subdomains_routes.conf
 
-# Do some checks to ensure that there is enough info to request domains:
+# Parse SSL domains and any host names from SUBDOMAINS entries.
 # shellcheck disable=SC2153
-if (( ${#SSL_DOMAIN[@]} == 0 ))
+IFS="," read -ra SSL_DOMAINS <<< "$(echo "$SSL_DOMAIN"|tr -d '[:blank:]')"
+readarray -d ',' -t SUBDOMAINS_ARRAY <<< "$SUBDOMAINS"
+REQUESTED_DOMAINS=()
+for domain in "${SSL_DOMAINS[@]}"; do
+    [[ -n "$domain" ]] && REQUESTED_DOMAINS+=("$domain")
+done
+for subdomain_proxy in "${SUBDOMAINS_ARRAY[@]}"; do
+    host="${subdomain_proxy%%|*}"
+    host="${host//[[:space:]]}"
+    host="${host,,}"
+    [[ -n "$host" ]] && REQUESTED_DOMAINS+=("$host")
+done
+
+if (( ${#REQUESTED_DOMAINS[@]} == 0 ))
 then
     # No domains in environment files. Complain and stop trying to install certificates:
     "${s6wrap[@]}" echo "--------------------------------------------------"
     "${s6wrap[@]}" echo "|    WARNING ! NGINX SSL configuration problem   |"
-    "${s6wrap[@]}" echo "| You must define at least 1 SSL_DOMAIN in your  |"
-    "${s6wrap[@]}" echo "| docker-compose.yml file. Go check and fix it!  |"
+    "${s6wrap[@]}" echo "| You must define at least 1 SSL_DOMAIN and/or   |"
+    "${s6wrap[@]}" echo "| SUBDOMAINS entry in your docker-compose.yml.   |"
     "${s6wrap[@]}" echo "| The container will continue without SSL.       |"
     "${s6wrap[@]}" echo "--------------------------------------------------"
     exit 0
 fi
 
+# Do some checks to ensure that there is enough info to request domains:
 if ! grep -E "\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}\b" <<< "$SSL_EMAIL" >/dev/null
 then
     # No domains in environment files. Complain and stop trying to install certificates:
@@ -98,15 +114,14 @@ newdomains=()
 #shellcheck disable=SC2207
 domains=($(/usr/bin/certbot certificates 2>/dev/null | awk '/Domains:/ { $1=""; print substr($0,2) }'))
 
-# shellcheck disable=SC2086
-IFS="," read -ra SSL_DOMAINS <<< "$(echo $SSL_DOMAIN|tr -d '[:blank:]')"
-for (( i=0; i<${#SSL_DOMAINS[@]}; i++ ))
+for requested_domain in "${REQUESTED_DOMAINS[@]}"
 do
-    [[ ! " ${domains[*]} " =~ " ${SSL_DOMAINS[i]} " ]] && newdomains+=("${SSL_DOMAINS[i]}")
+    [[ " ${newdomains[*]} " =~ " ${requested_domain} " ]] && continue
+    [[ ! " ${domains[*]} " =~ " ${requested_domain} " ]] && newdomains+=("${requested_domain}")
 done
 
 # Figure out if we want to redirect all queries to SSL?
-if chk_enabled "${SSL_REDIRECT}"; then
+if chk_enabled "${SSL_REDIRECT:-enabled}"; then
     redirect="--redirect"
 else
     redirect=""
@@ -138,7 +153,9 @@ then
 else
     "${s6wrap[@]}" echo "SSL Certificates installed for these domains:"
     /usr/bin/certbot certificates
-    [[ "${SSL_REDIRECT,,}" == "enabled" ]] && "${s6wrap[@]}" echo "All web traffic will be redirected to SSL."
+    if chk_enabled "${SSL_REDIRECT:-enabled}"; then
+        "${s6wrap[@]}" echo "All web traffic will be redirected to SSL."
+    fi
 
     # back things up again, keep a copy of the previous TGZ if there was one:
     mkdir -p /run/nginx/.letsencrypt
