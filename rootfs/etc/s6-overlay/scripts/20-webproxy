@@ -138,12 +138,12 @@ if chk_enabled "${AUTOGENERATE:-enabled}"; then
                 printf "    rewrite ^ %s\\$uri break;\n" "$destination_path"
             fi
             printf "    proxy_pass %s;\n" "$destination_origin"
-                        printf '%s\n' "    proxy_set_header Upgrade \$http_upgrade;"
-                        printf '%s\n' "    proxy_set_header Connection \$http_connection;"
+            printf "    proxy_set_header Upgrade \$http_upgrade;\n"
+            printf "    proxy_set_header Connection \$http_connection;\n"
             printf "    proxy_http_version 1.1;\n"
-                        printf '%s\n' "    proxy_set_header Host \$http_host;"
-                        printf '%s\n' "    proxy_set_header X-Real-IP \$remote_addr;"
-                        printf '%s\n' "    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;"
+            printf "    proxy_set_header Host \$http_host;\n"
+            printf "    proxy_set_header X-Real-IP \$remote_addr;\n"
+            printf "    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\n"
             printf "}\n\n"
           } >> /run/nginx/subdomains_locations.conf
         touch "/run/nginx/.htaccess/.htpasswd-subdomain-${host_safe}"
