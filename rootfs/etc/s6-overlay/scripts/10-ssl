@@ -121,7 +121,7 @@ do
 done
 
 # Figure out if we want to redirect all queries to SSL?
-if chk_enabled "${SSL_REDIRECT:-enabled}"; then
+if chk_enabled "${SSL_REDIRECT}"; then
     redirect="--redirect"
 else
     redirect=""
@@ -153,7 +153,7 @@ then
 else
     "${s6wrap[@]}" echo "SSL Certificates installed for these domains:"
     /usr/bin/certbot certificates
-    if chk_enabled "${SSL_REDIRECT:-enabled}"; then
+    if chk_enabled "${SSL_REDIRECT}"; then
         "${s6wrap[@]}" echo "All web traffic will be redirected to SSL."
     fi
 

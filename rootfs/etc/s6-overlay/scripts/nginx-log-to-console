@@ -3,7 +3,7 @@
 
 source /scripts/common
 
-if ! chk_enabled "${VERBOSELOG:-ON}"; then
+if ! chk_enabled "${VERBOSELOG}"; then
   "${s6wrap[@]}" echo "Logging to console is disabled. Set \"VERBOSELOG=on\" if you want to see the nginx access and error logs"
   sleep infinity
 fi
