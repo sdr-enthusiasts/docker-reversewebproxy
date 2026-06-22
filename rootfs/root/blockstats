@@ -34,6 +34,9 @@ declare -A hits=()
 declare -A ips=()
 for a in "${blocksclean[@]}"
 do
+  # SC2126 disabled: a glob is passed to grep, so 'grep -c' would emit one
+  # count per matching file; piping to 'wc -l' gives the intended total.
+  # shellcheck disable=SC2126
   hits+=(["$a"]="$(grep -h -i "$a" /var/log/nginx/* |wc -l)")
   ips+=(["$a"]="$(readarray x <<< "$(grep -h -i "$a" /var/log/nginx/* | awk '{print $1}' | sort -u)";echo "${x[@]}")")
 done

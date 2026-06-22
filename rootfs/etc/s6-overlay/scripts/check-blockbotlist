@@ -23,7 +23,7 @@ READ_REMOTE_BOTLIST () {
     while [[ "${BLIST_ARR[index]:0:1}" == "," ]] || [[ "${BLIST_ARR[index]:0:1}" == " " ]]; do BLIST_ARR[index]="${BLIST_ARR[index]:1}"; done
     if [[ "${BLIST_ARR[index]:0:4}" == "http" ]]; then
       # replace any entry that starts with http by content of the equivalent URL
-      if extra_args="$(curl -sSLf -H 'Cache-Control: no-cache' "${BLIST_ARR[index]}" 2>/dev/null)" && [[ "${extra_args:0:1}" != "<" ]] ; then 
+      if extra_args="$(curl -sSLf -H 'Cache-Control: no-cache' "${BLIST_ARR[index]}" 2>/dev/null)" && [[ "${extra_args:0:1}" != "<" ]] ; then
         remotebots="${remotebots}${extra_args//$'\n'/,}"
       fi
     fi

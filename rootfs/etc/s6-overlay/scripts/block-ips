@@ -114,5 +114,5 @@ while true; do
       fi
     fi
   fi
-  "${s6wrap[@]}" echo "Done. Next check will start at $(date -d @$(( $(date +%s) + SLEEPTIME )))" 
+  "${s6wrap[@]}" echo "Done. Next check will start at $(date -d @$(( $(date +%s) + SLEEPTIME )))"
 done
