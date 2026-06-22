@@ -41,7 +41,7 @@ while :; do
       echo "${notavail_template//##TIME##/$(date)}"
     fi
   } > "${HTMLDIR}/${IPMAPS_BASENAME}filtered.html"
-  
+
   "${s6wrap[@]}" echo "Updating ${IPMAPS_BASENAME}accepted.html --> $ipmap_accepted"
   { if [[ "${ipmap_accepted:0:4}" == "http" ]]; then
       echo "${redir_template//##REDIRURL##/$ipmap_accepted}"

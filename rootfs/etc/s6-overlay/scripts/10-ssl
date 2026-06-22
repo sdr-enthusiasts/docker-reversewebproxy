@@ -127,7 +127,7 @@ else
     redirect=""
 fi
 
-if (( ${#newdomains[@]} > 0 )); then 
+if (( ${#newdomains[@]} > 0 )); then
     "${s6wrap[@]}" echo "New domains detected - attempting to get certificates for ${newdomains[@]}"
 else
     "${s6wrap[@]}" echo "No new domains detected"

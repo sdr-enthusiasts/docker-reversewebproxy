@@ -67,7 +67,7 @@ if chk_enabled "${AUTOGENERATE}"; then
             continue;
         fi
 
-        if [[ -n "$creds" ]]; then 
+        if [[ -n "$creds" ]]; then
             "${s6wrap[@]}" echo "WARNING: Auth credentials not supported REDIRECT ($location:$destination). Implemented without authentications"
         fi
 
@@ -78,7 +78,7 @@ if chk_enabled "${AUTOGENERATE}"; then
         [[ "${location:0:2}" == "/=" ]] && location="= ${location:2}" || true
 
         # Now print the location entry:
-        {   printf "location %s {\n" "$location" 
+        {   printf "location %s {\n" "$location"
             printf "    return 301 %s;\n" "$destination"
             printf "}\n\n"
         } >> /run/nginx/locations.conf
@@ -197,7 +197,7 @@ if chk_enabled "${AUTOGENERATE}"; then
             # printf "    proxy_redirect ~^(/|http://[^/]*/)(.*) %s\$2;\n" "$location" >> /run/nginx/locations.conf
             printf "    proxy_redirect / /%s/;\n" "$location"
             printf "    proxy_set_header  X-Forwarded-Prefix /%s;\n" "${location}"
-            
+
             # close off the location entry:
             printf "}\n\n"
           }  >> /run/nginx/locations.conf
