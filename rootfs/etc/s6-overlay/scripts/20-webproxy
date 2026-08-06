@@ -219,7 +219,7 @@ elif [[ ! -f /run/nginx/locations.conf ]]; then
     "${s6wrap[@]}" echo "| Please do so and then restart the container.  |"
     "${s6wrap[@]}" echo "-------------------------------------------------"
 
-    [[ -z "$DEBUG" ]] && exit 1 || sleep infinity
+    [[ -z "$DEBUG" ]] && exit 78 || sleep infinity
 else
     "${s6wrap[@]}" echo "Using user-provided locations.conf file"
 fi

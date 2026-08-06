@@ -19,7 +19,7 @@ then
     "${s6wrap[@]}" echo "--------------------------------------------------"
 
     if [[ -z "$DEBUG" ]]; then
-        exit 1
+        exit 78
     else
         exec sleep infinity
     fi
