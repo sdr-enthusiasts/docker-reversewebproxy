@@ -30,7 +30,7 @@ touch /var/log/nginx/error.log
 chmod a+rw /var/log/nginx/access.log /var/log/nginx/error.log
 
 # auto-create the locations.conf file if $AUTOGENERATE is set to yes
-if chk_enabled "${AUTOGENERATE:-enabled}"; then
+if chk_enabled "${AUTOGENERATE}"; then
     "${s6wrap[@]}" echo "Auto-generating locations.conf file"
     # back up any existing locations.conf file:
     [[ -f /run/nginx/locations.conf ]] && mv -f /run/nginx/locations.conf "/run/nginx/locations.conf.bkup-$(date +%y%m%d%H%M%S)"
@@ -67,7 +67,7 @@ if chk_enabled "${AUTOGENERATE:-enabled}"; then
             continue;
         fi
 
-        if [[ -n "$creds" ]]; then 
+        if [[ -n "$creds" ]]; then
             "${s6wrap[@]}" echo "WARNING: Auth credentials not supported REDIRECT ($location:$destination). Implemented without authentications"
         fi
 
@@ -78,7 +78,7 @@ if chk_enabled "${AUTOGENERATE:-enabled}"; then
         [[ "${location:0:2}" == "/=" ]] && location="= ${location:2}" || true
 
         # Now print the location entry:
-        {   printf "location %s {\n" "$location" 
+        {   printf "location %s {\n" "$location"
             printf "    return 301 %s;\n" "$destination"
             printf "}\n\n"
         } >> /run/nginx/locations.conf
@@ -197,7 +197,7 @@ if chk_enabled "${AUTOGENERATE:-enabled}"; then
             # printf "    proxy_redirect ~^(/|http://[^/]*/)(.*) %s\$2;\n" "$location" >> /run/nginx/locations.conf
             printf "    proxy_redirect / /%s/;\n" "$location"
             printf "    proxy_set_header  X-Forwarded-Prefix /%s;\n" "${location}"
-            
+
             # close off the location entry:
             printf "}\n\n"
           }  >> /run/nginx/locations.conf
@@ -219,7 +219,7 @@ elif [[ ! -f /run/nginx/locations.conf ]]; then
     "${s6wrap[@]}" echo "| Please do so and then restart the container.  |"
     "${s6wrap[@]}" echo "-------------------------------------------------"
 
-    [[ -z "$DEBUG" ]] && exit 1 || sleep infinity
+    [[ -z "$DEBUG" ]] && exit 78 || sleep infinity
 else
     "${s6wrap[@]}" echo "Using user-provided locations.conf file"
 fi
@@ -285,8 +285,9 @@ rm -f "$tmp_default_1"
 # now enable default:
 ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
-# set logging to what VERBOSELOG says. Default is on, "ON" means to stdout, "FILE" means to access.log/error.log file in external volume
-if chk_enabled "${VERBOSELOG:-ON}" \
+# set logging to what VERBOSELOG says. Default is off, "ON" means to stdout, "FILE" means to access.log/error.log file in external volume
+# certain other settings also trigger verbose logging
+if chk_enabled "${VERBOSELOG}" \
     || [[ "${VERBOSELOG,,}" == "file" ]] \
     || chk_enabled "$IPMAPS" \
     || chk_enabled "$IPTABLES_BLOCK" \
