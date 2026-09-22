@@ -16,6 +16,9 @@ anthropic-ai
 Apify
 ApifyWebsiteContentCrawler
 Aranet-Search
+AwarioBot
+AwarioSmartBot
+AwarioRssBot
 aws
 axios
 AzureAI-Search
@@ -200,7 +203,6 @@ RealDownload
 Reflection
 ReGet
 Ruby
-rv:45.0
 scan
 scoop.it
 scpitspi-rs
