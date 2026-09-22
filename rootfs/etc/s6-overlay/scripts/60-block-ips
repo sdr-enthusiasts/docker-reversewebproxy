@@ -106,7 +106,7 @@ fi
 
   if (( ${#blocktable[@]} > 0 ))
   then
-    "${s6wrap[@]}" echo "These ${#blocktable[@]} IPs were blocked previously and have been added to the iptables block list"
+    "${s6wrap[@]}" echo "${#blocktable[@]} IPs were blocked previously and have been added to the iptables block list"
     "${s6wrap[@]}" echo "You can review this list by perusing the \"ip-blocklist\" file in your mounted volume"
     # "${s6wrap[@]}" echo "${blocktable[@]}"
   else
