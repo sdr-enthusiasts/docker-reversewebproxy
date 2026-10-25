@@ -30,15 +30,14 @@ RUN set -x && \
     apt-get install -o APT::Autoremove::RecommendsImportant=0 -o APT::Autoremove::SuggestsImportant=0 -o Dpkg::Options::="--force-confold" --force-yes -y --no-install-recommends  --no-install-suggests\
     "${KEPT_PACKAGES[@]}" \
     "${TEMP_PACKAGES[@]}" && \
-    # check for trixie
+    # Debian ships goaccess from trixie on; only bookworm needs the upstream repo.
     . /etc/os-release && \
     # version="$VERSION_ID" && \
     codename="$VERSION_CODENAME" && \
-    if [[ "$codename" != "trixie" ]]; then \
+    if [[ "$codename" == "bookworm" ]]; then \
     # Added for GoAccess server report - see https://goaccess.io/
     mkdir -p /usr/share/keyrings && \
     curl -sSL https://deb.goaccess.io/gnugpg.key | gpg --dearmor > /usr/share/keyrings/goaccess.gpg && \
-    # FIXME: upstream doesn't have a Trixie release. $(lsb_release -cs) is now hardcoded to bookworm.
     echo "deb [signed-by=/usr/share/keyrings/goaccess.gpg arch=$(dpkg --print-architecture)] https://deb.goaccess.io/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/goaccess.list && \
     apt-get update; \
     fi && \
