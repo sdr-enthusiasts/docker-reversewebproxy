@@ -50,7 +50,7 @@ The following example highlights this:
 ## How do I get it?
 
 Prerequisite for this to work, is that you have a working `Docker` and `Docker-compose` setup.
-This is less than 5 minutes of work -- use [this script](https://github.com/sdr-enthusiasts/docker-install) or follow all 3 steps of the "Setting up the Host System" section at [this GitBook](https://sdr-enthusiasts.gitbook.io/ads-b/setting-up-the-host-system/install-docker).
+This is less than 5 minutes of work -- use [this script](https://github.com/sdr-enthusiasts/docker-install) or follow all 3 steps of the "Setting up the Host System" section at [this GitBook](https://sdr-enthusiasts.gitbook.io/ads-b/setting-up-the-host-system/running-docker-install).
 
 Once this is done, create a working directory and download the `docker-compose.yml` file:
 
