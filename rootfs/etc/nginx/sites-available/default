@@ -1,6 +1,7 @@
 # Default server configuration
 #
 server {
+    http2 off;
 #geoip config related
     if ($allowed_country = no) {
         return 403;

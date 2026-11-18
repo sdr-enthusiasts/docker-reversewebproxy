@@ -1,6 +1,7 @@
 # Default server configuration
 #
 server {
+    http2 off;
 	listen 80 default_server;
 	listen [::]:80 default_server;
 
