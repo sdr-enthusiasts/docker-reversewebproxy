@@ -2,7 +2,7 @@
 #
 server {
 #geoip config related
-    if ($allowed_country = no) {
+    if ($geoip_blocked = 1) {
         return 403;
     }
 # check if it's a bot that needs filtering

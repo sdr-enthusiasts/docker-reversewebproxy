@@ -52,6 +52,17 @@ download_geoip_pair() {
 
 "${s6wrap[@]}" echo "Set up of GeoIP Database and corresponding nginx configuration"
 
+# Build the Nginx allow-list map from the persistent grep-pattern allow list.
+touch /run/nginx/ip-allowlist
+{
+  echo "# This file is generated from /run/nginx/ip-allowlist."
+  while IFS= read -r allowlist_entry; do
+    read -r allowlist_pattern _ <<< "$allowlist_entry"
+    [[ -z "$allowlist_pattern" || "${allowlist_pattern:0:1}" == "#" ]] && continue
+    printf "~%s 1;\n" "$allowlist_pattern"
+  done < /run/nginx/ip-allowlist
+} > /run/nginx/ip-allowlist.conf
+
 #Moving geoip_countries.conf to the right place
 "${s6wrap[@]}" echo "Copy geoip_countries.conf to the right place, delete old version first"
 rm -f /etc/nginx/geoip_countries.conf
@@ -172,7 +183,7 @@ if [[ -n "$GEOIP_RESPONSECODE" ]] && [[ "$GEOIP_RESPONSECODE" -ge 100 ]]  && [[ 
 then
   "${s6wrap[@]}" echo "Setting response code for blocked bots to $GEOIP_RESPONSECODE"
   # shellcheck disable=SC2016
-  sed -i '/\s*if ($allowed_country = no)/{$!{N;s/\(\s*if ($allowed_country = no) {\s*\n\s*return \)[0-9]*\(.*\)/\1'"$GEOIP_RESPONSECODE"'\2/;ty;P;D;:y}}' /etc/nginx/sites-available/default >/dev/null 2>&1
+  sed -i '/\s*if ($geoip_blocked = 1)/{$!{N;s/\(\s*if ($geoip_blocked = 1) {\s*\n\s*return \)[0-9]*\(.*\)/\1'"$GEOIP_RESPONSECODE"'\2/;ty;P;D;:y}}' /etc/nginx/sites-available/default >/dev/null 2>&1
 fi
 
 "${s6wrap[@]}" echo "Finished setting up GeoIP"

@@ -295,7 +295,7 @@ if chk_enabled "${VERBOSELOG}" \
     || ( [[ -n "$ACCESS_REPORT_PAGE" ]] \
     && ! chk_disabled "$ACCESS_REPORT_PAGE" ); then
   "${s6wrap[@]}" echo "Enabled HTTP logging"
-  sed -i 's|\(^\s*access_log\).*|\1 /var/log/nginx/access.log ;|' /etc/nginx/nginx.conf
+  sed -i 's|\(^\s*access_log\).*|\1 /var/log/nginx/access.log webproxy;|' /etc/nginx/nginx.conf
   sed -i 's|\(^\s*error_log\).*|\1 /var/log/nginx/error.log ;|' /etc/nginx/nginx.conf
 else
   "${s6wrap[@]}" echo "HTTP logging is disabled"

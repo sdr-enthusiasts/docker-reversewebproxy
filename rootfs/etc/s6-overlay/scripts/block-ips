@@ -38,7 +38,18 @@ while true; do
   if [[ -f /var/log/nginx/access.log ]]; then
     old_blocklist="$(</run/nginx/ip-blocklist)"
     # Read access log and process any GEOIP or BLOCKBOT response codes. Note - also naturally occurring responses with these codes are picked up:
-    awk -v "g=$GEOIP_RESPONSECODE" -v "b=$BLOCKBOT_RESPONSECODE" -v "d=$(date +%s)" '{if ($9 == b) {print $1 " geo_blocked " d} else if ($9 == g) {print $1 " bot_blocked " d}}' /var/log/nginx/access.log >> /run/nginx/ip-blocklist
+    awk -v "g=$GEOIP_RESPONSECODE" -v "b=$BLOCKBOT_RESPONSECODE" -v "d=$(date +%s)" '
+      {
+        country=$NF
+        gsub(/"/, "", country)
+        if ($9 == g) {
+          comment=(country != "" && country != "-") ? " #" country : ""
+          print $1 " geo_blocked " d comment
+        } else if ($9 == b) {
+          print $1 " bot_blocked " d
+        }
+      }
+    ' /var/log/nginx/access.log >> /run/nginx/ip-blocklist
 
     # Remove IPs that don't have user agents:
     if chk_enabled "$IPTABLES_BLOCK_NO_USERAGENT"; then

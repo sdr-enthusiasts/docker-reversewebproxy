@@ -6,7 +6,7 @@
 # You can invoke this utility by using "docker exec", e.g., "docker exec -it webproxy manage_ipblock"
 #
 # Format of the file:
-# ipaddress reason timestamp
+# ipaddress reason timestamp [#comment]
 # "Reason" is a single word without any quotes or clearspaces. Often, the reason will be the HTTP return code that caused the block.
 # "Timestamp" is the date the item was added to the IP Block List, in seconds since epoch ("date +%s")
 # Any lines starting with # will be ignored

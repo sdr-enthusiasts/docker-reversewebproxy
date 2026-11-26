@@ -127,6 +127,10 @@ The Reverse Webproxy can filter incoming requests by originating IP. It uses an 
 | `GEOIP_COUNTRIES`    |                               | empty               | Comma-separated list of 2-letter country abbreviations, for example `RU,CN,BY,RS` (which means Russia, China, Bielorus, Serbia).                                                                                                                                                      |
 | `GEOIP_RESPONSECODE` | 3-digit HTTP response code    | `403` ("Forbidden") | Other codes that may be useful: `402` (payment required), `404` (doesn't exist), `418` (I am a teapot - used to tell requesters to go away), `410` (Gone), `500` (Internal Server Error), `503` (service unavailable). See <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status> |
 
+Entries in the persistent `ip-allowlist` take precedence over GeoIP filtering.
+GeoIP-blocked entries written to `ip-blocklist` include the detected country as
+a trailing comment, for example `203.0.113.10 geo_blocked 1700000000 #US`.
+
 ### BlockBot Filtering
 
 The BlockBot feature filters out HTTP requests based on a fuzzy match of the HTTP User Agent field against a list of potential matches. This can be used to somewhat effectively filter out bots that are trying to scrape your website. The `BLOCKBOT` parameter included `docker-compose.yml` file has an example of a bot filter.
